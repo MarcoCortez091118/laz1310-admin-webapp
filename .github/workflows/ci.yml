@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OPENAPI_URL: https://laz1310-fastapi-enaeaghwfhbhgsa9.canadacentral-01.azurewebsites.net/openapi.json
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -22,6 +25,9 @@ jobs:
 
       - name: Install
         run: npm install --no-audit --no-fund
+
+      - name: Generate FastAPI contract
+        run: npm run api:generate
 
       - name: Typecheck
         run: npm run typecheck
