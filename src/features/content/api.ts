@@ -3,12 +3,21 @@ import type { Draft, Page, PublicState } from "../../api/types";
 
 export const adminQueryKeys = {
   draft: ["admin", "draft"] as const,
+  preview: ["admin", "preview"] as const,
   publicState: ["admin", "public-state"] as const,
 };
 
 export function getDraft(signal?: AbortSignal): Promise<ApiResult<Draft>> {
   return apiRequest<Draft>(
     "/api/v1/admin/draft",
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function getPreview(signal?: AbortSignal): Promise<ApiResult<Draft>> {
+  return apiRequest<Draft>(
+    "/api/v1/admin/preview",
     { method: "GET" },
     { signal },
   );
