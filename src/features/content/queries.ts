@@ -1,10 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { adminQueryKeys, getDraft, getPublicState } from "./api";
+import { adminQueryKeys, getDraft, getPreview, getPublicState } from "./api";
 
 export function useDraftQuery() {
   return useQuery({
     queryKey: adminQueryKeys.draft,
     queryFn: ({ signal }) => getDraft(signal),
+    retry: false,
+  });
+}
+
+export function usePreviewQuery() {
+  return useQuery({
+    queryKey: adminQueryKeys.preview,
+    queryFn: ({ signal }) => getPreview(signal),
     retry: false,
   });
 }
