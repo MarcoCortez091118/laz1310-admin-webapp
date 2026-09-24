@@ -34,27 +34,109 @@ const overviewRoute = createRoute({
   component: DashboardPage,
 });
 
-function placeholder(path: string, title: string, dependency: string) {
-  return createRoute({
-    getParentRoute: () => adminRoute,
-    path,
-    component: () => <PlaceholderPage dependency={dependency} title={title} />,
-  });
-}
+const pagesRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/pages",
+  component: () => (
+    <PlaceholderPage dependency="Draft Page contracts" title="Pages" />
+  ),
+});
+
+const radioRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/radio",
+  component: () => (
+    <PlaceholderPage
+      dependency="Station / Stream / Show / Schedule contracts"
+      title="Radio"
+    />
+  ),
+});
+
+const dynamicsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/dynamics",
+  component: () => (
+    <PlaceholderPage
+      dependency="Dynamics + participation contracts"
+      title="Dynamics"
+    />
+  ),
+});
+
+const mediaRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/media",
+  component: () => (
+    <PlaceholderPage dependency="Admin media upload/list contracts" title="Media" />
+  ),
+});
+
+const releasesRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/releases",
+  component: () => (
+    <PlaceholderPage
+      dependency="Release history; detail contract still required"
+      title="Releases"
+    />
+  ),
+});
+
+const weatherRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/weather",
+  component: () => (
+    <PlaceholderPage
+      dependency="Public weather + future operational contract"
+      title="Weather"
+    />
+  ),
+});
+
+const notificationsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/notifications",
+  component: () => (
+    <PlaceholderPage
+      dependency="Blocked until backend LAZ-28 is implemented"
+      title="Notifications"
+    />
+  ),
+});
+
+const auditRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/audit",
+  component: () => (
+    <PlaceholderPage dependency="Admin audit contract" title="Audit" />
+  ),
+});
+
+const configurationRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/configuration",
+  component: () => (
+    <PlaceholderPage
+      dependency="Admin configuration contract"
+      title="App Configuration"
+    />
+  ),
+});
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
   adminRoute.addChildren([
     overviewRoute,
-    placeholder("/pages", "Pages", "Draft Page contracts"),
-    placeholder("/radio", "Radio", "Station / Stream / Show / Schedule contracts"),
-    placeholder("/dynamics", "Dynamics", "Dynamics + participation contracts"),
-    placeholder("/media", "Media", "Admin media upload/list contracts"),
-    placeholder("/releases", "Releases", "Release history; detail contract still required"),
-    placeholder("/weather", "Weather", "Public weather + future operational contract"),
-    placeholder("/notifications", "Notifications", "Blocked until backend LAZ-28 is implemented"),
-    placeholder("/audit", "Audit", "Admin audit contract"),
-    placeholder("/configuration", "App Configuration", "Admin configuration contract"),
+    pagesRoute,
+    radioRoute,
+    dynamicsRoute,
+    mediaRoute,
+    releasesRoute,
+    weatherRoute,
+    notificationsRoute,
+    auditRoute,
+    configurationRoute,
   ]),
 ]);
 
