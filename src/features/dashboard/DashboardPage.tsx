@@ -53,7 +53,9 @@ export function DashboardPage() {
         <article className="metric-card">
           <span>Draft revision</span>
           <strong>{loading ? "…" : draft.data?.data.revision ?? "—"}</strong>
-          <small>{draft.data?.etag ? `ETag ${draft.data.etag}` : "Optimistic concurrency"}</small>
+          <small>
+            {draft.data?.etag ? `ETag ${draft.data.etag}` : "Optimistic concurrency"}
+          </small>
         </article>
         <article className="metric-card">
           <span>Published release</span>
@@ -64,17 +66,17 @@ export function DashboardPage() {
         </article>
         <article className="metric-card">
           <span>Pages</span>
-          <strong>{loading ? "…" : catalog?.pages.length ?? 0}</strong>
+          <strong>{loading ? "…" : catalog?.pages?.length ?? 0}</strong>
           <small>Draft catalog</small>
         </article>
         <article className="metric-card">
           <span>Stations</span>
-          <strong>{loading ? "…" : catalog?.stations.length ?? 0}</strong>
+          <strong>{loading ? "…" : catalog?.stations?.length ?? 0}</strong>
           <small>Draft radio configuration</small>
         </article>
         <article className="metric-card">
           <span>Dynamics</span>
-          <strong>{loading ? "…" : catalog?.dynamics.length ?? 0}</strong>
+          <strong>{loading ? "…" : catalog?.dynamics?.length ?? 0}</strong>
           <small>Draft campaigns</small>
         </article>
       </div>
