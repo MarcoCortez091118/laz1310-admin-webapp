@@ -25,11 +25,13 @@ function PageEditor({
   const [slug, setSlug] = useState(page?.slug ?? "");
   const [title, setTitle] = useState(page?.title ?? "");
   const existing = page !== null;
+  const blocks = page?.blocks ?? [];
 
   const save = useMutation({
     mutationFn: async () => {
       const normalizedSlug = slug.trim().toLowerCase();
       const normalizedTitle = title.trim();
+
       if (!SLUG.test(normalizedSlug)) {
         throw new Error("Slug must use lowercase letters, numbers and single hyphens.");
       }
@@ -45,7 +47,7 @@ function PageEditor({
     },
     onSuccess: (result) => {
       queryClient.setQueryData(adminQueryKeys.draft, result);
-      onSaved(result.data.catalog.pages.find((item) => item.title === title.trim())?.slug ?? slug.trim());
+      onSaved(page?.slug ?? slug.trim().toLowerCase());
     },
   });
 
@@ -95,7 +97,9 @@ function PageEditor({
         <div className="conflict-banner">
           <div>
             <strong>Draft changed while you were editing.</strong>
-            <span>Reload the current Draft before saving again. Nothing was overwritten.</span>
+            <span>
+              Reload the current Draft before saving again. Nothing was overwritten.
+            </span>
           </div>
           <button
             onClick={() => {
@@ -124,11 +128,16 @@ function PageEditor({
           Slug
           <input
             disabled={existing}
+            maxLength={100}
             onChange={(event) => setSlug(event.target.value)}
             placeholder="news"
             value={slug}
           />
-          <small>{existing ? "Existing slugs are immutable in this editor." : "Example: community-news"}</small>
+          <small>
+            {existing
+              ? "Existing slugs are immutable in this editor."
+              : "Example: community-news"}
+          </small>
         </label>
 
         <label>
@@ -146,12 +155,13 @@ function PageEditor({
         <div>
           <strong>Blocks</strong>
           <span className="muted">
-            {page?.blocks.length ?? 0} configured. This slice preserves blocks but does not edit them yet.
+            {blocks.length} configured. This slice preserves blocks but does not edit them
+            yet.
           </span>
         </div>
-        {page?.blocks.length ? (
+        {blocks.length ? (
           <ol>
-            {page.blocks.map((block, index) => (
+            {blocks.map((block, index) => (
               <li key={block.id ?? `${block.type}-${index}`}>
                 <span>{index + 1}</span>
                 <strong>{block.type}</strong>
@@ -181,14 +191,18 @@ export function PagesPage() {
   const draft = useDraftQuery();
   const [selection, setSelection] = useState<string | "new" | null>(null);
 
-  const pages = draft.data?.data.catalog.pages ?? [];
+  const pages = draft.data?.data.catalog?.pages ?? [];
   const selected = useMemo(
     () => pages.find((page) => page.slug === selection) ?? null,
     [pages, selection],
   );
 
   if (draft.isPending) {
-    return <section className="page-stack"><div className="panel">Loading Draft pages…</div></section>;
+    return (
+      <section className="page-stack">
+        <div className="panel">Loading Draft pages…</div>
+      </section>
+    );
   }
 
   if (draft.error || !draft.data) {
@@ -200,7 +214,9 @@ export function PagesPage() {
           <p className="muted">
             {draft.error instanceof Error ? draft.error.message : "Admin API unavailable."}
           </p>
-          <button onClick={() => void draft.refetch()} type="button">Retry</button>
+          <button onClick={() => void draft.refetch()} type="button">
+            Retry
+          </button>
         </article>
       </section>
     );
@@ -212,7 +228,9 @@ export function PagesPage() {
       <section className="page-stack">
         <article className="panel">
           <h1>Draft ETag missing</h1>
-          <p className="muted">Writes are disabled because optimistic concurrency cannot be enforced safely.</p>
+          <p className="muted">
+            Writes are disabled because optimistic concurrency cannot be enforced safely.
+          </p>
         </article>
       </section>
     );
@@ -222,7 +240,7 @@ export function PagesPage() {
     <section className="page-stack">
       <header className="page-heading split-heading">
         <div>
-          <p className="eyebrow">Content / Draft #{draft.data.data.revision}</p>
+          <p className="eyebrow">Content / Draft #{draft.data.data.revision ?? "—"}</p>
           <h1>Pages</h1>
           <p className="muted">Manage page metadata without publishing automatically.</p>
         </div>
@@ -264,7 +282,7 @@ export function PagesPage() {
             key={selection}
             onDeleted={() => setSelection(null)}
             onReload={async () => draft.refetch()}
-            onSaved={(slug) => setSelection(slug)}
+            onSaved={(savedSlug) => setSelection(savedSlug)}
             page={selection === "new" ? null : selected}
           />
         ) : (
@@ -272,7 +290,8 @@ export function PagesPage() {
             <p className="eyebrow">Pages</p>
             <h2>Select a page or create a new one.</h2>
             <p className="muted">
-              Saving changes updates only the Draft. Mobile and Web remain on the current immutable release.
+              Saving changes updates only the Draft. Mobile and Web remain on the current
+              immutable release.
             </p>
           </article>
         )}
