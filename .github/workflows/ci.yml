@@ -1,0 +1,43 @@
+name: Admin Web CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: https://example.invalid
+          VITE_FIREBASE_API_KEY: ci-placeholder
+          VITE_FIREBASE_AUTH_DOMAIN: ci.example.invalid
+          VITE_FIREBASE_PROJECT_ID: ci-project
+          VITE_FIREBASE_APP_ID: ci-app
+          VITE_FIREBASE_APPCHECK_SITE_KEY: ci-site-key
+        run: npm run build
