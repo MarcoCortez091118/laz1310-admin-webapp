@@ -7,8 +7,10 @@ import {
 import { AdminShell } from "./app/AdminShell";
 import { AuthGate } from "./features/auth/AuthGate";
 import { LoginPage } from "./features/auth/LoginPage";
+import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
+import { PagesPage } from "./features/pages/PagesPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -23,7 +25,9 @@ const adminRoute = createRoute({
   id: "admin",
   component: () => (
     <AuthGate>
-      <AdminShell />
+      <StaffGate>
+        <AdminShell />
+      </StaffGate>
     </AuthGate>
   ),
 });
@@ -37,9 +41,7 @@ const overviewRoute = createRoute({
 const pagesRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/pages",
-  component: () => (
-    <PlaceholderPage dependency="Draft Page contracts" title="Pages" />
-  ),
+  component: PagesPage,
 });
 
 const radioRoute = createRoute({
