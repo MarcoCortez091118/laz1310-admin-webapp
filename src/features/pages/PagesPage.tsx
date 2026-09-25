@@ -2,35 +2,54 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { ApiError } from "../../api/errors";
-import type { Page } from "../../api/types";
+import type { Page, Station } from "../../api/types";
 import { adminQueryKeys, deletePage, putPage } from "../content/api";
-import { useDraftQuery } from "../content/queries";
+import { useDraftQuery, usePreviewQuery } from "../content/queries";
+import { PageBuilder } from "./PageBuilder";
+import { PagePreview } from "./PagePreview";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+type PreviewMode = "live" | "server";
+
 function PageEditor({
   page,
+  pages,
+  stations,
   etag,
+  serverPage,
+  serverRevision,
+  serverPreviewPending,
+  serverPreviewError,
+  onRefreshServerPreview,
   onSaved,
   onDeleted,
   onReload,
 }: {
   page: Page | null;
+  pages: Page[];
+  stations: Station[];
   etag: string;
+  serverPage: Page | null;
+  serverRevision: number | undefined;
+  serverPreviewPending: boolean;
+  serverPreviewError: Error | null;
+  onRefreshServerPreview: () => Promise<unknown>;
   onSaved: (slug: string) => void;
   onDeleted: () => void;
   onReload: () => Promise<unknown>;
 }) {
   const queryClient = useQueryClient();
-  const [slug, setSlug] = useState(page?.slug ?? "");
-  const [title, setTitle] = useState(page?.title ?? "");
   const existing = page !== null;
-  const blocks = page?.blocks ?? [];
+  const [workingPage, setWorkingPage] = useState<Page>(
+    page ?? { slug: "", title: "", blocks: [] },
+  );
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("live");
 
   const save = useMutation({
     mutationFn: async () => {
-      const normalizedSlug = slug.trim().toLowerCase();
-      const normalizedTitle = title.trim();
+      const normalizedSlug = workingPage.slug.trim().toLowerCase();
+      const normalizedTitle = workingPage.title.trim();
 
       if (!SLUG.test(normalizedSlug)) {
         throw new Error("Slug must use lowercase letters, numbers and single hyphens.");
@@ -38,16 +57,23 @@ function PageEditor({
       if (!normalizedTitle) {
         throw new Error("Title is required.");
       }
+      if ((workingPage.blocks ?? []).length > 30) {
+        throw new Error("A page may contain at most 30 blocks.");
+      }
 
-      const payload: Page = page
-        ? { ...page, title: normalizedTitle }
-        : { slug: normalizedSlug, title: normalizedTitle, blocks: [] };
+      const payload: Page = {
+        ...workingPage,
+        slug: normalizedSlug,
+        title: normalizedTitle,
+        blocks: workingPage.blocks ?? [],
+      };
 
       return putPage(payload, etag);
     },
     onSuccess: (result) => {
       queryClient.setQueryData(adminQueryKeys.draft, result);
-      onSaved(page?.slug ?? slug.trim().toLowerCase());
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview });
+      onSaved(workingPage.slug.trim().toLowerCase());
     },
   });
 
@@ -62,6 +88,7 @@ function PageEditor({
       if (result) {
         queryClient.setQueryData(adminQueryKeys.draft, result);
       }
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview });
       onDeleted();
     },
   });
@@ -74,7 +101,7 @@ function PageEditor({
       <div className="editor-heading">
         <div>
           <p className="eyebrow">{existing ? "Edit page" : "New page"}</p>
-          <h2>{existing ? page.title : "Create an empty page"}</h2>
+          <h2>{workingPage.title || "Untitled page"}</h2>
         </div>
         {existing ? (
           <button
@@ -129,9 +156,14 @@ function PageEditor({
           <input
             disabled={existing}
             maxLength={100}
-            onChange={(event) => setSlug(event.target.value)}
+            onChange={(event) =>
+              setWorkingPage((current) => ({
+                ...current,
+                slug: event.target.value,
+              }))
+            }
             placeholder="news"
-            value={slug}
+            value={workingPage.slug}
           />
           <small>
             {existing
@@ -144,37 +176,91 @@ function PageEditor({
           Title
           <input
             maxLength={160}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) =>
+              setWorkingPage((current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
             placeholder="Community News"
-            value={title}
+            value={workingPage.title}
           />
         </label>
       </div>
 
-      <section className="blocks-summary">
-        <div>
-          <strong>Blocks</strong>
-          <span className="muted">
-            {blocks.length} configured. This slice preserves blocks but does not edit them
-            yet.
-          </span>
+      <div className="page-workbench">
+        <PageBuilder
+          onChange={setWorkingPage}
+          page={workingPage}
+          pages={pages}
+          stations={stations}
+        />
+
+        <div className="preview-column">
+          <div className="preview-mode-bar">
+            <div>
+              <button
+                className={previewMode === "live" ? "selected" : ""}
+                onClick={() => setPreviewMode("live")}
+                type="button"
+              >
+                Live Preview
+              </button>
+              <button
+                className={previewMode === "server" ? "selected" : ""}
+                onClick={() => setPreviewMode("server")}
+                type="button"
+              >
+                Server Draft
+              </button>
+            </div>
+            {previewMode === "server" ? (
+              <button
+                className="icon-button"
+                disabled={serverPreviewPending}
+                onClick={() => void onRefreshServerPreview()}
+                title="Refresh server preview"
+                type="button"
+              >
+                <RefreshCw size={15} />
+              </button>
+            ) : null}
+          </div>
+
+          {previewMode === "live" ? (
+            <PagePreview
+              description="Unsaved local composition. Saving is still required."
+              page={workingPage}
+              stations={stations}
+              title="Live Preview"
+            />
+          ) : serverPreviewPending ? (
+            <article className="panel preview-state">Loading persisted Draft preview…</article>
+          ) : serverPreviewError ? (
+            <article className="panel preview-state error-banner">
+              <strong>Server preview unavailable.</strong>
+              <span>{serverPreviewError.message}</span>
+            </article>
+          ) : serverPage ? (
+            <PagePreview
+              description={`Persisted in server Draft revision ${serverRevision ?? "—"}.`}
+              page={serverPage}
+              stations={stations}
+              title="Server Draft Preview"
+            />
+          ) : (
+            <article className="panel preview-state">
+              <strong>This page is not persisted in the Draft yet.</strong>
+              <span className="muted">Save it first, then refresh Server Draft.</span>
+            </article>
+          )}
         </div>
-        {blocks.length ? (
-          <ol>
-            {blocks.map((block, index) => (
-              <li key={block.id ?? `${block.type}-${index}`}>
-                <span>{index + 1}</span>
-                <strong>{block.type}</strong>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="empty-copy">No blocks configured.</p>
-        )}
-      </section>
+      </div>
 
       <div className="editor-actions">
-        <span className="muted">Write is protected by the current Draft ETag.</span>
+        <span className="muted">
+          Saving replaces this Page in the Draft only and is protected by {etag}.
+        </span>
         <button
           disabled={save.isPending || remove.isPending}
           onClick={() => save.mutate()}
@@ -189,12 +275,20 @@ function PageEditor({
 
 export function PagesPage() {
   const draft = useDraftQuery();
+  const preview = usePreviewQuery();
   const [selection, setSelection] = useState<string | "new" | null>(null);
 
   const pages = draft.data?.data.catalog?.pages ?? [];
+  const stations = draft.data?.data.catalog?.stations ?? [];
+  const previewPages = preview.data?.data.catalog?.pages ?? [];
+
   const selected = useMemo(
     () => pages.find((page) => page.slug === selection) ?? null,
     [pages, selection],
+  );
+  const serverSelected = useMemo(
+    () => previewPages.find((page) => page.slug === selection) ?? null,
+    [previewPages, selection],
   );
 
   if (draft.isPending) {
@@ -242,7 +336,9 @@ export function PagesPage() {
         <div>
           <p className="eyebrow">Content / Draft #{draft.data.data.revision ?? "—"}</p>
           <h1>Pages</h1>
-          <p className="muted">Manage page metadata without publishing automatically.</p>
+          <p className="muted">
+            Compose page blocks visually, preview locally, then persist to the Draft.
+          </p>
         </div>
         <button onClick={() => setSelection("new")} type="button">
           <Plus size={16} />
@@ -250,7 +346,7 @@ export function PagesPage() {
         </button>
       </header>
 
-      <div className="content-layout">
+      <div className="content-layout page-content-layout">
         <aside className="panel resource-list">
           <div className="resource-list-heading">
             <strong>{pages.length} pages</strong>
@@ -268,7 +364,9 @@ export function PagesPage() {
                   type="button"
                 >
                   <span>{page.title}</span>
-                  <small>/{page.slug}</small>
+                  <small>
+                    /{page.slug} · {(page.blocks ?? []).length} blocks
+                  </small>
                 </button>
               ))
           ) : (
@@ -279,19 +377,28 @@ export function PagesPage() {
         {selection === "new" || selected ? (
           <PageEditor
             etag={etag}
-            key={selection}
+            key={`${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
             onDeleted={() => setSelection(null)}
+            onRefreshServerPreview={async () => preview.refetch()}
             onReload={async () => draft.refetch()}
             onSaved={(savedSlug) => setSelection(savedSlug)}
             page={selection === "new" ? null : selected}
+            pages={pages}
+            serverPage={selection === "new" ? null : serverSelected}
+            serverPreviewError={
+              preview.error instanceof Error ? preview.error : null
+            }
+            serverPreviewPending={preview.isPending || preview.isFetching}
+            serverRevision={preview.data?.data.revision}
+            stations={stations}
           />
         ) : (
           <article className="panel empty-editor">
             <p className="eyebrow">Pages</p>
             <h2>Select a page or create a new one.</h2>
             <p className="muted">
-              Saving changes updates only the Draft. Mobile and Web remain on the current
-              immutable release.
+              Changes remain local until Save. Saving updates only the Draft; Mobile and
+              Web remain on the current immutable release.
             </p>
           </article>
         )}
