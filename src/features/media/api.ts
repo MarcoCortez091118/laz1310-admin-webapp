@@ -1,6 +1,8 @@
 import { apiRequest, type ApiResult } from "../../api/client";
 import type { MediaAsset } from "../../api/types";
 
+export type MediaAssetId = ReturnType<Crypto["randomUUID"]>;
+
 export const mediaQueryKeys = {
   all: ["admin", "media"] as const,
   list: (limit: number) => ["admin", "media", "list", limit] as const,
@@ -8,7 +10,7 @@ export const mediaQueryKeys = {
 
 export function listMedia(
   limit: number,
-  after?: string | null,
+  after?: MediaAssetId | null,
   signal?: AbortSignal,
 ): Promise<ApiResult<MediaAsset[]>> {
   const params = new URLSearchParams({ limit: String(limit) });
@@ -19,7 +21,7 @@ export function listMedia(
 export function uploadMedia(
   file: File,
   alt: string,
-  assetId = crypto.randomUUID(),
+  assetId: MediaAssetId = crypto.randomUUID(),
   signal?: AbortSignal,
 ): Promise<ApiResult<MediaAsset>> {
   const params = new URLSearchParams({ alt: alt.trim() });
