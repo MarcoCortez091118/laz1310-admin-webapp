@@ -2,6 +2,7 @@ import { FileImage, ShieldCheck, Upload, X } from "lucide-react";
 import { useId, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { MediaAsset } from "../../api/types";
+import type { MediaAssetId } from "./api";
 import {
   formatBytes,
   MAX_ALT_LENGTH,
@@ -20,7 +21,7 @@ export function MediaUploadPanel({
 }) {
   const inputId = useId();
   const [file, setFile] = useState<File | null>(null);
-  const [assetId, setAssetId] = useState<string | null>(null);
+  const [assetId, setAssetId] = useState<MediaAssetId | null>(null);
   const [alt, setAlt] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
