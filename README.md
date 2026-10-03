@@ -22,15 +22,15 @@ LA Z FastAPI /api/v1
 
 FastAPI is the source of truth. The Admin WebApp must not write directly to Firestore, Cloud Storage, FCM, or the Mobile app.
 
-## Planned stack
+## Stack
 
 - React + TypeScript + Vite
 - TanStack Router and TanStack Query
 - Firebase Web SDK for Auth and App Check
 - OpenAPI-generated FastAPI contracts
 - React Hook Form + Zod
-- Tailwind CSS
-- Vitest + React Testing Library + Playwright
+- Tailwind CSS + Lucide React
+- Vitest + React Testing Library
 
 ## Security boundaries
 
@@ -39,7 +39,29 @@ FastAPI is the source of truth. The Admin WebApp must not write directly to Fire
 - PII from Dynamics participations must never be persisted in browser storage or logged.
 - Draft writes must preserve the backend `ETag` / `If-Match` concurrency contract.
 - A `409 Conflict` must cause reload/reconciliation, never automatic overwrite.
+- The browser does not write directly to Firestore, Cloud Storage, or FCM.
 
-## Status
+## Current implementation
 
-Foundation initialization in progress.
+Implemented:
+
+- Firebase email authentication + App Check;
+- FastAPI staff authorization (`editor` / `admin`);
+- Overview / Draft status;
+- Pages editor with Live Preview and Server Draft Preview;
+- Programs editor backed by Station `Show` + `Schedule` contracts;
+- optimistic concurrency and request-id aware error handling;
+- OpenAPI-generated API types in CI.
+
+Planned administration surfaces already represented in navigation:
+
+- Radio;
+- Dynamics;
+- Media;
+- Releases / Publish / Rollback;
+- Weather;
+- Notifications;
+- Audit;
+- App Configuration.
+
+See `docs/architecture.md` for platform boundaries and `docs/programs.md` for the Programs workflow.

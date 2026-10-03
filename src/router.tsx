@@ -11,6 +11,7 @@ import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
 import { PagesPage } from "./features/pages/PagesPage";
+import { ProgramsPage } from "./features/programs/ProgramsPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -49,10 +50,16 @@ const radioRoute = createRoute({
   path: "/radio",
   component: () => (
     <PlaceholderPage
-      dependency="Station / Stream / Show / Schedule contracts"
+      dependency="Station / Stream contracts"
       title="Radio"
     />
   ),
+});
+
+const programsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/programs",
+  component: ProgramsPage,
 });
 
 const dynamicsRoute = createRoute({
@@ -101,7 +108,7 @@ const notificationsRoute = createRoute({
   path: "/notifications",
   component: () => (
     <PlaceholderPage
-      dependency="Blocked until backend LAZ-28 is implemented"
+      dependency="Notification campaign administration contracts"
       title="Notifications"
     />
   ),
@@ -132,6 +139,7 @@ const routeTree = rootRoute.addChildren([
     overviewRoute,
     pagesRoute,
     radioRoute,
+    programsRoute,
     dynamicsRoute,
     mediaRoute,
     releasesRoute,
