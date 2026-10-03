@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import {
   listMedia,
   type MediaAssetId,
+  type MediaCursor,
   mediaQueryKeys,
   uploadMedia,
 } from "./api";
@@ -10,7 +11,7 @@ export function useMediaLibraryQuery(limit = 24) {
   return useInfiniteQuery({
     queryKey: mediaQueryKeys.list(limit),
     queryFn: ({ pageParam, signal }) => listMedia(limit, pageParam, signal),
-    initialPageParam: null as MediaAssetId | null,
+    initialPageParam: null as MediaCursor | null,
     getNextPageParam: (lastPage) => {
       if (lastPage.data.length < limit) return undefined;
       return lastPage.data.at(-1)?.id ?? undefined;
