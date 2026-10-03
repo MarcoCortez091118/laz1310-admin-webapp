@@ -379,7 +379,7 @@ export function ProgramEditor({
         <aside className="program-preview-card" aria-label="Mobile program preview">
           <div className="program-preview-art">
             {imageUrl?.startsWith("https://") ? (
-              <img alt="" src={imageUrl} />
+              <img alt="" referrerPolicy="no-referrer" src={imageUrl} />
             ) : (
               <div className="program-preview-placeholder">
                 <span>LA Z</span>
