@@ -214,7 +214,7 @@ export function ProgramsPage() {
                 >
                   <div className="program-card-art">
                     {program.imageUrl ? (
-                      <img alt="" src={program.imageUrl} />
+                      <img alt="" referrerPolicy="no-referrer" src={program.imageUrl} />
                     ) : (
                       <div className="program-card-placeholder">LA Z</div>
                     )}
