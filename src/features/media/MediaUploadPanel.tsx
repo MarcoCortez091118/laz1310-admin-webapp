@@ -110,7 +110,11 @@ export function MediaUploadPanel({
         <input
           accept={MEDIA_ACCEPT.join(",")}
           id={inputId}
-          onChange={(event) => chooseFile(event.target.files?.item(0) ?? null)}
+          onChange={(event) => {
+            const next = event.currentTarget.files?.item(0) ?? null;
+            event.currentTarget.value = "";
+            chooseFile(next);
+          }}
           type="file"
         />
         {file ? (
