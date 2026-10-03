@@ -17,7 +17,8 @@ export function useMediaLibraryQuery(limit = 24) {
 export function useUploadMediaMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, alt }: { file: File; alt: string }) => uploadMedia(file, alt),
+    mutationFn: ({ file, alt, assetId }: { file: File; alt: string; assetId: string }) =>
+      uploadMedia(file, alt, assetId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: mediaQueryKeys.all }),
   });
 }
