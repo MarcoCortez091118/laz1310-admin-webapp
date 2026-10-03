@@ -256,7 +256,8 @@
 }
 
 .program-form-grid label,
-.schedule-editor-row label {
+.schedule-editor-row label,
+.program-artwork-field {
   display: grid;
   gap: 6px;
   font-size: 12px;
@@ -264,7 +265,8 @@
 }
 
 .program-form-grid input,
-.schedule-editor-row input {
+.schedule-editor-row input,
+.program-artwork-field input {
   width: 100%;
   border: 1px solid #d4d4d8;
   border-radius: 11px;
@@ -273,7 +275,21 @@
   color: inherit;
 }
 
-.program-form-grid small { color: var(--program-muted); font-weight: 400; line-height: 1.4; }
+.program-form-grid small,
+.program-artwork-field small { color: var(--program-muted); font-weight: 400; line-height: 1.4; }
+
+.program-artwork-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.program-artwork-actions .secondary-button {
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
 
 .program-switch {
   grid-template-columns: auto minmax(0, 1fr) !important;
@@ -369,7 +385,8 @@
 
   .program-filter button.selected { background: #f4f4f5; color: #18181b; }
   .program-form-grid input,
-  .schedule-editor-row input { border-color: #3f3f46; }
+  .schedule-editor-row input,
+  .program-artwork-field input { border-color: #3f3f46; }
   .program-card:hover,
   .program-card.selected { border-color: #52525b; }
 }
