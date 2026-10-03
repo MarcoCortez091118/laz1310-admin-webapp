@@ -5,25 +5,25 @@ import { useDraftQuery } from "../content/queries";
 import { ProgramEditor } from "./ProgramEditor";
 import {
   displayTime,
+  programsForStation,
   type Program,
   schedulesForProgram,
   WEEKDAYS,
 } from "./model";
-
-function stationPrograms(station: Station): Program[] {
-  return station.shows ?? [];
-}
+import "./programs.css";
 
 function scheduleSummary(station: Station, program: Program): string {
   const entries = schedulesForProgram(station, program.id);
   if (!entries.length) return "No schedule";
-  return entries
-    .slice(0, 3)
-    .map(
-      (entry) =>
-        `${WEEKDAYS[entry.weekday].slice(0, 3)} ${displayTime(entry.startsAt)}–${displayTime(entry.endsAt)}`,
-    )
-    .join(" · ") + (entries.length > 3 ? ` +${entries.length - 3}` : "");
+  return (
+    entries
+      .slice(0, 3)
+      .map(
+        (entry) =>
+          `${WEEKDAYS[entry.weekday].slice(0, 3)} ${displayTime(entry.startsAt)}–${displayTime(entry.endsAt)}`,
+      )
+      .join(" · ") + (entries.length > 3 ? ` +${entries.length - 3}` : "")
+  );
 }
 
 export function ProgramsPage() {
@@ -35,7 +35,8 @@ export function ProgramsPage() {
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
 
   useEffect(() => {
-    if (!stationId && stations[0]?.id) setStationId(stations[0].id);
+    const firstStationId = stations[0]?.id;
+    if (!stationId && firstStationId) setStationId(firstStationId);
   }, [stationId, stations]);
 
   const station = useMemo(
@@ -46,7 +47,7 @@ export function ProgramsPage() {
   const programs = useMemo(() => {
     if (!station) return [];
     const normalized = search.trim().toLowerCase();
-    return stationPrograms(station)
+    return programsForStation(station)
       .filter((program) => {
         const active = program.isActive ?? true;
         const matchStatus =
@@ -64,7 +65,7 @@ export function ProgramsPage() {
   const selected = useMemo(
     () =>
       station && selection && selection !== "new"
-        ? stationPrograms(station).find((program) => program.id === selection) ?? null
+        ? programsForStation(station).find((program) => program.id === selection) ?? null
         : null,
     [selection, station],
   );
@@ -86,7 +87,9 @@ export function ProgramsPage() {
           <p className="muted">
             {draft.error instanceof Error ? draft.error.message : "Admin API unavailable."}
           </p>
-          <button onClick={() => void draft.refetch()} type="button">Retry</button>
+          <button onClick={() => void draft.refetch()} type="button">
+            Retry
+          </button>
         </article>
       </section>
     );
@@ -120,7 +123,9 @@ export function ProgramsPage() {
     );
   }
 
-  const activeCount = stationPrograms(station).filter((program) => program.isActive ?? true).length;
+  const activeCount = programsForStation(station).filter(
+    (program) => program.isActive ?? true,
+  ).length;
   const scheduledCount = new Set((station.schedule ?? []).map((entry) => entry.showId)).size;
 
   return (
@@ -141,11 +146,15 @@ export function ProgramsPage() {
 
       <div className="program-metrics">
         <article className="program-metric-card">
-          <span><UsersRound size={16} /> Active programs</span>
+          <span>
+            <UsersRound size={16} /> Active programs
+          </span>
           <strong>{activeCount}</strong>
         </article>
         <article className="program-metric-card">
-          <span><CalendarDays size={16} /> Scheduled programs</span>
+          <span>
+            <CalendarDays size={16} /> Scheduled programs
+          </span>
           <strong>{scheduledCount}</strong>
         </article>
         <article className="program-metric-card wide">
@@ -156,10 +165,12 @@ export function ProgramsPage() {
               setStationId(event.target.value);
               setSelection(null);
             }}
-            value={station.id}
+            value={station.id ?? ""}
           >
             {stations.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
             ))}
           </select>
         </article>
@@ -191,33 +202,35 @@ export function ProgramsPage() {
 
       <div className="content-layout programs-content-layout">
         <aside className="program-card-grid" aria-label="Programs list">
-          {programs.length ? programs.map((program) => {
-            const active = program.isActive ?? true;
-            return (
-              <button
-                className={`program-card ${selection === program.id ? "selected" : ""}`}
-                key={program.id}
-                onClick={() => setSelection(program.id)}
-                type="button"
-              >
-                <div className="program-card-art">
-                  {program.imageUrl ? (
-                    <img alt="" src={program.imageUrl} />
-                  ) : (
-                    <div className="program-card-placeholder">LA Z</div>
-                  )}
-                  <span className={active ? "program-state active" : "program-state"}>
-                    {active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-                <div className="program-card-copy">
-                  <strong>{program.name}</strong>
-                  <span>{program.hostName || "No host assigned"}</span>
-                  <small>{scheduleSummary(station, program)}</small>
-                </div>
-              </button>
-            );
-          }) : (
+          {programs.length ? (
+            programs.map((program) => {
+              const active = program.isActive ?? true;
+              return (
+                <button
+                  className={`program-card ${selection === program.id ? "selected" : ""}`}
+                  key={program.id}
+                  onClick={() => setSelection(program.id)}
+                  type="button"
+                >
+                  <div className="program-card-art">
+                    {program.imageUrl ? (
+                      <img alt="" src={program.imageUrl} />
+                    ) : (
+                      <div className="program-card-placeholder">LA Z</div>
+                    )}
+                    <span className={active ? "program-state active" : "program-state"}>
+                      {active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <div className="program-card-copy">
+                    <strong>{program.name}</strong>
+                    <span>{program.hostName || "No host assigned"}</span>
+                    <small>{scheduleSummary(station, program)}</small>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
             <article className="panel program-list-empty">
               <strong>No programs found.</strong>
               <span>Adjust the filters or create a new program.</span>
@@ -228,7 +241,7 @@ export function ProgramsPage() {
         {selection === "new" || selected ? (
           <ProgramEditor
             etag={etag}
-            key={`${station.id}-${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
+            key={`${station.id ?? "station"}-${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
             onDeleted={() => setSelection(null)}
             onReload={async () => draft.refetch()}
             onSaved={(programId) => setSelection(programId)}
