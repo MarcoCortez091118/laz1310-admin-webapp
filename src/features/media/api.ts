@@ -2,6 +2,7 @@ import { apiRequest, type ApiResult } from "../../api/client";
 import type { MediaAsset } from "../../api/types";
 
 export type MediaAssetId = ReturnType<Crypto["randomUUID"]>;
+export type MediaCursor = MediaAsset["id"];
 
 export const mediaQueryKeys = {
   all: ["admin", "media"] as const,
@@ -10,7 +11,7 @@ export const mediaQueryKeys = {
 
 export function listMedia(
   limit: number,
-  after?: MediaAssetId | null,
+  after?: MediaCursor | null,
   signal?: AbortSignal,
 ): Promise<ApiResult<MediaAsset[]>> {
   const params = new URLSearchParams({ limit: String(limit) });
