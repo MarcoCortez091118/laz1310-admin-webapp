@@ -20,6 +20,8 @@ function station(): Station {
     slug: "la-z-detroit",
     name: "LA Z Detroit",
     timezone: "America/Detroit",
+    locale: "es-US",
+    isActive: true,
     streams: [],
     shows: [
       {
