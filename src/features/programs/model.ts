@@ -1,7 +1,17 @@
 import type { Station } from "../../api/types";
 
-export type Program = NonNullable<Station["shows"]>[number];
-export type ScheduleEntry = NonNullable<Station["schedule"]>[number];
+type GeneratedProgram = NonNullable<Station["shows"]>[number];
+type GeneratedScheduleEntry = NonNullable<Station["schedule"]>[number];
+
+export type Program = Omit<GeneratedProgram, "id" | "slug" | "name"> & {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+export type ScheduleEntry = Omit<GeneratedScheduleEntry, "id"> & {
+  id: string;
+};
 
 export const WEEKDAYS = [
   "Monday",
@@ -15,12 +25,20 @@ export const WEEKDAYS = [
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function shows(station: Station): Program[] {
-  return station.shows ?? [];
+function hasProgramIdentity(program: GeneratedProgram): program is Program {
+  return Boolean(program.id && program.slug && program.name);
+}
+
+function hasScheduleIdentity(entry: GeneratedScheduleEntry): entry is ScheduleEntry {
+  return Boolean(entry.id);
+}
+
+export function programsForStation(station: Station): Program[] {
+  return (station.shows ?? []).filter(hasProgramIdentity);
 }
 
 function schedule(station: Station): ScheduleEntry[] {
-  return station.schedule ?? [];
+  return (station.schedule ?? []).filter(hasScheduleIdentity);
 }
 
 function minutes(value: string): number {
@@ -55,16 +73,19 @@ export function validateProgram(program: Program): string[] {
 
 export function validateSchedule(station: Station): string[] {
   const activeShowIds = new Set(
-    shows(station)
+    programsForStation(station)
       .filter((show) => show.isActive ?? true)
       .map((show) => show.id),
   );
 
-  const intervals = schedule(station)
-    .filter(
-      (entry) =>
-        (entry.isActive ?? true) && activeShowIds.has(entry.showId),
-    )
+  const activeEntries = schedule(station).filter(
+    (entry) => (entry.isActive ?? true) && activeShowIds.has(entry.showId),
+  );
+  if (activeEntries.some((entry) => entry.startsAt === entry.endsAt)) {
+    return ["Schedule start and end times must differ."];
+  }
+
+  const intervals = activeEntries
     .flatMap((entry) => interval(entry).map(([start, end]) => ({ start, end })))
     .sort((left, right) => left.start - right.start);
 
@@ -94,7 +115,7 @@ export function upsertProgram(
   program: Program,
   programSchedule: ScheduleEntry[],
 ): Station {
-  const currentShows = shows(station);
+  const currentShows = programsForStation(station);
   const currentSchedule = schedule(station);
   const programs = currentShows.some((item) => item.id === program.id)
     ? currentShows.map((item) => (item.id === program.id ? program : item))
@@ -117,7 +138,7 @@ export function upsertProgram(
 export function removeProgram(station: Station, programId: string): Station {
   return {
     ...station,
-    shows: shows(station).filter((show) => show.id !== programId),
+    shows: programsForStation(station).filter((show) => show.id !== programId),
     schedule: schedule(station).filter((entry) => entry.showId !== programId),
   };
 }
