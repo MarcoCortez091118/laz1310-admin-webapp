@@ -5,6 +5,7 @@ export type Draft = components["schemas"]["Draft"];
 export type PublicState = components["schemas"]["PublicState"];
 export type Page = components["schemas"]["Page"];
 export type Station = components["schemas"]["Station"];
+export type MediaAsset = components["schemas"]["AssetResponse"];
 export type Link = components["schemas"]["Link"];
 export type Card = components["schemas"]["Card"];
 export type HeroBlock = components["schemas"]["HeroBlock"];
