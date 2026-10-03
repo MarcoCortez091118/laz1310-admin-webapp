@@ -1,7 +1,7 @@
 import type { Station } from "../../api/types";
 
-export type Program = Station["shows"][number];
-export type ScheduleEntry = Station["schedule"][number];
+export type Program = NonNullable<Station["shows"]>[number];
+export type ScheduleEntry = NonNullable<Station["schedule"]>[number];
 
 export const WEEKDAYS = [
   "Monday",
@@ -14,6 +14,14 @@ export const WEEKDAYS = [
 ] as const;
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function shows(station: Station): Program[] {
+  return station.shows ?? [];
+}
+
+function schedule(station: Station): ScheduleEntry[] {
+  return station.schedule ?? [];
+}
 
 function minutes(value: string): number {
   const [hour, minute] = value.split(":").map(Number);
@@ -47,28 +55,31 @@ export function validateProgram(program: Program): string[] {
 
 export function validateSchedule(station: Station): string[] {
   const activeShowIds = new Set(
-    station.shows.filter((show) => show.isActive).map((show) => show.id),
+    shows(station)
+      .filter((show) => show.isActive ?? true)
+      .map((show) => show.id),
   );
 
-  const intervals = station.schedule
-    .filter((entry) => entry.isActive && activeShowIds.has(entry.showId))
-    .flatMap((entry) => interval(entry).map(([start, end]) => ({ start, end, entry })))
+  const intervals = schedule(station)
+    .filter(
+      (entry) =>
+        (entry.isActive ?? true) && activeShowIds.has(entry.showId),
+    )
+    .flatMap((entry) => interval(entry).map(([start, end]) => ({ start, end })))
     .sort((left, right) => left.start - right.start);
 
-  const issues: string[] = [];
   for (let index = 1; index < intervals.length; index += 1) {
     const previous = intervals[index - 1];
     const current = intervals[index];
     if (current.start < previous.end) {
-      issues.push("Active program schedules cannot overlap.");
-      break;
+      return ["Active program schedules cannot overlap."];
     }
   }
-  return issues;
+  return [];
 }
 
 export function schedulesForProgram(station: Station, programId: string): ScheduleEntry[] {
-  return station.schedule
+  return schedule(station)
     .filter((entry) => entry.showId === programId)
     .slice()
     .sort((left, right) =>
@@ -81,18 +92,20 @@ export function schedulesForProgram(station: Station, programId: string): Schedu
 export function upsertProgram(
   station: Station,
   program: Program,
-  schedule: ScheduleEntry[],
+  programSchedule: ScheduleEntry[],
 ): Station {
-  const programs = station.shows.some((item) => item.id === program.id)
-    ? station.shows.map((item) => (item.id === program.id ? program : item))
-    : [...station.shows, program];
+  const currentShows = shows(station);
+  const currentSchedule = schedule(station);
+  const programs = currentShows.some((item) => item.id === program.id)
+    ? currentShows.map((item) => (item.id === program.id ? program : item))
+    : [...currentShows, program];
 
   const next: Station = {
     ...station,
     shows: programs,
     schedule: [
-      ...station.schedule.filter((entry) => entry.showId !== program.id),
-      ...schedule.map((entry) => ({ ...entry, showId: program.id })),
+      ...currentSchedule.filter((entry) => entry.showId !== program.id),
+      ...programSchedule.map((entry) => ({ ...entry, showId: program.id })),
     ],
   };
 
@@ -104,8 +117,8 @@ export function upsertProgram(
 export function removeProgram(station: Station, programId: string): Station {
   return {
     ...station,
-    shows: station.shows.filter((show) => show.id !== programId),
-    schedule: station.schedule.filter((entry) => entry.showId !== programId),
+    shows: shows(station).filter((show) => show.id !== programId),
+    schedule: schedule(station).filter((entry) => entry.showId !== programId),
   };
 }
 
