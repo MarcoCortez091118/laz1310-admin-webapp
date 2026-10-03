@@ -58,15 +58,15 @@ export function MediaLibraryPage() {
       </header>
 
       <div className="media-metrics">
-        <article className="program-metric-card">
+        <article className="metric-card">
           <span><ImageIcon size={16} /> Loaded assets</span>
           <strong>{assets.length}</strong>
         </article>
-        <article className="program-metric-card">
+        <article className="metric-card">
           <span><Database size={16} /> Storage output</span>
           <strong>WebP</strong>
         </article>
-        <article className="program-metric-card wide">
+        <article className="metric-card wide">
           <span>Security boundary</span>
           <strong>Admin API → Storage</strong>
           <small>No direct browser write access to the bucket.</small>
