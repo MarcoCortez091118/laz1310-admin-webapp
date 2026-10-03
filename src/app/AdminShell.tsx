@@ -2,6 +2,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
+  CalendarRange,
   CloudSun,
   FileClock,
   FileText,
@@ -19,6 +20,7 @@ const navigation = [
   { label: "Overview", to: "/", icon: LayoutDashboard, adminOnly: false },
   { label: "Pages", to: "/pages", icon: FileText, adminOnly: false },
   { label: "Radio", to: "/radio", icon: Radio, adminOnly: false },
+  { label: "Programs", to: "/programs", icon: CalendarRange, adminOnly: false },
   { label: "Dynamics", to: "/dynamics", icon: Sparkles, adminOnly: false },
   { label: "Media", to: "/media", icon: Image, adminOnly: false },
   { label: "Releases", to: "/releases", icon: FileClock, adminOnly: true },
