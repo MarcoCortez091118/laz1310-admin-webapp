@@ -20,6 +20,7 @@ export function MediaUploadPanel({
 }) {
   const inputId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [assetId, setAssetId] = useState<string | null>(null);
   const [alt, setAlt] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -30,15 +31,18 @@ export function MediaUploadPanel({
     setLocalError(null);
     if (!next) {
       setFile(null);
+      setAssetId(null);
       return;
     }
     const issue = validateMediaFile(next);
     if (issue) {
       setFile(null);
+      setAssetId(null);
       setLocalError(issue);
       return;
     }
     setFile(next);
+    setAssetId(crypto.randomUUID());
     if (!alt.trim()) {
       setAlt(next.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "));
     }
@@ -48,18 +52,19 @@ export function MediaUploadPanel({
     const fileIssue = file ? validateMediaFile(file) : "Choose an image to upload.";
     const altIssue = validateAltText(alt);
     const issue = fileIssue ?? altIssue;
-    if (issue || !file) {
-      setLocalError(issue);
+    if (issue || !file || !assetId) {
+      setLocalError(issue ?? "Choose the image again before uploading.");
       return;
     }
 
     setLocalError(null);
     upload.mutate(
-      { file, alt },
+      { file, alt, assetId },
       {
         onSuccess: (result) => {
           onUploaded?.(result.data);
           setFile(null);
+          setAssetId(null);
           setAlt("");
         },
       },
