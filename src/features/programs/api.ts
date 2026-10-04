@@ -20,3 +20,16 @@ export function putStation(
     { ifMatch: etag, signal },
   );
 }
+
+export function deleteProgram(
+  stationId: string,
+  programId: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<Draft>> {
+  return apiRequest<Draft>(
+    `/api/v1/admin/stations/${encodeURIComponent(stationId)}/shows/${encodeURIComponent(programId)}`,
+    { method: "DELETE" },
+    { ifMatch: etag, signal },
+  );
+}
