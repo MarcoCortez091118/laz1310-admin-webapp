@@ -1,10 +1,32 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import {
   CalendarClock,
+  Clock3,
   Image as ImageIcon,
   Images,
   Plus,
   RefreshCw,
+  Save,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -12,14 +34,13 @@ import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
 import { MediaPickerDialog } from "../media/MediaPickerDialog";
-import { putStation } from "./api";
+import { deleteProgram, putStation } from "./api";
 import {
   apiTime,
   createProgram,
   createScheduleEntry,
   displayTime,
   type Program,
-  removeProgram,
   type ScheduleEntry,
   schedulesForProgram,
   upsertProgram,
@@ -65,6 +86,7 @@ export function ProgramEditor({
   );
   const [slugTouched, setSlugTouched] = useState(existing);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -84,6 +106,10 @@ export function ProgramEditor({
         endsAt: apiTime(displayTime(entry.endsAt)),
         isActive: entry.isActive ?? true,
       }));
+
+      // Program + all of its schedule entries are intentionally validated and written
+      // as one Station replacement. The API documents this route as the atomic aggregate
+      // boundary and protects the write with If-Match.
       const nextStation = upsertProgram(station, payload, schedule);
       return putStation(nextStation, etag);
     },
@@ -95,10 +121,14 @@ export function ProgramEditor({
   });
 
   const remove = useMutation({
-    mutationFn: async () => putStation(removeProgram(station, workingProgram.id), etag),
+    mutationFn: async () => {
+      if (!station.id) throw new Error("Station ID is required to delete a program.");
+      return deleteProgram(station.id, workingProgram.id, etag);
+    },
     onSuccess: (result) => {
       queryClient.setQueryData(adminQueryKeys.draft, result);
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview });
+      setDeleteOpen(false);
       onDeleted();
     },
   });
@@ -106,6 +136,7 @@ export function ProgramEditor({
   const error = save.error ?? remove.error;
   const conflict = error instanceof ApiError && error.kind === "conflict";
   const imageUrl = workingProgram.imageUrl?.trim();
+  const busy = save.isPending || remove.isPending;
 
   function updateSchedule(id: string, patch: Partial<ScheduleEntry>) {
     setWorkingSchedule((current) =>
@@ -114,82 +145,89 @@ export function ProgramEditor({
   }
 
   return (
-    <article className="panel program-editor">
-      <div className="editor-heading">
-        <div>
-          <p className="eyebrow">{existing ? "Edit program" : "New program"}</p>
-          <h2>{workingProgram.name || "Untitled program"}</h2>
-          <p className="muted program-editor-intro">
-            Program metadata and its schedule are saved atomically as one Station Draft mutation.
-          </p>
-        </div>
-        {existing ? (
-          <button
-            className="danger-button"
-            disabled={remove.isPending || save.isPending}
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Delete "${workingProgram.name}" and all of its schedule entries from the Draft?`,
-                )
-              ) {
-                remove.mutate();
-              }
-            }}
-            type="button"
-          >
-            <Trash2 size={16} />
-            Delete
-          </button>
-        ) : null}
-      </div>
-
-      {conflict ? (
-        <div className="conflict-banner">
-          <div>
-            <strong>The Draft changed while you were editing.</strong>
-            <span>Reload the current revision before saving. Nothing will be overwritten.</span>
-          </div>
-          <button
-            onClick={() => {
-              void onReload();
-              save.reset();
-              remove.reset();
-            }}
-            type="button"
-          >
-            <RefreshCw size={16} />
-            Reload Draft
-          </button>
-        </div>
-      ) : error ? (
-        <div className="error-banner">
-          <div>
-            <strong>Unable to update this program.</strong>
-            <span>{error instanceof Error ? error.message : "Unknown error"}</span>
-            {error instanceof ApiError && error.requestId ? (
-              <code>Request ID: {error.requestId}</code>
+    <Paper className="program-mui-editor" elevation={0}>
+      <Stack spacing={2.25}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "stretch", md: "flex-start" }}
+          spacing={1.5}
+        >
+          <Box>
+            <Typography variant="overline" color="primary.main" fontWeight={800} letterSpacing="0.1em">
+              {existing ? "Edit program" : "New program"}
+            </Typography>
+            <Typography variant="h5" fontWeight={850} sx={{ letterSpacing: "-0.035em" }}>
+              {workingProgram.name || "Untitled program"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Program metadata and weekly schedule are validated together before the Draft is replaced.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              color={workingProgram.isActive ?? true ? "success" : "default"}
+              label={workingProgram.isActive ?? true ? "Active" : "Inactive"}
+              size="small"
+            />
+            <Chip label={`${workingSchedule.length} slot${workingSchedule.length === 1 ? "" : "s"}`} size="small" variant="outlined" />
+            {existing ? (
+              <Tooltip title="Remove program from Draft">
+                <IconButton color="error" onClick={() => setDeleteOpen(true)} disabled={busy}>
+                  <Trash2 size={18} />
+                </IconButton>
+              </Tooltip>
             ) : null}
-          </div>
-        </div>
-      ) : null}
+          </Stack>
+        </Stack>
 
-      <div className="program-workbench">
-        <div className="program-form-column">
-          <section className="program-section">
-            <div className="program-section-heading">
-              <div className="program-section-icon"><ImageIcon size={17} /></div>
-              <div>
-                <strong>Program details</strong>
-                <span>Information displayed in the mobile app.</span>
-              </div>
-            </div>
+        {conflict ? (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                startIcon={<RefreshCw size={15} />}
+                onClick={() => {
+                  void onReload();
+                  save.reset();
+                  remove.reset();
+                }}
+              >
+                Reload Draft
+              </Button>
+            }
+          >
+            The Draft changed while you were editing. Reload the current revision before saving; nothing will be overwritten.
+          </Alert>
+        ) : error ? (
+          <Alert severity="error">
+            <strong>Unable to update this program.</strong>{" "}
+            {error instanceof Error ? error.message : "Unknown error"}
+            {error instanceof ApiError && error.requestId ? ` · Request ID ${error.requestId}` : ""}
+          </Alert>
+        ) : null}
 
-            <div className="program-form-grid">
-              <label>
-                Program name
-                <input
-                  maxLength={160}
+        <Box className="program-editor-mui-workbench">
+          <Stack spacing={2} minWidth={0}>
+            <Paper className="program-editor-section" variant="outlined">
+              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
+                <Box className="program-editor-section-icon"><ImageIcon size={17} /></Box>
+                <Box>
+                  <Typography fontWeight={800}>Program details</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Listener-facing metadata delivered by the published release.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Box className="program-editor-fields">
+                <TextField
+                  label="Program name"
+                  required
+                  value={workingProgram.name}
+                  inputProps={{ maxLength: 160 }}
                   onChange={(event) => {
                     const name = event.target.value;
                     setWorkingProgram((current) => ({
@@ -199,258 +237,253 @@ export function ProgramEditor({
                     }));
                   }}
                   placeholder="El Show de LA Z"
-                  value={workingProgram.name}
                 />
-              </label>
-              <label>
-                Slug
-                <input
+                <TextField
+                  label="Slug"
+                  required
                   disabled={existing}
-                  maxLength={100}
+                  value={workingProgram.slug}
+                  inputProps={{ maxLength: 100, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" }}
+                  helperText={existing ? "Existing program slugs remain stable." : "Generated from the name; editable before first save."}
                   onChange={(event) => {
                     setSlugTouched(true);
-                    setWorkingProgram((current) => ({
-                      ...current,
-                      slug: event.target.value,
-                    }));
+                    setWorkingProgram((current) => ({ ...current, slug: event.target.value.toLowerCase() }));
                   }}
                   placeholder="el-show-de-la-z"
-                  value={workingProgram.slug}
                 />
-                <small>{existing ? "Existing program slugs remain stable." : "Generated from the name; you may edit it before saving."}</small>
-              </label>
-              <label>
-                Host
-                <input
-                  maxLength={160}
-                  onChange={(event) =>
-                    setWorkingProgram((current) => ({
-                      ...current,
-                      hostName: event.target.value,
-                    }))
-                  }
-                  placeholder="Host name"
+                <TextField
+                  label="Host"
                   value={workingProgram.hostName ?? ""}
+                  inputProps={{ maxLength: 160 }}
+                  onChange={(event) => setWorkingProgram((current) => ({ ...current, hostName: event.target.value }))}
+                  placeholder="Host name"
                 />
-              </label>
-              <div className="program-artwork-field">
-                <span>Artwork</span>
-                <input
-                  aria-label="Artwork URL"
-                  inputMode="url"
-                  maxLength={2048}
-                  onChange={(event) =>
-                    setWorkingProgram((current) => ({
-                      ...current,
-                      imageUrl: event.target.value,
-                    }))
-                  }
-                  placeholder="https://.../program.webp"
-                  value={workingProgram.imageUrl ?? ""}
-                />
-                <div className="program-artwork-actions">
-                  <button
-                    className="secondary-button"
-                    onClick={() => setMediaPickerOpen(true)}
-                    type="button"
-                  >
-                    <Images size={15} />
-                    Media Library
-                  </button>
-                  {imageUrl ? (
-                    <button
-                      className="secondary-button"
-                      onClick={() =>
-                        setWorkingProgram((current) => ({ ...current, imageUrl: null }))
-                      }
-                      type="button"
-                    >
-                      Clear
-                    </button>
-                  ) : null}
-                </div>
-                <small>Managed Media Library is recommended; external HTTPS URLs remain supported.</small>
-              </div>
-              <label className="field-span">
-                Description
-                <textarea
-                  maxLength={5000}
-                  onChange={(event) =>
-                    setWorkingProgram((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                  placeholder="Describe the program for listeners."
-                  rows={4}
+                <Box className="program-artwork-mui-field">
+                  <TextField
+                    fullWidth
+                    label="Artwork URL"
+                    value={workingProgram.imageUrl ?? ""}
+                    inputProps={{ maxLength: 2048 }}
+                    onChange={(event) => setWorkingProgram((current) => ({ ...current, imageUrl: event.target.value }))}
+                    placeholder="https://.../program.webp"
+                  />
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <Button variant="outlined" size="small" startIcon={<Images size={15} />} onClick={() => setMediaPickerOpen(true)}>
+                      Media Library
+                    </Button>
+                    {imageUrl ? (
+                      <Button size="small" onClick={() => setWorkingProgram((current) => ({ ...current, imageUrl: null }))}>
+                        Clear
+                      </Button>
+                    ) : null}
+                  </Stack>
+                </Box>
+                <TextField
+                  className="program-field-span"
+                  label="Description"
+                  multiline
+                  minRows={4}
                   value={workingProgram.description ?? ""}
+                  inputProps={{ maxLength: 5000 }}
+                  onChange={(event) => setWorkingProgram((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Describe the program for listeners."
                 />
-              </label>
-              <label className="program-switch field-span">
-                <input
-                  checked={workingProgram.isActive ?? true}
-                  onChange={(event) =>
-                    setWorkingProgram((current) => ({
-                      ...current,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                  type="checkbox"
-                />
-                <span>
-                  <strong>Active program</strong>
-                  <small>Inactive programs remain in the Draft but are omitted from the active schedule.</small>
-                </span>
-              </label>
-            </div>
-          </section>
+                <Box className="program-field-span">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={workingProgram.isActive ?? true}
+                        onChange={(event) => setWorkingProgram((current) => ({ ...current, isActive: event.target.checked }))}
+                      />
+                    }
+                    label="Active program"
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 6 }}>
+                    Inactive programs remain in the Draft but are omitted from active schedule output.
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
 
-          <section className="program-section">
-            <div className="program-section-heading split-heading">
-              <div className="program-section-heading-copy">
-                <div className="program-section-icon"><CalendarClock size={17} /></div>
-                <div>
-                  <strong>Weekly schedule</strong>
-                  <span>Station timezone: {station.timezone ?? "America/Detroit"}</span>
-                </div>
-              </div>
-              <button
-                className="secondary-button"
-                onClick={() =>
-                  setWorkingSchedule((current) => [
-                    ...current,
-                    createScheduleEntry(workingProgram.id),
-                  ])
-                }
-                type="button"
+            <Paper className="program-editor-section" variant="outlined">
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", sm: "center" }}
+                spacing={1.5}
+                sx={{ mb: 2 }}
               >
-                <Plus size={15} />
-                Add time
-              </button>
-            </div>
+                <Stack direction="row" spacing={1.25} alignItems="center">
+                  <Box className="program-editor-section-icon"><CalendarClock size={17} /></Box>
+                  <Box>
+                    <Typography fontWeight={800}>Weekly schedule</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Station timezone: {station.timezone ?? "America/Detroit"}
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Plus size={15} />}
+                  onClick={() => setWorkingSchedule((current) => [...current, createScheduleEntry(workingProgram.id)])}
+                >
+                  Add time
+                </Button>
+              </Stack>
 
-            {workingSchedule.length ? (
-              <div className="schedule-editor-list">
-                {workingSchedule.map((entry) => (
-                  <div className="schedule-editor-row" key={entry.id}>
-                    <label>
-                      <span>Day</span>
-                      <select
-                        onChange={(event) =>
-                          updateSchedule(entry.id, { weekday: Number(event.target.value) })
-                        }
+              <Alert severity="info" icon={<Clock3 size={18} />} sx={{ mb: 1.5 }}>
+                Monday = 0 and Sunday = 6 in the API. Overnight slots are supported; active slots across the station cannot overlap, including Sunday → Monday.
+              </Alert>
+
+              {workingSchedule.length ? (
+                <Stack spacing={1}>
+                  {workingSchedule.map((entry, index) => (
+                    <Paper className="program-schedule-editor-row" variant="outlined" key={entry.id}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={800}>
+                        SLOT {index + 1}
+                      </Typography>
+                      <TextField
+                        select
+                        size="small"
+                        label="Day"
                         value={entry.weekday}
+                        onChange={(event) => updateSchedule(entry.id, { weekday: Number(event.target.value) })}
                       >
-                        {WEEKDAYS.map((day, index) => (
-                          <option key={day} value={index}>{day}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Starts</span>
-                      <input
-                        onChange={(event) =>
-                          updateSchedule(entry.id, { startsAt: apiTime(event.target.value) })
-                        }
+                        {WEEKDAYS.map((day, weekday) => <MenuItem key={day} value={weekday}>{day}</MenuItem>)}
+                      </TextField>
+                      <TextField
+                        size="small"
+                        label="Starts"
                         type="time"
                         value={displayTime(entry.startsAt)}
+                        InputLabelProps={{ shrink: true }}
+                        onChange={(event) => updateSchedule(entry.id, { startsAt: apiTime(event.target.value) })}
                       />
-                    </label>
-                    <label>
-                      <span>Ends</span>
-                      <input
-                        onChange={(event) =>
-                          updateSchedule(entry.id, { endsAt: apiTime(event.target.value) })
-                        }
+                      <TextField
+                        size="small"
+                        label="Ends"
                         type="time"
                         value={displayTime(entry.endsAt)}
+                        InputLabelProps={{ shrink: true }}
+                        onChange={(event) => updateSchedule(entry.id, { endsAt: apiTime(event.target.value) })}
                       />
-                    </label>
-                    <label className="schedule-active">
-                      <input
-                        checked={entry.isActive ?? true}
-                        onChange={(event) =>
-                          updateSchedule(entry.id, { isActive: event.target.checked })
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={entry.isActive ?? true}
+                            onChange={(event) => updateSchedule(entry.id, { isActive: event.target.checked })}
+                          />
                         }
-                        type="checkbox"
+                        label="Active"
                       />
-                      <span>Active</span>
-                    </label>
-                    <button
-                      aria-label="Remove schedule entry"
-                      className="icon-button danger-ghost"
-                      onClick={() =>
-                        setWorkingSchedule((current) =>
-                          current.filter((item) => item.id !== entry.id),
-                        )
-                      }
-                      type="button"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="schedule-empty">
-                <CalendarClock size={22} />
-                <strong>No schedule yet</strong>
-                <span>Add one or more broadcast times. Overnight schedules are supported.</span>
-              </div>
-            )}
-          </section>
-        </div>
+                      <Tooltip title="Remove schedule slot">
+                        <IconButton
+                          color="error"
+                          onClick={() => setWorkingSchedule((current) => current.filter((item) => item.id !== entry.id))}
+                        >
+                          <Trash2 size={17} />
+                        </IconButton>
+                      </Tooltip>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Box className="program-schedule-empty-mui">
+                  <CalendarClock size={24} />
+                  <Typography fontWeight={800}>No schedule yet</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Add one or more weekly broadcast windows. The program can exist without a schedule.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Stack>
 
-        <aside className="program-preview-card" aria-label="Mobile program preview">
-          <div className="program-preview-art">
-            {imageUrl?.startsWith("https://") ? (
-              <img alt="" referrerPolicy="no-referrer" src={imageUrl} />
-            ) : (
-              <div className="program-preview-placeholder">
-                <span>LA Z</span>
-                <small>PROGRAM ARTWORK</small>
-              </div>
-            )}
-            <span className={workingProgram.isActive ?? true ? "program-state active" : "program-state"}>
-              {workingProgram.isActive ?? true ? "Active" : "Inactive"}
-            </span>
-          </div>
-          <div className="program-preview-copy">
-            <p className="eyebrow">Mobile preview</p>
-            <h3>{workingProgram.name || "Program name"}</h3>
-            <p>{workingProgram.hostName || "Host not assigned"}</p>
-            <div className="program-preview-schedule">
-              {workingSchedule.length ? workingSchedule.map((entry) => (
-                <span key={entry.id}>
-                  {WEEKDAYS[entry.weekday].slice(0, 3)} · {displayTime(entry.startsAt)}–{displayTime(entry.endsAt)}
-                </span>
-              )) : <span>No schedule assigned</span>}
-            </div>
-          </div>
-        </aside>
-      </div>
+          <Paper className="program-mobile-preview-mui" variant="outlined">
+            <Box className="program-mobile-preview-art">
+              {imageUrl?.startsWith("https://") ? (
+                <img alt="" referrerPolicy="no-referrer" src={imageUrl} />
+              ) : (
+                <Box className="program-mobile-preview-placeholder">
+                  <strong>LA Z</strong>
+                  <span>PROGRAM ARTWORK</span>
+                </Box>
+              )}
+              <Chip
+                className="program-preview-status-chip"
+                color={workingProgram.isActive ?? true ? "success" : "default"}
+                label={workingProgram.isActive ?? true ? "Active" : "Inactive"}
+                size="small"
+              />
+            </Box>
+            <Box sx={{ p: 2 }}>
+              <Typography variant="overline" color="primary.main" fontWeight={800}>Mobile preview</Typography>
+              <Typography variant="h6" fontWeight={850} sx={{ mt: 0.25 }}>
+                {workingProgram.name || "Program name"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {workingProgram.hostName || "Host not assigned"}
+              </Typography>
+              <Divider sx={{ my: 1.5 }} />
+              <Stack spacing={0.75}>
+                {workingSchedule.length ? workingSchedule.map((entry) => (
+                  <Stack direction="row" spacing={0.75} alignItems="center" key={entry.id}>
+                    <Clock3 size={13} />
+                    <Typography variant="caption" color="text.secondary">
+                      {WEEKDAYS[entry.weekday].slice(0, 3)} · {displayTime(entry.startsAt)}–{displayTime(entry.endsAt)}
+                    </Typography>
+                  </Stack>
+                )) : (
+                  <Typography variant="caption" color="text.secondary">No schedule assigned</Typography>
+                )}
+              </Stack>
+            </Box>
+          </Paper>
+        </Box>
 
-      <div className="editor-actions">
-        <span className="muted">
-          Saving updates Draft only and is protected by <code>{etag}</code>.
-        </span>
-        <button
-          disabled={save.isPending || remove.isPending}
-          onClick={() => save.mutate()}
-          type="button"
-        >
-          {save.isPending ? "Saving…" : existing ? "Save program" : "Create program"}
-        </button>
-      </div>
+        <Box className="program-editor-sticky-actions">
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Draft write protected by ETag
+            </Typography>
+            <Typography variant="caption" component="code" sx={{ display: "block", color: "text.disabled" }}>
+              {etag}
+            </Typography>
+          </Box>
+          <Button
+            disabled={busy}
+            variant="contained"
+            startIcon={<Save size={16} />}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? "Saving…" : existing ? "Save program" : "Create program"}
+          </Button>
+        </Box>
+      </Stack>
 
       <MediaPickerDialog
         currentUrl={workingProgram.imageUrl}
         onClose={() => setMediaPickerOpen(false)}
-        onSelect={(asset) =>
-          setWorkingProgram((current) => ({ ...current, imageUrl: asset.url }))
-        }
+        onSelect={(asset) => setWorkingProgram((current) => ({ ...current, imageUrl: asset.url }))}
         open={mediaPickerOpen}
       />
-    </article>
+
+      <Dialog open={deleteOpen} onClose={() => !remove.isPending && setDeleteOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete program?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            “{workingProgram.name}” will be removed from the Draft. The backend also removes its schedule entries from this Draft revision. Published releases remain immutable.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)} disabled={remove.isPending}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => remove.mutate()} disabled={remove.isPending}>
+            {remove.isPending ? "Deleting…" : "Delete program"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
   );
 }
