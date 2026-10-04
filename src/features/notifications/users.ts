@@ -42,3 +42,15 @@ export function findAdminUserByEmail(
     { signal },
   );
 }
+
+export function findAdminUserById(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<AdminUserPage>> {
+  const params = new URLSearchParams({ limit: "1", userId: userId.trim() });
+  return apiRequest<AdminUserPage>(
+    `/api/v1/admin/users?${params.toString()}`,
+    { method: "GET" },
+    { signal },
+  );
+}

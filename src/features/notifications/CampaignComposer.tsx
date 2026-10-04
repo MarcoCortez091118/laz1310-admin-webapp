@@ -74,7 +74,6 @@ export function CampaignComposer({
   const [clientError, setClientError] = useState<string | null>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const mutable = !campaign || campaign.status === "draft";
-  const busy = false;
   const dynamicId = form.target.value.startsWith("/dynamics/") ? form.target.value.slice(10) : "";
   const destination = dynamicId ? "dynamic_detail" : form.target.value;
 
@@ -112,23 +111,29 @@ export function CampaignComposer({
   }
 
   const error = clientError ?? (save.error ? errorMessage(save.error) : null) ?? (send.error ? errorMessage(send.error) : null);
-  const pending = save.isPending || send.isPending || busy;
+  const pending = save.isPending || send.isPending;
+  const hasInboxWithoutPushDevice = Boolean(
+    campaign
+      && campaign.status !== "draft"
+      && campaign.inboxCount > 0
+      && campaign.targetedCount === 0,
+  );
 
   return (
-    <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-        <Box sx={{ p: 2.5 }}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
-            <Box>
+    <Stack spacing={2} minWidth={0}>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden", minWidth: 0 }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0 }}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2} minWidth={0}>
+            <Box sx={{ minWidth: 0 }}>
               <Typography variant="overline" color="primary.main" fontWeight={800}>
                 {campaign ? "Campaign detail" : "New notification"}
               </Typography>
-              <Typography variant="h5" fontWeight={850}>{campaign?.title || "Compose notification"}</Typography>
+              <Typography variant="h5" fontWeight={850} sx={{ overflowWrap: "anywhere" }}>{campaign?.title || "Compose notification"}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
                 {mutable ? "Drafts remain editable until an administrator queues the send." : "This campaign is immutable because dispatch has started."}
               </Typography>
             </Box>
-            {campaign ? <Chip label={`${statusLabel(campaign.status)} · rev ${campaign.revision}`} size="small" variant="outlined" /> : null}
+            {campaign ? <Chip label={`${statusLabel(campaign.status)} · rev ${campaign.revision}`} size="small" variant="outlined" sx={{ alignSelf: "flex-start", flexShrink: 0 }} /> : null}
           </Stack>
         </Box>
         <Divider />
@@ -141,9 +146,9 @@ export function CampaignComposer({
             setClientError(issue);
             if (!issue) save.mutate();
           }}
-          sx={{ p: 2.5 }}
+          sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0 }}
         >
-          <Stack spacing={2.25}>
+          <Stack spacing={2.25} minWidth={0}>
             {error ? (
               <Alert
                 severity="error"
@@ -153,7 +158,13 @@ export function CampaignComposer({
               </Alert>
             ) : null}
 
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 220px" }, gap: 2 }}>
+            {hasInboxWithoutPushDevice ? (
+              <Alert severity={campaign?.status === "sending" || campaign?.status === "queued" ? "info" : "warning"}>
+                This campaign created an in-app Inbox item, but no eligible FCM device has been targeted yet. The mobile app must register a native FCM token with notifications enabled before a system push can be delivered.
+              </Alert>
+            ) : null}
+
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 220px" }, gap: 2, minWidth: 0 }}>
               <TextField
                 disabled={!mutable || pending}
                 label="Title"
@@ -187,8 +198,8 @@ export function CampaignComposer({
               onChange={(event) => update({ body: event.target.value })}
             />
 
-            <Paper variant="outlined" sx={{ borderRadius: 2.5, p: 2 }}>
-              <Stack spacing={1.5}>
+            <Paper variant="outlined" sx={{ borderRadius: 2.5, p: { xs: 1.5, sm: 2 }, minWidth: 0 }}>
+              <Stack spacing={1.5} minWidth={0}>
                 <Box>
                   <Typography fontWeight={800}>In-app destination</Typography>
                   <Typography variant="body2" color="text.secondary">Only allowlisted Notifications V1 routes can be sent.</Typography>
@@ -202,7 +213,7 @@ export function CampaignComposer({
                     if (!value) return;
                     update({ target: { kind: "route", value: value === "dynamic_detail" ? `/dynamics/${dynamicId}` : value } });
                   }}
-                  sx={{ flexWrap: "wrap", gap: .5, "& .MuiToggleButtonGroup-grouped": { border: "1px solid !important", borderColor: "divider !important", borderRadius: "8px !important", m: 0 } }}
+                  sx={{ flexWrap: "wrap", gap: .5, "& .MuiToggleButtonGroup-grouped": { flex: "1 1 130px", border: "1px solid !important", borderColor: "divider !important", borderRadius: "8px !important", m: 0 } }}
                 >
                   <ToggleButton value="/home">Home</ToggleButton>
                   <ToggleButton value="/radio">Radio / Programs</ToggleButton>
@@ -222,8 +233,8 @@ export function CampaignComposer({
               </Stack>
             </Paper>
 
-            <Paper variant="outlined" sx={{ borderRadius: 2.5, p: 2 }}>
-              <Stack spacing={1.5}>
+            <Paper variant="outlined" sx={{ borderRadius: 2.5, p: { xs: 1.5, sm: 2 }, minWidth: 0 }}>
+              <Stack spacing={1.5} minWidth={0}>
                 <Box>
                   <Typography fontWeight={800}>Audience</Typography>
                   <Typography variant="body2" color="text.secondary">Category preferences and device notification permission are enforced again by the backend before delivery.</Typography>
@@ -245,7 +256,7 @@ export function CampaignComposer({
             </Paper>
 
             {campaign ? (
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3,1fr)" }, gap: 1.5 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
                 <Box><Typography variant="caption" color="text.secondary">Created</Typography><Typography variant="body2" fontWeight={700}>{new Date(campaign.createdAt).toLocaleString()}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">Queued</Typography><Typography variant="body2" fontWeight={700}>{campaign.queuedAt ? new Date(campaign.queuedAt).toLocaleString() : "—"}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">Finished</Typography><Typography variant="body2" fontWeight={700}>{campaign.sentAt ? new Date(campaign.sentAt).toLocaleString() : "—"}</Typography></Box>
@@ -253,11 +264,11 @@ export function CampaignComposer({
             ) : null}
 
             <Divider />
-            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1.5}>
-              <Typography variant="caption" color="text.secondary">
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1.5} minWidth={0}>
+              <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
                 {campaign ? `Campaign ${campaign.id}` : "Creating a campaign stores a draft only; it does not contact FCM."}
               </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexShrink={0}>
                 {campaign?.status === "draft" ? (
                   <Button
                     color="error"
@@ -277,17 +288,20 @@ export function CampaignComposer({
       </Paper>
 
       {campaign && campaign.status !== "draft" ? (
-        <Paper variant="outlined" sx={{ borderRadius: 3, p: 2.25 }}>
-          <Stack spacing={1.5}>
-            <Stack direction="row" justifyContent="space-between"><Typography fontWeight={800}>Delivery results</Typography><Chip label={statusLabel(campaign.status)} size="small" /></Stack>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,1fr)", md: "repeat(5,1fr)" }, gap: 1 }}>
+        <Paper variant="outlined" sx={{ borderRadius: 3, p: 2.25, minWidth: 0 }}>
+          <Stack spacing={1.5} minWidth={0}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+              <Typography fontWeight={800}>Delivery results</Typography>
+              <Chip label={statusLabel(campaign.status)} size="small" sx={{ alignSelf: "flex-start" }} />
+            </Stack>
+            <Box className="notifications-delivery-grid">
               {[
                 ["Targeted", campaign.targetedCount],
                 ["Accepted", campaign.successCount],
                 ["Failed", campaign.failureCount],
                 ["Skipped", campaign.skippedCount],
                 ["Inbox", campaign.inboxCount],
-              ].map(([label, value]) => <Box key={label} sx={{ bgcolor: "#f8fafc", borderRadius: 2, p: 1.25 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" fontWeight={800}>{value}</Typography></Box>)}
+              ].map(([label, value]) => <Box key={label} sx={{ bgcolor: "#f8fafc", borderRadius: 2, p: 1.25, minWidth: 0 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" fontWeight={800}>{value}</Typography></Box>)}
             </Box>
             <Typography variant="caption" color="text.secondary">Accepted means FCM accepted the message; it does not prove the user viewed it. Inbox counts users, not devices.</Typography>
           </Stack>

@@ -1,0 +1,113 @@
+.notifications-page {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.notifications-page-header,
+.notifications-campaign-pane,
+.notifications-detail-pane {
+  min-width: 0;
+}
+
+.notifications-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.notifications-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  min-width: 0;
+}
+
+.notifications-campaign-pane {
+  display: grid;
+  gap: 10px;
+}
+
+.notifications-list-controls {
+  border-radius: 14px !important;
+}
+
+.notifications-status-filter {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.notifications-status-filter .MuiToggleButtonGroup-grouped {
+  flex: 1 1 92px;
+  min-width: 76px;
+  margin: 0 !important;
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 9px !important;
+}
+
+.notifications-detail-pane {
+  min-width: 0;
+}
+
+.notifications-detail-pane .MuiPaper-root,
+.notifications-detail-pane .MuiFormControl-root,
+.notifications-detail-pane .MuiInputBase-root,
+.notifications-detail-pane .MuiStack-root,
+.notifications-detail-pane .MuiBox-root {
+  min-width: 0;
+}
+
+.notifications-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 1900px) {
+  .notifications-workbench {
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  }
+
+  .notifications-campaign-pane {
+    position: sticky;
+    top: 90px;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .notifications-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notifications-delivery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .notifications-page {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .notifications-metrics,
+  .notifications-delivery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notifications-status-filter .MuiToggleButtonGroup-grouped {
+    flex-basis: calc(50% - 3px);
+  }
+
+  .notifications-page .MuiCardContent-root,
+  .notifications-page .MuiPaper-root > .MuiBox-root {
+    min-width: 0;
+  }
+}
