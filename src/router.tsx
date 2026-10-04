@@ -12,6 +12,7 @@ import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
 import { DynamicsPage } from "./features/dynamics/DynamicsPage";
 import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
+import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
 
@@ -101,12 +102,7 @@ const weatherRoute = createRoute({
 const notificationsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/notifications",
-  component: () => (
-    <PlaceholderPage
-      dependency="Notification campaign administration contracts"
-      title="Notifications"
-    />
-  ),
+  component: NotificationsPage,
 });
 
 const auditRoute = createRoute({
