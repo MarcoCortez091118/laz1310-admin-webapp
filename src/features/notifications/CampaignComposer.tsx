@@ -73,13 +73,24 @@ export function CampaignComposer({
   const [form, setForm] = useState<CampaignInput>(() => campaign ? campaignToInput(campaign) : defaultCampaignInput());
   const [clientError, setClientError] = useState<string | null>(null);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [recipientEligible, setRecipientEligible] = useState<boolean | null>(null);
   const mutable = !campaign || campaign.status === "draft";
   const dynamicId = form.target.value.startsWith("/dynamics/") ? form.target.value.slice(10) : "";
   const destination = dynamicId ? "dynamic_detail" : form.target.value;
+  const recipientReady = form.audience.type !== "user" || recipientEligible === true;
+
+  function validateReadyCampaign() {
+    const issue = validateCampaignInput(form);
+    if (issue) return issue;
+    if (form.audience.type === "user" && recipientEligible !== true) {
+      return "Choose a push-eligible user whose device is registered and whose selected notification category is enabled.";
+    }
+    return null;
+  }
 
   const save = useMutation({
     mutationFn: async () => {
-      const issue = validateCampaignInput(form);
+      const issue = validateReadyCampaign();
       if (issue) throw new Error(issue);
       if (!campaign) return createNotificationCampaign(form);
       if (!etag) throw new Error("Campaign ETag unavailable. Reload this draft before editing.");
@@ -95,6 +106,8 @@ export function CampaignComposer({
   const send = useMutation({
     mutationFn: async () => {
       if (!campaign) throw new Error("Save the notification draft before sending it.");
+      const issue = validateReadyCampaign();
+      if (issue) throw new Error(issue);
       return sendNotificationCampaign(campaign.id);
     },
     onSuccess: async (result) => {
@@ -106,6 +119,7 @@ export function CampaignComposer({
 
   function update(patch: Partial<CampaignInput>) {
     setForm((current) => ({ ...current, ...patch }));
+    if (patch.category || patch.audience) setRecipientEligible(null);
     setClientError(null);
     save.reset();
   }
@@ -142,7 +156,7 @@ export function CampaignComposer({
           component="form"
           onSubmit={(event) => {
             event.preventDefault();
-            const issue = validateCampaignInput(form);
+            const issue = validateReadyCampaign();
             setClientError(issue);
             if (!issue) save.mutate();
           }}
@@ -244,13 +258,15 @@ export function CampaignComposer({
                   onChange={(event) => update({ audience: event.target.value === "user" ? { type: "user", userId: "" } : { type: "all_opted_in" } })}
                 >
                   <FormControlLabel disabled={!mutable || pending} value="all_opted_in" control={<Radio />} label="All users opted in to this category" />
-                  <FormControlLabel disabled={!mutable || pending || !isAdmin} value="user" control={<Radio />} label="One registered user" />
+                  <FormControlLabel disabled={!mutable || pending || !isAdmin} value="user" control={<Radio />} label="One push-eligible registered user" />
                 </RadioGroup>
                 <RecipientSelector
                   audience={form.audience}
+                  category={form.category}
                   disabled={!mutable || pending}
                   isAdmin={isAdmin}
                   onChange={(audience) => update({ audience })}
+                  onEligibilityChange={setRecipientEligible}
                 />
               </Stack>
             </Paper>
@@ -272,7 +288,7 @@ export function CampaignComposer({
                 {campaign?.status === "draft" ? (
                   <Button
                     color="error"
-                    disabled={!isAdmin || pending}
+                    disabled={!isAdmin || pending || !recipientReady}
                     onClick={() => setConfirmSend(true)}
                     startIcon={<Send size={16} />}
                     variant="outlined"
@@ -280,7 +296,7 @@ export function CampaignComposer({
                     {isAdmin ? "Queue send" : "Admin required"}
                   </Button>
                 ) : null}
-                {mutable ? <Button disabled={pending} type="submit" variant="contained">{save.isPending ? "Saving…" : campaign ? "Save draft" : "Create draft"}</Button> : null}
+                {mutable ? <Button disabled={pending || !recipientReady} type="submit" variant="contained">{save.isPending ? "Saving…" : campaign ? "Save draft" : "Create draft"}</Button> : null}
               </Stack>
             </Stack>
           </Stack>
@@ -317,7 +333,7 @@ export function CampaignComposer({
         </DialogContent>
         <DialogActions>
           <Button disabled={send.isPending} onClick={() => setConfirmSend(false)}>Cancel</Button>
-          <Button color="error" disabled={send.isPending} onClick={() => send.mutate()} variant="contained" startIcon={<Send size={16} />}>{send.isPending ? "Queueing…" : "Queue send"}</Button>
+          <Button color="error" disabled={send.isPending || !recipientReady} onClick={() => send.mutate()} variant="contained" startIcon={<Send size={16} />}>{send.isPending ? "Queueing…" : "Queue send"}</Button>
         </DialogActions>
       </Dialog>
     </Stack>
