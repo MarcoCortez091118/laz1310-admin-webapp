@@ -6,6 +6,9 @@ export function putDynamic(
   etag: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<Draft>> {
+  if (!dynamic.id) {
+    throw new Error("Dynamic ID is required before saving a campaign.");
+  }
   return apiRequest<Draft>(
     `/api/v1/admin/dynamics/${encodeURIComponent(dynamic.id)}`,
     {
