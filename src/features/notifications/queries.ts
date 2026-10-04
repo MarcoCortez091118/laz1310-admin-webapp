@@ -4,6 +4,9 @@ import {
   listNotificationCampaigns,
   notificationsQueryKeys,
 } from "./api";
+import { listAdminUsers } from "./users";
+
+export const notificationUserQueryKey = ["admin", "notification-users"] as const;
 
 export function useNotificationCampaignsQuery() {
   return useInfiniteQuery({
@@ -20,5 +23,21 @@ export function useNotificationCampaignQuery(id: string | null) {
     queryFn: ({ signal }) => getNotificationCampaign(id!, signal),
     enabled: Boolean(id),
     refetchOnWindowFocus: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.data.status;
+      return status === "queued" || status === "sending" ? 5000 : false;
+    },
+  });
+}
+
+export function useNotificationUsersQuery(enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: notificationUserQueryKey,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) => listAdminUsers(50, pageParam, signal),
+    getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
+    enabled,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
 }
