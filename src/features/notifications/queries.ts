@@ -4,7 +4,7 @@ import {
   listNotificationCampaigns,
   notificationsQueryKeys,
 } from "./api";
-import { findAdminUserByEmail, listAdminUsers } from "./users";
+import { findAdminUserByEmail, findAdminUserById, listAdminUsers } from "./users";
 
 export const notificationUserQueryKey = ["admin", "notification-users"] as const;
 
@@ -48,6 +48,18 @@ export function useNotificationUserEmailQuery(email: string, enabled: boolean) {
     queryKey: [...notificationUserQueryKey, "email", normalized],
     queryFn: ({ signal }) => findAdminUserByEmail(normalized, signal),
     enabled: enabled && normalized.length >= 3 && normalized.includes("@"),
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+export function useNotificationUserByIdQuery(userId: string, enabled: boolean) {
+  const normalized = userId.trim();
+  return useQuery({
+    queryKey: [...notificationUserQueryKey, "id", normalized],
+    queryFn: ({ signal }) => findAdminUserById(normalized, signal),
+    enabled: enabled && Boolean(normalized),
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     retry: false,
