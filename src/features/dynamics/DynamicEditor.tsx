@@ -54,7 +54,7 @@ export function DynamicEditor({
       if (error) throw new Error(error);
       return putDynamic(form.id, dynamicFromForm(form), etag);
     },
-    onSuccess: async (_result) => {
+    onSuccess: async () => {
       setClientError(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
