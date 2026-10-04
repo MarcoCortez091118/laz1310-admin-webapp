@@ -31,6 +31,7 @@ import { useStaff } from "../auth/StaffGate";
 import { CampaignComposer } from "./CampaignComposer";
 import { statusLabel, type CampaignStatus, type NotificationCampaign } from "./model";
 import { useNotificationCampaignQuery, useNotificationCampaignsQuery } from "./queries";
+import "./notifications.css";
 
 type Selection = "new" | string | null;
 type StatusFilter = "all" | CampaignStatus | "issues";
@@ -51,11 +52,11 @@ function formatDate(value: string): string {
 
 function Metric({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: number; detail: string }) {
   return (
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
+    <Card variant="outlined" sx={{ borderRadius: 3, minWidth: 0 }}>
       <CardContent sx={{ p: 2.25, "&:last-child": { pb: 2.25 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="body2" color="text.secondary">{label}</Typography>
-          <Box sx={{ color: "primary.main", display: "flex" }}>{icon}</Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+          <Typography variant="body2" color="text.secondary" noWrap>{label}</Typography>
+          <Box sx={{ color: "primary.main", display: "flex", flexShrink: 0 }}>{icon}</Box>
         </Stack>
         <Typography variant="h4" fontWeight={850} sx={{ mt: 1 }}>{value}</Typography>
         <Typography variant="caption" color="text.secondary">{detail}</Typography>
@@ -73,6 +74,7 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
       variant="outlined"
       sx={{
         width: "100%",
+        minWidth: 0,
         p: 0,
         textAlign: "left",
         cursor: "pointer",
@@ -84,15 +86,15 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
         "&:hover": { borderColor: "primary.light" },
       }}
     >
-      <CardContent sx={{ p: 2, width: "100%", "&:last-child": { pb: 2 } }}>
-        <Stack spacing={1.15}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-            <Box sx={{ minWidth: 0 }}>
+      <CardContent sx={{ p: 2, width: "100%", minWidth: 0, "&:last-child": { pb: 2 } }}>
+        <Stack spacing={1.15} minWidth={0}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} minWidth={0}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography fontWeight={800} noWrap>{campaign.title}</Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mt: .25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                sx={{ mt: .25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" }}
               >
                 {campaign.body}
               </Typography>
@@ -102,7 +104,7 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
 
           <Stack direction="row" spacing={.75} flexWrap="wrap" useFlexGap>
             <Chip icon={<BellRing size={13} />} label={campaign.category} size="small" variant="outlined" />
-            <Chip label={campaign.target.value} size="small" variant="outlined" />
+            <Chip label={campaign.target.value} size="small" variant="outlined" sx={{ maxWidth: "100%" }} />
             <Chip
               icon={<UsersRound size={13} />}
               label={campaign.audience.type === "all_opted_in" ? "Opted-in audience" : "1 user"}
@@ -111,8 +113,10 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
             />
           </Stack>
 
-          <Stack direction="row" justifyContent="space-between" spacing={1}>
-            <Typography variant="caption" color="text.secondary">Rev {campaign.revision} · {formatDate(campaign.createdAt)}</Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={.5}>
+            <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+              Rev {campaign.revision} · {formatDate(campaign.createdAt)}
+            </Typography>
             {campaign.inboxCount > 0 ? (
               <Typography variant="caption" color="text.secondary"><Inbox size={12} style={{ verticalAlign: "-2px" }} /> {campaign.inboxCount}</Typography>
             ) : null}
@@ -156,31 +160,35 @@ export function NotificationsPage() {
   const issueCount = campaigns.filter((campaign) => campaign.status === "failed" || campaign.status === "partially_failed").length;
 
   if (campaignsQuery.isPending) {
-    return <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
+    return <Box className="modern-page notifications-page" sx={{ minHeight: 360, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   }
 
   if (campaignsQuery.error) {
     return (
-      <Alert severity="error" action={<Button color="inherit" onClick={() => void campaignsQuery.refetch()}>Retry</Button>}>
-        {campaignsQuery.error instanceof Error ? campaignsQuery.error.message : "Unable to load notification campaigns."}
-      </Alert>
+      <Box className="modern-page notifications-page">
+        <Alert severity="error" action={<Button color="inherit" onClick={() => void campaignsQuery.refetch()}>Retry</Button>}>
+          {campaignsQuery.error instanceof Error ? campaignsQuery.error.message : "Unable to load notification campaigns."}
+        </Alert>
+      </Box>
     );
   }
 
   return (
-    <Stack spacing={2.25}>
-      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", md: "flex-end" }} spacing={2}>
-        <Box>
+    <Stack className="modern-page notifications-page" spacing={2.25}>
+      <Stack className="notifications-page-header" direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", md: "flex-end" }} spacing={2}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" color="primary.main" fontWeight={800}>Engagement / Operational</Typography>
           <Typography variant="h4" fontWeight={850}>Notifications</Typography>
           <Typography color="text.secondary" sx={{ mt: .5, maxWidth: 780 }}>
             Compose and dispatch campaigns through the durable notification outbox. Notifications are operational records and do not participate in content Draft/Publish releases.
           </Typography>
         </Box>
-        <Button onClick={() => setSelection("new")} startIcon={<Plus size={17} />} variant="contained">New notification</Button>
+        <Button onClick={() => setSelection("new")} startIcon={<Plus size={17} />} variant="contained" sx={{ flexShrink: 0 }}>
+          New notification
+        </Button>
       </Stack>
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,1fr)", lg: "repeat(4,1fr)" }, gap: 1.5 }}>
+      <Box className="notifications-metrics">
         <Metric icon={<Megaphone size={18} />} label="Drafts" value={draftCount} detail="Editable campaigns loaded" />
         <Metric icon={<Clock3 size={18} />} label="In flight" value={inflightCount} detail="Queued or sending" />
         <Metric icon={<CheckCircle2 size={18} />} label="Sent" value={sentCount} detail="Completed without failures" />
@@ -191,9 +199,9 @@ export function NotificationsPage() {
         Editors may create and update drafts. Only verified admins can queue delivery. The API remains authoritative for notification enablement, quotas, recipient preferences and device eligibility.
       </Alert>
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "430px minmax(0,1fr)" }, gap: 2, alignItems: "start" }}>
-        <Stack spacing={1.25}>
-          <Paper variant="outlined" sx={{ borderRadius: 3, p: 1.5 }}>
+      <Box className="notifications-workbench">
+        <Box className="notifications-campaign-pane">
+          <Paper className="notifications-list-controls" variant="outlined" sx={{ p: 1.5 }}>
             <Stack spacing={1.25}>
               <TextField
                 fullWidth
@@ -204,8 +212,8 @@ export function NotificationsPage() {
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment> }}
               />
               <ToggleButtonGroup
+                className="notifications-status-filter"
                 exclusive
-                fullWidth
                 size="small"
                 value={status}
                 onChange={(_event, value: StatusFilter | null) => value && setStatus(value)}
@@ -242,9 +250,9 @@ export function NotificationsPage() {
               {campaignsQuery.isFetchingNextPage ? "Loading…" : "Load next page"}
             </Button>
           ) : null}
-        </Stack>
+        </Box>
 
-        <Box sx={{ minWidth: 0 }}>
+        <Box className="notifications-detail-pane">
           {selection === "new" ? (
             <CampaignComposer campaign={null} isAdmin={isAdmin} onSaved={setSelection} onReload={() => undefined} />
           ) : selectedId ? (
@@ -265,7 +273,7 @@ export function NotificationsPage() {
               />
             )
           ) : (
-            <Paper variant="outlined" sx={{ borderRadius: 3, minHeight: 420, display: "grid", placeItems: "center", p: 4, textAlign: "center" }}>
+            <Paper variant="outlined" sx={{ borderRadius: 3, minHeight: 320, display: "grid", placeItems: "center", p: 4, textAlign: "center" }}>
               <Box>
                 <BellRing size={38} />
                 <Typography variant="h5" fontWeight={800} sx={{ mt: 1.5 }}>Select a campaign</Typography>
