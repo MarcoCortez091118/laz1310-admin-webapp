@@ -3,6 +3,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Stack,
   TextField,
@@ -15,8 +16,12 @@ import {
   useNotificationUserEmailQuery,
   useNotificationUsersQuery,
 } from "./queries";
-import type { NotificationAudience } from "./model";
-import type { AdminUserSummary } from "./users";
+import type { NotificationAudience, NotificationCategory } from "./model";
+import {
+  userAllowsCategory,
+  userCanReceivePush,
+  type AdminUserSummary,
+} from "./users";
 
 function userLabel(user: AdminUserSummary): string {
   return user.displayName || user.email || user.id;
@@ -47,13 +52,27 @@ function uniqueUsers(...groups: AdminUserSummary[][]): AdminUserSummary[] {
   return [...users.values()];
 }
 
+function eligibilityLabel(user: AdminUserSummary, category: NotificationCategory): string {
+  const status = user.notificationStatus;
+  if (!status) return "Eligibility unavailable";
+  if (!status.pushEligible) {
+    if (status.registeredDeviceCount === 0) return "No registered device";
+    if (status.notificationsEnabledDeviceCount === 0) return "Push disabled on device";
+    return "No valid FCM device";
+  }
+  if (!userAllowsCategory(user, category)) return `Opted out of ${category}`;
+  return `${status.pushEligibleDeviceCount} eligible device${status.pushEligibleDeviceCount === 1 ? "" : "s"}`;
+}
+
 export function RecipientSelector({
   audience,
+  category,
   disabled,
   isAdmin,
   onChange,
 }: {
   audience: NotificationAudience;
+  category: NotificationCategory;
   disabled?: boolean;
   isAdmin: boolean;
   onChange: (audience: NotificationAudience) => void;
@@ -79,6 +98,7 @@ export function RecipientSelector({
     : null;
   const directoryError = usersQuery.error ?? idQuery.error;
   const loading = usersQuery.isLoading || emailQuery.isFetching || idQuery.isFetching;
+  const eligibleCount = users.filter((user) => userCanReceivePush(user, category)).length;
 
   if (audience.type !== "user") return null;
 
@@ -92,6 +112,19 @@ export function RecipientSelector({
 
   return (
     <Stack spacing={1.25} minWidth={0}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+        <Typography variant="caption" color="text.secondary">
+          Only users with an active FCM device and the <strong>{category}</strong> category enabled can be selected.
+        </Typography>
+        <Chip
+          size="small"
+          color={eligibleCount > 0 ? "success" : "default"}
+          variant="outlined"
+          label={`${eligibleCount} eligible loaded`}
+          sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
+        />
+      </Stack>
+
       <Autocomplete
         disabled={disabled}
         options={users}
@@ -99,6 +132,7 @@ export function RecipientSelector({
         inputValue={inputValue}
         loading={loading}
         getOptionLabel={userLabel}
+        getOptionDisabled={(user) => !userCanReceivePush(user, category)}
         isOptionEqualToValue={(option, value) => option.id === value.id}
         filterOptions={(options, state) => {
           const needle = state.inputValue.trim().toLowerCase();
@@ -120,9 +154,9 @@ export function RecipientSelector({
         renderInput={(params) => (
           <TextField
             {...params}
-            label="Registered user"
+            label="Push-eligible user"
             placeholder="Name or exact email address"
-            helperText="Choose an LA Z account. The internal User UUID is stored automatically; Firebase UID and push tokens stay private."
+            helperText="The internal User UUID is stored automatically. Firebase UID and FCM tokens never leave the API boundary."
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -134,17 +168,36 @@ export function RecipientSelector({
             }}
           />
         )}
-        renderOption={(props, user) => (
-          <Box component="li" {...props} key={user.id} sx={{ minWidth: 0 }}>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={700} noWrap>{userLabel(user)}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", overflowWrap: "anywhere" }}>
-                {user.email ?? "No email"} · {user.lastSeenAt ? `Last seen ${new Date(user.lastSeenAt).toLocaleString()}` : "No recent session"}
-              </Typography>
+        renderOption={(props, user) => {
+          const eligible = userCanReceivePush(user, category);
+          return (
+            <Box component="li" {...props} key={user.id} sx={{ minWidth: 0 }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                  <Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0, flex: 1 }}>
+                    {userLabel(user)}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    color={eligible ? "success" : "default"}
+                    variant={eligible ? "filled" : "outlined"}
+                    label={eligibilityLabel(user, category)}
+                  />
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", overflowWrap: "anywhere", mt: 0.25 }}>
+                  {user.email ?? "No email"} · {user.lastSeenAt ? `Last seen ${new Date(user.lastSeenAt).toLocaleString()}` : "No recent session"}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
-        )}
+          );
+        }}
       />
+
+      {selected && !userCanReceivePush(selected, category) ? (
+        <Alert severity="warning">
+          This account is not currently push-eligible for <strong>{category}</strong>: {eligibilityLabel(selected, category)}. Choose another user or fix the device/category permission in Mobile.
+        </Alert>
+      ) : null}
 
       {directoryError ? (
         <Alert
