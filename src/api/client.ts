@@ -16,10 +16,17 @@ export interface ApiResult<T> {
   retryAfter?: string;
 }
 
+export class AppCheckTokenUnavailableError extends Error {
+  constructor() {
+    super("Firebase App Check token unavailable; administrative request blocked.");
+    this.name = "AppCheckTokenUnavailableError";
+  }
+}
+
 function apiUrl(path: string): string {
   const base = env.VITE_API_BASE_URL.replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return base ? `${base}${normalized}` : normalized;
+  return `${base}${normalized}`;
 }
 
 async function securityHeaders(authenticated: boolean): Promise<Headers> {
@@ -34,25 +41,21 @@ async function securityHeaders(authenticated: boolean): Promise<Headers> {
     throw new Error("Authenticated API request attempted without a Firebase user");
   }
 
-  try {
-    const idToken = await user.getIdToken();
-    headers.set("Authorization", `Bearer ${idToken}`);
-  } catch (err) {
-    console.warn("Failed to get ID token", err);
-  }
+  const idToken = await user.getIdToken();
 
+  let appCheckToken: Awaited<ReturnType<typeof getToken>>;
   try {
-    const check = appCheck();
-    if (check) {
-      const appCheckToken = await getToken(check, false);
-      if (appCheckToken?.token) {
-        headers.set("X-Firebase-AppCheck", appCheckToken.token);
-      }
-    }
+    appCheckToken = await getToken(appCheck(), false);
   } catch {
-    // AppCheck may fail in development environments without valid reCAPTCHA keys
+    throw new AppCheckTokenUnavailableError();
   }
 
+  if (!appCheckToken.token.trim()) {
+    throw new AppCheckTokenUnavailableError();
+  }
+
+  headers.set("Authorization", `Bearer ${idToken}`);
+  headers.set("X-Firebase-AppCheck", appCheckToken.token);
   return headers;
 }
 
