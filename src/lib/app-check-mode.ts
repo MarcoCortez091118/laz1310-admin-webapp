@@ -1,4 +1,4 @@
-export type AppCheckMode = "enterprise" | "debug";
+export type ResolvedAppCheckMode = "enterprise" | "debug";
 
 export interface AppCheckDebugTarget {
   FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean | string;
@@ -14,23 +14,22 @@ export function isApprovedAppCheckDebugHost(hostname: string): boolean {
   return APPROVED_DEBUG_HOSTS.has(hostname.trim().toLowerCase());
 }
 
-export function configureAppCheckDebugMode(
-  mode: AppCheckMode,
+export function resolveAppCheckMode(hostname: string): ResolvedAppCheckMode {
+  return isApprovedAppCheckDebugHost(hostname) ? "debug" : "enterprise";
+}
+
+export function configureAppCheckForHost(
   hostname: string,
   target: AppCheckDebugTarget,
-): void {
-  if (mode !== "debug") {
-    return;
+): ResolvedAppCheckMode {
+  const mode = resolveAppCheckMode(hostname);
+
+  if (mode === "debug") {
+    // Firebase generates and persists a browser-local debug token. The token
+    // must be registered manually in Firebase App Check. It is intentionally
+    // never embedded in Vite environment variables or committed to Git.
+    target.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
 
-  if (!isApprovedAppCheckDebugHost(hostname)) {
-    throw new Error(
-      "Firebase App Check debug mode is restricted to approved non-production hosts.",
-    );
-  }
-
-  // Firebase generates and persists a browser-local debug token. The token must
-  // be registered manually in Firebase App Check and is never committed or
-  // embedded as a Vite secret.
-  target.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  return mode;
 }
