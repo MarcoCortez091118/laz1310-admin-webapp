@@ -22,6 +22,7 @@ import type {
   Station,
   TextBlock,
 } from "../../api/types";
+import { ManagedImageField } from "../media/ManagedImageField";
 import {
   blockName,
   createBlock,
@@ -150,17 +151,15 @@ function HeroEditor({
           value={block.subtitle ?? ""}
         />
       </label>
-      <label className="field-span">
-        Image URL
-        <input
-          onChange={(event) =>
-            onChange({ ...block, imageUrl: nullable(event.target.value) })
-          }
-          placeholder="https://..."
-          type="url"
-          value={block.imageUrl ?? ""}
+      <div className="field-span">
+        <ManagedImageField
+          value={block.imageUrl}
+          label="Hero image"
+          pickerTitle="Choose hero image"
+          description="Upload the hero artwork or select a managed asset. The image URL is populated automatically from Storage."
+          onChange={(url) => onChange({ ...block, imageUrl: url })}
         />
-      </label>
+      </div>
       <div className="field-span">
         <LinkEditor
           link={block.link}
@@ -259,17 +258,13 @@ function CardEditor({
           value={card.title}
         />
       </label>
-      <label>
-        Image URL
-        <input
-          onChange={(event) =>
-            onChange({ ...card, imageUrl: nullable(event.target.value) })
-          }
-          placeholder="https://..."
-          type="url"
-          value={card.imageUrl ?? ""}
-        />
-      </label>
+      <ManagedImageField
+        value={card.imageUrl}
+        label="Card image"
+        pickerTitle="Choose card image"
+        description="Upload the card artwork or select it from the Media Library. The managed Storage URL is assigned automatically."
+        onChange={(url) => onChange({ ...card, imageUrl: url })}
+      />
       <LinkEditor
         link={card.link}
         onChange={(link) => onChange({ ...card, link })}
