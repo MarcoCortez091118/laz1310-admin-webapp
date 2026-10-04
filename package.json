@@ -17,7 +17,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-router": "^1.0.0",
-    "firebase": "^12.0.0",
+    "firebase": "12.19.0",
     "lucide-react": "^0.500.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -34,7 +34,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^9.0.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-hooks": "^6.0.0",
     "eslint-plugin-react-refresh": "^0.4.0",
     "globals": "^16.0.0",
     "openapi-typescript": "^7.0.0",

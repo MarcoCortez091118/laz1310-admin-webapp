@@ -5,6 +5,10 @@ import {
   type AppCheck,
 } from "firebase/app-check";
 import { getAuth, type Auth } from "firebase/auth";
+import {
+  configureAppCheckDebugMode,
+  type AppCheckDebugTarget,
+} from "./app-check-mode";
 import { env } from "./env";
 
 const firebaseApp = initializeApp({
@@ -19,9 +23,18 @@ export const auth: Auth = getAuth(firebaseApp);
 let appCheckInstance: AppCheck | undefined;
 
 export function appCheck(): AppCheck {
-  appCheckInstance ??= initializeAppCheck(firebaseApp, {
-    provider: new ReCaptchaEnterpriseProvider(env.VITE_FIREBASE_APPCHECK_SITE_KEY),
-    isTokenAutoRefreshEnabled: true,
-  });
+  if (!appCheckInstance) {
+    configureAppCheckDebugMode(
+      env.VITE_FIREBASE_APPCHECK_MODE,
+      window.location.hostname,
+      globalThis as AppCheckDebugTarget,
+    );
+
+    appCheckInstance = initializeAppCheck(firebaseApp, {
+      provider: new ReCaptchaEnterpriseProvider(env.VITE_FIREBASE_APPCHECK_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
+  }
+
   return appCheckInstance;
 }

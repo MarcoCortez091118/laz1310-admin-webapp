@@ -16,6 +16,13 @@ export interface ApiResult<T> {
   retryAfter?: string;
 }
 
+export class AppCheckTokenUnavailableError extends Error {
+  constructor() {
+    super("Firebase App Check token unavailable; administrative request blocked.");
+    this.name = "AppCheckTokenUnavailableError";
+  }
+}
+
 function apiUrl(path: string): string {
   const base = env.VITE_API_BASE_URL.replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -34,10 +41,18 @@ async function securityHeaders(authenticated: boolean): Promise<Headers> {
     throw new Error("Authenticated API request attempted without a Firebase user");
   }
 
-  const [idToken, appCheckToken] = await Promise.all([
-    user.getIdToken(),
-    getToken(appCheck(), false),
-  ]);
+  const idToken = await user.getIdToken();
+
+  let appCheckToken: Awaited<ReturnType<typeof getToken>>;
+  try {
+    appCheckToken = await getToken(appCheck(), false);
+  } catch {
+    throw new AppCheckTokenUnavailableError();
+  }
+
+  if (!appCheckToken.token.trim()) {
+    throw new AppCheckTokenUnavailableError();
+  }
 
   headers.set("Authorization", `Bearer ${idToken}`);
   headers.set("X-Firebase-AppCheck", appCheckToken.token);
