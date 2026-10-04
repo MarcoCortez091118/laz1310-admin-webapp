@@ -35,6 +35,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  UsersRound,
 } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
 import { useStaff } from "../features/auth/StaffGate";
@@ -64,6 +65,7 @@ const navigationGroups = [
     items: [
       { label: "Dynamics", to: "/dynamics", icon: Sparkles, adminOnly: false },
       { label: "Notifications", to: "/notifications", icon: Bell, adminOnly: false },
+      { label: "Users", to: "/users", icon: UsersRound, adminOnly: true },
     ],
   },
   {

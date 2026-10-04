@@ -1,4 +1,20 @@
 import { apiRequest, type ApiResult } from "../../api/client";
+import type { NotificationCategory } from "./model";
+
+export interface AdminNotificationPreferences {
+  general: boolean;
+  radio: boolean;
+  programs: boolean;
+  dynamics: boolean;
+}
+
+export interface AdminNotificationStatus {
+  preferences: AdminNotificationPreferences;
+  registeredDeviceCount: number;
+  notificationsEnabledDeviceCount: number;
+  pushEligibleDeviceCount: number;
+  pushEligible: boolean;
+}
 
 export interface AdminUserSummary {
   id: string;
@@ -10,11 +26,20 @@ export interface AdminUserSummary {
   timezone: string | null;
   createdAt: string;
   lastSeenAt: string | null;
+  notificationStatus?: AdminNotificationStatus;
 }
 
 export interface AdminUserPage {
   items: AdminUserSummary[];
   nextCursor: string | null;
+}
+
+export function userAllowsCategory(user: AdminUserSummary, category: NotificationCategory): boolean {
+  return Boolean(user.notificationStatus?.preferences?.[category]);
+}
+
+export function userCanReceivePush(user: AdminUserSummary, category: NotificationCategory): boolean {
+  return Boolean(user.notificationStatus?.pushEligible && userAllowsCategory(user, category));
 }
 
 export function listAdminUsers(

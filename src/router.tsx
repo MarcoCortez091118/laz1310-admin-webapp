@@ -15,6 +15,7 @@ import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
 import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
+import { UsersPage } from "./features/users/UsersPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -77,6 +78,12 @@ const mediaRoute = createRoute({
   component: MediaLibraryPage,
 });
 
+const usersRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/users",
+  component: UsersPage,
+});
+
 const releasesRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/releases",
@@ -133,6 +140,7 @@ const routeTree = rootRoute.addChildren([
     programsRoute,
     dynamicsRoute,
     mediaRoute,
+    usersRoute,
     releasesRoute,
     weatherRoute,
     notificationsRoute,
