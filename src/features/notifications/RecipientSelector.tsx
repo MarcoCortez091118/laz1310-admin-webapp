@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
 import {
   useNotificationUserByIdQuery,
@@ -70,12 +70,14 @@ export function RecipientSelector({
   disabled,
   isAdmin,
   onChange,
+  onEligibilityChange,
 }: {
   audience: NotificationAudience;
   category: NotificationCategory;
   disabled?: boolean;
   isAdmin: boolean;
   onChange: (audience: NotificationAudience) => void;
+  onEligibilityChange?: (eligible: boolean | null) => void;
 }) {
   const [inputValue, setInputValue] = useState("");
   const enabled = isAdmin && audience.type === "user";
@@ -99,6 +101,15 @@ export function RecipientSelector({
   const directoryError = usersQuery.error ?? idQuery.error;
   const loading = usersQuery.isLoading || emailQuery.isFetching || idQuery.isFetching;
   const eligibleCount = users.filter((user) => userCanReceivePush(user, category)).length;
+  const selectedEligible = selected ? userCanReceivePush(selected, category) : null;
+
+  useEffect(() => {
+    if (audience.type !== "user" || !audience.userId) {
+      onEligibilityChange?.(null);
+      return;
+    }
+    onEligibilityChange?.(selectedEligible);
+  }, [audience, onEligibilityChange, selectedEligible]);
 
   if (audience.type !== "user") return null;
 
