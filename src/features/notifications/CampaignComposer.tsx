@@ -256,7 +256,7 @@ export function CampaignComposer({
             </Paper>
 
             {campaign ? (
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr)" }, gap: 1.5 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
                 <Box><Typography variant="caption" color="text.secondary">Created</Typography><Typography variant="body2" fontWeight={700}>{new Date(campaign.createdAt).toLocaleString()}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">Queued</Typography><Typography variant="body2" fontWeight={700}>{campaign.queuedAt ? new Date(campaign.queuedAt).toLocaleString() : "—"}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">Finished</Typography><Typography variant="body2" fontWeight={700}>{campaign.sentAt ? new Date(campaign.sentAt).toLocaleString() : "—"}</Typography></Box>
