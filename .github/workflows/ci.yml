@@ -46,5 +46,4 @@ jobs:
           VITE_FIREBASE_PROJECT_ID: ci-project
           VITE_FIREBASE_APP_ID: ci-app
           VITE_FIREBASE_APPCHECK_SITE_KEY: ci-site-key
-          VITE_FIREBASE_APPCHECK_MODE: enterprise
         run: npm run build

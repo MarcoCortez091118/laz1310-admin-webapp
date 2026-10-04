@@ -5,10 +5,6 @@ import {
   type AppCheck,
 } from "firebase/app-check";
 import { getAuth, type Auth } from "firebase/auth";
-import {
-  configureAppCheckDebugMode,
-  type AppCheckDebugTarget,
-} from "./app-check-mode";
 import { env } from "./env";
 
 const firebaseApp = initializeApp({
@@ -22,19 +18,22 @@ export const auth: Auth = getAuth(firebaseApp);
 
 let appCheckInstance: AppCheck | undefined;
 
-export function appCheck(): AppCheck {
-  if (!appCheckInstance) {
-    configureAppCheckDebugMode(
-      env.VITE_FIREBASE_APPCHECK_MODE,
-      window.location.hostname,
-      globalThis as AppCheckDebugTarget,
-    );
-
-    appCheckInstance = initializeAppCheck(firebaseApp, {
-      provider: new ReCaptchaEnterpriseProvider(env.VITE_FIREBASE_APPCHECK_SITE_KEY),
-      isTokenAutoRefreshEnabled: true,
-    });
+export function appCheck(): AppCheck | undefined {
+  if (!appCheckInstance && typeof window !== "undefined") {
+    try {
+      if (
+        env.VITE_FIREBASE_APPCHECK_SITE_KEY &&
+        env.VITE_FIREBASE_APPCHECK_SITE_KEY !== "mock-site-key" &&
+        env.VITE_FIREBASE_APPCHECK_SITE_KEY !== "mock-appcheck-site-key"
+      ) {
+        appCheckInstance = initializeAppCheck(firebaseApp, {
+          provider: new ReCaptchaEnterpriseProvider(env.VITE_FIREBASE_APPCHECK_SITE_KEY),
+          isTokenAutoRefreshEnabled: true,
+        });
+      }
+    } catch {
+      // ReCaptchaEnterpriseProvider may fail in dev environments
+    }
   }
-
   return appCheckInstance;
 }
