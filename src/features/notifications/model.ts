@@ -97,13 +97,19 @@ export function contentBytes(input: CampaignInput): number {
   ).length;
 }
 
+function containsUnsafePlainText(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return character === "<" || character === ">" || codePoint < 32 || codePoint === 127;
+  });
+}
+
 export function validateCampaignInput(input: CampaignInput): string | null {
   const title = input.title.trim();
   const body = input.body.trim();
   if (!title || title.length > 120) return "Title must contain 1–120 characters.";
   if (!body || body.length > 1000) return "Body must contain 1–1000 characters.";
-  const plainText = `${title}${body}`;
-  if (/[<>\u0000-\u001f\u007f]/u.test(plainText)) {
+  if (containsUnsafePlainText(title) || containsUnsafePlainText(body)) {
     return "Title and body must be plain text without markup or control characters.";
   }
   if (!isSupportedTarget(input.target.value)) return "Select a supported in-app destination.";
