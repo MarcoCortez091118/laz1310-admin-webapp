@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarClock,
   Image as ImageIcon,
+  Images,
   Plus,
   RefreshCw,
   Trash2,
@@ -10,6 +11,7 @@ import { useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
+import { MediaPickerDialog } from "../media/MediaPickerDialog";
 import { putStation } from "./api";
 import {
   apiTime,
@@ -62,6 +64,7 @@ export function ProgramEditor({
     program ? schedulesForProgram(station, program.id) : [],
   );
   const [slugTouched, setSlugTouched] = useState(existing);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -230,9 +233,10 @@ export function ProgramEditor({
                   value={workingProgram.hostName ?? ""}
                 />
               </label>
-              <label>
-                Artwork URL
+              <div className="program-artwork-field">
+                <span>Artwork</span>
                 <input
+                  aria-label="Artwork URL"
                   inputMode="url"
                   maxLength={2048}
                   onChange={(event) =>
@@ -244,8 +248,29 @@ export function ProgramEditor({
                   placeholder="https://.../program.webp"
                   value={workingProgram.imageUrl ?? ""}
                 />
-                <small>HTTPS only. Media Library integration will replace manual URLs later.</small>
-              </label>
+                <div className="program-artwork-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={() => setMediaPickerOpen(true)}
+                    type="button"
+                  >
+                    <Images size={15} />
+                    Media Library
+                  </button>
+                  {imageUrl ? (
+                    <button
+                      className="secondary-button"
+                      onClick={() =>
+                        setWorkingProgram((current) => ({ ...current, imageUrl: null }))
+                      }
+                      type="button"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+                <small>Managed Media Library is recommended; external HTTPS URLs remain supported.</small>
+              </div>
               <label className="field-span">
                 Description
                 <textarea
@@ -417,6 +442,15 @@ export function ProgramEditor({
           {save.isPending ? "Saving…" : existing ? "Save program" : "Create program"}
         </button>
       </div>
+
+      <MediaPickerDialog
+        currentUrl={workingProgram.imageUrl}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(asset) =>
+          setWorkingProgram((current) => ({ ...current, imageUrl: asset.url }))
+        }
+        open={mediaPickerOpen}
+      />
     </article>
   );
 }

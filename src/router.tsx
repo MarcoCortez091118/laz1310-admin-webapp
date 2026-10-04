@@ -10,6 +10,7 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
+import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
 
@@ -76,9 +77,7 @@ const dynamicsRoute = createRoute({
 const mediaRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/media",
-  component: () => (
-    <PlaceholderPage dependency="Admin media upload/list contracts" title="Media" />
-  ),
+  component: MediaLibraryPage,
 });
 
 const releasesRoute = createRoute({

@@ -50,6 +50,7 @@ Implemented:
 - Overview / Draft status;
 - Pages editor with Live Preview and Server Draft Preview;
 - Programs editor backed by Station `Show` + `Schedule` contracts;
+- Media Library with secure image upload/listing and reusable Programs artwork picker;
 - optimistic concurrency and request-id aware error handling;
 - OpenAPI-generated API types in CI.
 
@@ -57,11 +58,10 @@ Planned administration surfaces already represented in navigation:
 
 - Radio;
 - Dynamics;
-- Media;
 - Releases / Publish / Rollback;
 - Weather;
 - Notifications;
 - Audit;
 - App Configuration.
 
-See `docs/architecture.md` for platform boundaries and `docs/programs.md` for the Programs workflow.
+See `docs/architecture.md` for platform boundaries, `docs/programs.md` for the Programs workflow, and `docs/media-library.md` for the managed image pipeline.
