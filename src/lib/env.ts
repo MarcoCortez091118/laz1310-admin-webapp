@@ -7,7 +7,6 @@ const EnvSchema = z.object({
   VITE_FIREBASE_PROJECT_ID: z.string().min(1),
   VITE_FIREBASE_APP_ID: z.string().min(1),
   VITE_FIREBASE_APPCHECK_SITE_KEY: z.string().min(1),
-  VITE_FIREBASE_APPCHECK_MODE: z.enum(["enterprise", "debug"]).default("enterprise"),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

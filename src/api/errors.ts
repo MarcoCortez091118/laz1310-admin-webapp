@@ -1,5 +1,6 @@
 export type ApiErrorKind =
   | "unauthenticated"
+  | "app-check"
   | "forbidden"
   | "conflict"
   | "payload-too-large"
@@ -44,6 +45,10 @@ export function apiErrorKind(status: number): ApiErrorKind {
   }
 }
 
+function isAppCheckError(status: number, message: string): boolean {
+  return status === 401 && /app\s*check/i.test(message);
+}
+
 export async function toApiError(response: Response): Promise<ApiError> {
   let message = response.statusText || "Request failed";
   try {
@@ -62,11 +67,14 @@ export async function toApiError(response: Response): Promise<ApiError> {
 
   const retryAfter = response.headers.get("Retry-After");
   const parsedRetry = retryAfter ? Number.parseInt(retryAfter, 10) : Number.NaN;
+  const kind = isAppCheckError(response.status, message)
+    ? "app-check"
+    : apiErrorKind(response.status);
 
   return new ApiError(
     message,
     response.status,
-    apiErrorKind(response.status),
+    kind,
     response.headers.get("X-Request-ID") ?? undefined,
     Number.isFinite(parsedRetry) ? parsedRetry : undefined,
   );

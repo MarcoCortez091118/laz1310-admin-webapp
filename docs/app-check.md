@@ -11,52 +11,44 @@ Authorization: Bearer <firebase-id-token>
 X-Firebase-AppCheck: <firebase-app-check-token>
 ```
 
-The client is fail-closed. If Firebase App Check cannot issue a token, the request to FastAPI is not sent.
+The client is fail-closed. If Firebase Auth or Firebase App Check cannot issue the required token, the administrative request is not sent to FastAPI.
 
-## Enterprise mode
+## Deployment-mode selection
 
-`enterprise` is the default and the only mode intended for production:
+App Check attestation is selected from the runtime hostname instead of an environment switch. This avoids stale or missing `VITE_FIREBASE_APPCHECK_MODE` values in hosted previews.
 
-```env
-VITE_FIREBASE_APPCHECK_MODE=enterprise
-VITE_FIREBASE_APPCHECK_SITE_KEY=<recaptcha-enterprise-site-key>
-```
-
-The site key must belong to the Firebase project's registered Fraud Defense / reCAPTCHA Enterprise provider and must authorize the deployed hostname.
-
-## Debug mode for the AI Studio test deployment
-
-The temporary test deployment may use Firebase's official App Check debug provider while the reCAPTCHA Enterprise provider issue is being isolated:
-
-```env
-VITE_FIREBASE_APPCHECK_MODE=debug
-```
-
-Debug mode is runtime-restricted to:
+Approved non-production hosts use Firebase's official App Check debug flow automatically:
 
 - `laz1310-adminwebapp.ai.studio`
 - `localhost`
 - `127.0.0.1`
 
-Any other hostname fails before App Check initialization. No debug token is committed or embedded in Vite configuration.
+Every other hostname uses reCAPTCHA Enterprise automatically. This includes future production domains such as `admin.laz1310.com`.
 
-After deploying with debug mode:
+`VITE_FIREBASE_APPCHECK_SITE_KEY` is still required because production/Enterprise deployments use the registered reCAPTCHA Enterprise key.
 
-1. Open the browser console on the test deployment.
+## First run on the AI Studio test deployment
+
+The first browser that opens the approved test hostname receives a browser-local App Check debug token.
+
+1. Open the browser console on `laz1310-adminwebapp.ai.studio`.
 2. Copy the `AppCheck debug token` printed by Firebase.
 3. In Firebase Console, open **App Check → Apps → LA Z 1310 Admin WebApp → Manage debug tokens**.
 4. Register that browser-local token.
-5. Reload the test deployment and sign in again.
-6. Verify `/api/v1/admin/me` includes `X-Firebase-AppCheck` and returns the staff identity.
+5. Reload the deployment and sign in again.
+6. Verify `/api/v1/admin/me` includes both `Authorization` and `X-Firebase-AppCheck` and returns the staff identity.
 
-The generated token is stored locally by Firebase for the same browser/machine. Treat registered debug tokens as credentials: never commit or share them, and revoke them after testing.
+The generated token is persisted locally by Firebase for that browser/machine. Treat registered debug tokens as credentials: never commit or share them, and revoke them after the test environment is retired.
 
-## Returning to production
+## Production
 
-Before deploying a production hostname such as `admin.laz1310.com`, set:
+No debug-mode environment variable is used in production. A production hostname automatically resolves to Enterprise attestation.
 
-```env
-VITE_FIREBASE_APPCHECK_MODE=enterprise
-```
+The reCAPTCHA Enterprise key must:
 
-Debug mode is intentionally blocked on production/arbitrary hosts even if the environment variable is misconfigured.
+- belong to the same Firebase/Google Cloud project,
+- be registered for the Web App in Firebase App Check,
+- be a Website / Score key,
+- authorize the production hostname.
+
+If App Check fails, StaffGate reports an App Check configuration problem separately from account authorization failures.

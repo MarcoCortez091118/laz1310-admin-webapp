@@ -1,51 +1,42 @@
 import { describe, expect, it } from "vitest";
 import {
-  configureAppCheckDebugMode,
+  configureAppCheckForHost,
   isApprovedAppCheckDebugHost,
+  resolveAppCheckMode,
   type AppCheckDebugTarget,
 } from "./app-check-mode";
 
-describe("App Check debug mode", () => {
-  it("allows the dedicated AI Studio test deployment", () => {
+describe("App Check deployment mode", () => {
+  it("uses debug attestation for the dedicated AI Studio test deployment", () => {
     expect(isApprovedAppCheckDebugHost("laz1310-adminwebapp.ai.studio")).toBe(true);
+    expect(resolveAppCheckMode("laz1310-adminwebapp.ai.studio")).toBe("debug");
   });
 
-  it("allows localhost development", () => {
-    expect(isApprovedAppCheckDebugHost("localhost")).toBe(true);
-    expect(isApprovedAppCheckDebugHost("127.0.0.1")).toBe(true);
+  it("uses debug attestation for localhost development", () => {
+    expect(resolveAppCheckMode("localhost")).toBe("debug");
+    expect(resolveAppCheckMode("127.0.0.1")).toBe("debug");
   });
 
-  it("rejects production and arbitrary hosts", () => {
-    expect(isApprovedAppCheckDebugHost("admin.laz1310.com")).toBe(false);
-    expect(isApprovedAppCheckDebugHost("example.ai.studio")).toBe(false);
+  it("uses Enterprise attestation for production and arbitrary hosts", () => {
+    expect(resolveAppCheckMode("admin.laz1310.com")).toBe("enterprise");
+    expect(resolveAppCheckMode("example.ai.studio")).toBe("enterprise");
   });
 
-  it("enables Firebase debug token generation only on approved hosts", () => {
+  it("enables Firebase debug token generation on approved test hosts", () => {
     const target: AppCheckDebugTarget = {};
 
-    configureAppCheckDebugMode(
-      "debug",
-      "laz1310-adminwebapp.ai.studio",
-      target,
-    );
-
+    expect(
+      configureAppCheckForHost("laz1310-adminwebapp.ai.studio", target),
+    ).toBe("debug");
     expect(target.FIREBASE_APPCHECK_DEBUG_TOKEN).toBe(true);
   });
 
-  it("fails closed when debug mode is requested on another host", () => {
+  it("does not expose debug attestation on production hosts", () => {
     const target: AppCheckDebugTarget = {};
 
-    expect(() =>
-      configureAppCheckDebugMode("debug", "admin.laz1310.com", target),
-    ).toThrow(/restricted to approved non-production hosts/i);
-    expect(target.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
-  });
-
-  it("does not mutate the runtime in enterprise mode", () => {
-    const target: AppCheckDebugTarget = {};
-
-    configureAppCheckDebugMode("enterprise", "admin.laz1310.com", target);
-
+    expect(configureAppCheckForHost("admin.laz1310.com", target)).toBe(
+      "enterprise",
+    );
     expect(target.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
   });
 });
