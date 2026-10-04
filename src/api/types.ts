@@ -13,6 +13,11 @@ export type TextBlock = components["schemas"]["TextBlock"];
 export type RadioBlock = components["schemas"]["RadioBlock"];
 export type ShowsBlock = components["schemas"]["ShowsBlock"];
 export type CardsBlock = components["schemas"]["CardsBlock"];
+export type Dynamic = components["schemas"]["Dynamic"];
+export type DynamicFormField = components["schemas"]["FormField"];
+export type ParticipationDefinition = components["schemas"]["ParticipationDefinition"];
+export type ParticipationPage = components["schemas"]["ParticipationPage"];
+export type AdminParticipation = components["schemas"]["AdminParticipation"];
 
 export type PageBlock =
   | HeroBlock
