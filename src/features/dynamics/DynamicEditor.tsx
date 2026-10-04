@@ -22,6 +22,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { Dynamic } from "../../api/types";
 import { ApiError } from "../../api/errors";
 import { adminQueryKeys } from "../content/api";
+import { ManagedImageField } from "../media/ManagedImageField";
 import { deleteDynamic, dynamicsQueryKeys, putDynamic } from "./api";
 import {
   defaultDynamicForm,
@@ -173,7 +174,14 @@ export function DynamicEditor({
             </Box>
             <TextField label="Description" value={form.description} onChange={(event) => update("description", event.target.value)} required multiline minRows={3} inputProps={{ maxLength: 5000 }} />
             <TextField label="Instructions" value={form.instructions} onChange={(event) => update("instructions", event.target.value)} required multiline minRows={3} inputProps={{ maxLength: 5000 }} />
-            <TextField label="Image URL" value={form.imageUrl} onChange={(event) => update("imageUrl", event.target.value)} required type="url" placeholder="https://..." />
+            <ManagedImageField
+              value={form.imageUrl}
+              label="Campaign artwork"
+              pickerTitle="Choose campaign artwork"
+              required
+              description="Upload the promotional image. FastAPI stores the processed asset and its managed Storage URL is assigned automatically."
+              onChange={(url) => update("imageUrl", url ?? "")}
+            />
           </FormSection>
 
           <FormSection title="Schedule & availability" description="Dates are interpreted in the selected IANA timezone and persisted as UTC.">

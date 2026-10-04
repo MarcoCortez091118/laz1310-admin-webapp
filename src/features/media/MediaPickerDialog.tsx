@@ -9,11 +9,15 @@ import "./media.css";
 export function MediaPickerDialog({
   open,
   currentUrl,
+  title = "Choose managed image",
+  description = "Select an existing managed image or upload a new one.",
   onClose,
   onSelect,
 }: {
   open: boolean;
   currentUrl?: string | null;
+  title?: string;
+  description?: string;
   onClose: () => void;
   onSelect: (asset: MediaAsset) => void;
 }) {
@@ -57,8 +61,8 @@ export function MediaPickerDialog({
         <header className="media-picker-header">
           <div>
             <p className="eyebrow">Media Library</p>
-            <h2 id="media-picker-title">Choose program artwork</h2>
-            <p className="muted">Select a managed image or upload a new one.</p>
+            <h2 id="media-picker-title">{title}</h2>
+            <p className="muted">{description}</p>
           </div>
           <button aria-label="Close media picker" className="icon-button" onClick={onClose} type="button">
             <X size={18} />

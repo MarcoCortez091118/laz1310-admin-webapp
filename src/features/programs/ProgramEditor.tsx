@@ -23,7 +23,6 @@ import {
   CalendarClock,
   Clock3,
   Image as ImageIcon,
-  Images,
   Plus,
   RefreshCw,
   Save,
@@ -33,7 +32,7 @@ import { useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
-import { MediaPickerDialog } from "../media/MediaPickerDialog";
+import { ManagedImageField } from "../media/ManagedImageField";
 import { deleteProgram, putStation } from "./api";
 import {
   apiTime,
@@ -85,7 +84,6 @@ export function ProgramEditor({
     program ? schedulesForProgram(station, program.id) : [],
   );
   const [slugTouched, setSlugTouched] = useState(existing);
-  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const save = useMutation({
@@ -258,25 +256,14 @@ export function ProgramEditor({
                   onChange={(event) => setWorkingProgram((current) => ({ ...current, hostName: event.target.value }))}
                   placeholder="Host name"
                 />
-                <Box className="program-artwork-mui-field">
-                  <TextField
-                    fullWidth
-                    label="Artwork URL"
-                    value={workingProgram.imageUrl ?? ""}
-                    inputProps={{ maxLength: 2048 }}
-                    onChange={(event) => setWorkingProgram((current) => ({ ...current, imageUrl: event.target.value }))}
-                    placeholder="https://.../program.webp"
+                <Box className="program-field-span">
+                  <ManagedImageField
+                    value={workingProgram.imageUrl}
+                    label="Program artwork"
+                    pickerTitle="Choose program artwork"
+                    description="Upload the program artwork or choose an existing managed asset. The Storage URL is assigned automatically after FastAPI accepts the image."
+                    onChange={(url) => setWorkingProgram((current) => ({ ...current, imageUrl: url }))}
                   />
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Button variant="outlined" size="small" startIcon={<Images size={15} />} onClick={() => setMediaPickerOpen(true)}>
-                      Media Library
-                    </Button>
-                    {imageUrl ? (
-                      <Button size="small" onClick={() => setWorkingProgram((current) => ({ ...current, imageUrl: null }))}>
-                        Clear
-                      </Button>
-                    ) : null}
-                  </Stack>
                 </Box>
                 <TextField
                   className="program-field-span"
@@ -462,13 +449,6 @@ export function ProgramEditor({
           </Button>
         </Box>
       </Stack>
-
-      <MediaPickerDialog
-        currentUrl={workingProgram.imageUrl}
-        onClose={() => setMediaPickerOpen(false)}
-        onSelect={(asset) => setWorkingProgram((current) => ({ ...current, imageUrl: asset.url }))}
-        open={mediaPickerOpen}
-      />
 
       <Dialog open={deleteOpen} onClose={() => !remove.isPending && setDeleteOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Delete program?</DialogTitle>
