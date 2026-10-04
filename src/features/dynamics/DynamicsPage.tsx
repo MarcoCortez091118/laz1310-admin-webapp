@@ -1,3 +1,20 @@
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  InputAdornment,
+  Paper,
+  Skeleton,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { Clock3, Plus, Search, Sparkles, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
@@ -13,6 +30,13 @@ type LifecycleFilter = "all" | DynamicLifecycle;
 
 const FILTERS: LifecycleFilter[] = ["all", "live", "scheduled", "closed", "ended"];
 
+const lifecycleColor: Record<DynamicLifecycle, "success" | "warning" | "default" | "error"> = {
+  live: "success",
+  scheduled: "warning",
+  ended: "default",
+  closed: "error",
+};
+
 function dateSummary(startsAt: string | undefined, endsAt: string | undefined, timezone: string | undefined) {
   if (!startsAt || !endsAt) return "Window unavailable";
   const format = new Intl.DateTimeFormat(undefined, {
@@ -27,6 +51,33 @@ function dateSummary(startsAt: string | undefined, endsAt: string | undefined, t
   return `${format.format(new Date(startsAt))} → ${format.format(new Date(endsAt))}`;
 }
 
+function MetricCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  detail: string;
+}) {
+  return (
+    <Card variant="outlined" className="dynamics-mui-metric">
+      <CardContent>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
+            <Typography variant="h4" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
+            <Typography variant="caption" color="text.secondary">{detail}</Typography>
+          </Box>
+          <Box className="dynamics-mui-metric-icon">{icon}</Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DynamicsPage() {
   const staff = useStaff();
   const query = useDynamicsQuery();
@@ -37,7 +88,7 @@ export function DynamicsPage() {
   const isAdmin = staff.roles?.includes("admin") ?? false;
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
-  const now = new Date();
+  const now = useMemo(() => new Date(), [query.data]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -67,32 +118,41 @@ export function DynamicsPage() {
   );
 
   if (query.isPending) {
-    return <section className="page-stack"><div className="panel">Loading Dynamics Draft…</div></section>;
+    return (
+      <Box className="modern-page dynamics-mui-page">
+        <Stack spacing={2}>
+          <Skeleton variant="text" width={220} height={50} />
+          <Box className="dynamics-mui-metrics">
+            {[0, 1, 2].map((item) => <Skeleton key={item} variant="rounded" height={126} />)}
+          </Box>
+          <Skeleton variant="rounded" height={520} />
+        </Stack>
+      </Box>
+    );
   }
 
   if (query.error || !query.data) {
     return (
-      <section className="page-stack">
-        <article className="panel">
-          <p className="eyebrow">Dynamics</p>
-          <h1>Unable to load campaigns.</h1>
-          <p className="muted">{query.error instanceof Error ? query.error.message : "Admin API unavailable."}</p>
-          <button onClick={() => void query.refetch()} type="button">Retry</button>
-        </article>
-      </section>
+      <Box className="modern-page dynamics-mui-page">
+        <Alert
+          severity="error"
+          action={<Button color="inherit" size="small" onClick={() => void query.refetch()}>Retry</Button>}
+        >
+          <strong>Unable to load campaigns.</strong>{" "}
+          {query.error instanceof Error ? query.error.message : "Admin API unavailable."}
+        </Alert>
+      </Box>
     );
   }
 
   const etag = query.data.etag;
   if (!etag) {
     return (
-      <section className="page-stack">
-        <article className="panel">
-          <p className="eyebrow">Dynamics</p>
-          <h1>Draft ETag missing</h1>
-          <p className="muted">Campaign writes are disabled because optimistic concurrency cannot be enforced safely.</p>
-        </article>
-      </section>
+      <Box className="modern-page dynamics-mui-page">
+        <Alert severity="warning">
+          <strong>Draft ETag missing.</strong> Campaign writes are disabled because optimistic concurrency cannot be enforced safely.
+        </Alert>
+      </Box>
     );
   }
 
@@ -101,120 +161,170 @@ export function DynamicsPage() {
   const formCount = dynamics.filter((item) => item.participation?.type === "form").length;
 
   return (
-    <section className="page-stack dynamics-page">
-      <header className="page-heading split-heading dynamics-heading">
-        <div>
-          <p className="eyebrow">Content / Draft ETag {etag}</p>
-          <h1>Dynamics</h1>
-          <p className="muted">Manage contests and promotions in the Draft. Mobile changes only after the global Publish workflow creates an immutable release.</p>
-        </div>
-        <button
-          disabled={dynamics.length >= 100}
-          onClick={() => {
-            setSelection("new");
-            setTab("editor");
-          }}
-          type="button"
-        >
-          <Plus size={16} /> New campaign
-        </button>
-      </header>
+    <Box className="modern-page dynamics-mui-page">
+      <Stack spacing={2.25}>
+        <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "flex-end" }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="overline" color="primary.main" sx={{ fontWeight: 800, letterSpacing: ".12em" }}>
+              Engagement · Draft
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Dynamics</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 760 }}>
+              Manage contests and promotions in the Draft. Mobile changes only after the global Publish workflow creates an immutable release.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label={`ETag ${etag}`} size="small" variant="outlined" />
+            <Button
+              variant="contained"
+              startIcon={<Plus size={17} />}
+              disabled={dynamics.length >= 100}
+              onClick={() => {
+                setSelection("new");
+                setTab("editor");
+              }}
+            >
+              New campaign
+            </Button>
+          </Stack>
+        </Stack>
 
-      <div className="dynamic-metrics">
-        <article className="dynamic-metric-card"><span><Sparkles size={16} /> Campaigns</span><strong>{dynamics.length}</strong><small>Max 100 in catalog</small></article>
-        <article className="dynamic-metric-card"><span><Clock3 size={16} /> Live now</span><strong>{liveCount}</strong><small>{scheduledCount} scheduled</small></article>
-        <article className="dynamic-metric-card"><span><UsersRound size={16} /> Native forms</span><strong>{formCount}</strong><small>{dynamics.length - formCount} external</small></article>
-      </div>
+        <Box className="dynamics-mui-metrics">
+          <MetricCard icon={<Sparkles size={21} />} label="Campaigns" value={dynamics.length} detail="Maximum 100 in Draft catalog" />
+          <MetricCard icon={<Clock3 size={21} />} label="Live now" value={liveCount} detail={`${scheduledCount} scheduled`} />
+          <MetricCard icon={<UsersRound size={21} />} label="Native forms" value={formCount} detail={`${dynamics.length - formCount} external URL`} />
+        </Box>
 
-      <div className="panel dynamic-toolbar">
-        <label className="dynamic-search">
-          <Search aria-hidden size={17} />
-          <input aria-label="Search campaigns" onChange={(event) => setSearch(event.target.value)} placeholder="Search title, slug, or context" value={search} />
-        </label>
-        <div className="dynamic-filter" aria-label="Campaign lifecycle filter">
-          {FILTERS.map((value) => (
-            <button className={filter === value ? "selected" : ""} key={value} onClick={() => setFilter(value)} type="button">
-              {value[0].toUpperCase() + value.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
+        <Paper variant="outlined" className="dynamics-mui-toolbar">
+          <TextField
+            size="small"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search title, slug, or context"
+            aria-label="Search campaigns"
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment>,
+            }}
+          />
+          <Stack direction="row" spacing={0.75} className="dynamics-mui-filter" role="group" aria-label="Campaign lifecycle filter">
+            {FILTERS.map((value) => (
+              <Chip
+                clickable
+                key={value}
+                color={filter === value ? "primary" : "default"}
+                variant={filter === value ? "filled" : "outlined"}
+                label={value[0].toUpperCase() + value.slice(1)}
+                onClick={() => setFilter(value)}
+              />
+            ))}
+          </Stack>
+        </Paper>
 
-      <div className="dynamic-layout">
-        <aside className="dynamic-list" aria-label="Dynamics campaigns">
-          {filtered.length ? (
-            filtered.map((dynamic) => {
-              const current = lifecycle(dynamic, now);
-              return (
-                <button
-                  className={`dynamic-card ${selection === dynamic.id ? "selected" : ""}`}
-                  key={dynamic.id}
-                  onClick={() => {
-                    setSelection(dynamic.id ?? null);
-                    setTab("editor");
-                  }}
-                  type="button"
-                >
-                  <div className="dynamic-card-art">
-                    <img alt="" referrerPolicy="no-referrer" src={dynamic.imageUrl} />
-                    <span className={`dynamic-lifecycle ${current}`}>{current}</span>
-                    {dynamic.featured ? <span className="dynamic-featured">Featured</span> : null}
-                  </div>
-                  <div className="dynamic-card-copy">
-                    <strong>{dynamic.title}</strong>
-                    <span>{dynamic.context} · {dynamic.participation?.type === "form" ? "Native form" : "External URL"}</span>
-                    <small>{dateSummary(dynamic.startsAt, dynamic.endsAt, dynamic.timezone)}</small>
-                    <code>{dynamic.slug}</code>
-                  </div>
-                </button>
-              );
-            })
-          ) : (
-            <article className="panel dynamic-list-empty">
-              <strong>No campaigns found.</strong>
-              <span>Adjust the filters or create a new Dynamic.</span>
-            </article>
-          )}
-        </aside>
+        <Box className="dynamics-mui-layout">
+          <Paper variant="outlined" className="dynamics-mui-catalog">
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Campaign catalog</Typography>
+                <Typography variant="caption" color="text.secondary">{filtered.length} of {dynamics.length} visible</Typography>
+              </Box>
+              <Chip size="small" label="Draft" color="warning" variant="outlined" />
+            </Stack>
 
-        <div className="dynamic-detail">
-          {selection === "new" ? (
-            <DynamicEditor
-              allDynamics={dynamics}
-              dynamic={null}
-              etag={etag}
-              key={`new-${etag}`}
-              onDeleted={() => setSelection(null)}
-              onSaved={(dynamicId) => setSelection(dynamicId)}
-            />
-          ) : selected ? (
-            <>
-              <div className="dynamic-detail-tabs" role="tablist">
-                <button aria-selected={tab === "editor"} className={tab === "editor" ? "selected" : ""} onClick={() => setTab("editor")} role="tab" type="button">Campaign</button>
-                <button aria-selected={tab === "participants"} className={tab === "participants" ? "selected" : ""} onClick={() => setTab("participants")} role="tab" type="button">Participants {isAdmin ? "" : "(admin)"}</button>
-              </div>
-              {tab === "editor" ? (
-                <DynamicEditor
-                  allDynamics={dynamics}
-                  dynamic={selected}
-                  etag={etag}
-                  key={`${selected.id}-${etag}`}
-                  onDeleted={() => setSelection(null)}
-                  onSaved={(dynamicId) => setSelection(dynamicId)}
-                />
-              ) : (
-                <ParticipantsPanel active={tab === "participants"} dynamicId={selected.id ?? ""} isAdmin={isAdmin} title={selected.title ?? "Campaign"} />
+            <Box className="dynamics-mui-campaign-list" aria-label="Dynamics campaigns">
+              {filtered.length ? filtered.map((dynamic) => {
+                const current = lifecycle(dynamic, now);
+                const isSelected = selection === dynamic.id;
+                return (
+                  <Card
+                    key={dynamic.id}
+                    variant="outlined"
+                    className={`dynamics-mui-campaign ${isSelected ? "selected" : ""}`}
+                  >
+                    <CardActionArea
+                      onClick={() => {
+                        setSelection(dynamic.id ?? null);
+                        setTab("editor");
+                      }}
+                    >
+                      <Box className="dynamics-mui-campaign-image">
+                        <img alt={dynamic.artworkLabel || dynamic.title || "Campaign"} referrerPolicy="no-referrer" src={dynamic.imageUrl} />
+                        <Stack direction="row" spacing={0.6} className="dynamics-mui-campaign-badges">
+                          <Chip label={current} color={lifecycleColor[current]} size="small" />
+                          {dynamic.featured ? <Chip label="Featured" color="primary" size="small" /> : null}
+                        </Stack>
+                      </Box>
+                      <CardContent sx={{ p: 1.75 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>{dynamic.title}</Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.4 }}>
+                          {dynamic.context} · {dynamic.participation?.type === "form" ? "Native form" : "External URL"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                          {dateSummary(dynamic.startsAt, dynamic.endsAt, dynamic.timezone)}
+                        </Typography>
+                        <Typography component="code" variant="caption" color="text.secondary" display="block" noWrap sx={{ mt: 0.6 }}>
+                          {dynamic.slug}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                );
+              }) : (
+                <Box className="dynamics-mui-empty">
+                  <Sparkles size={28} />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>No campaigns found</Typography>
+                  <Typography variant="body2" color="text.secondary">Adjust the filters or create a new Dynamic.</Typography>
+                </Box>
               )}
-            </>
-          ) : (
-            <article className="panel empty-editor dynamic-empty-editor">
-              <p className="eyebrow">Dynamics</p>
-              <h2>Select the existing test campaign or create a new one.</h2>
-              <p className="muted">The existing campaign is loaded directly from <code>GET /api/v1/admin/dynamics</code>; no local fixtures or mock campaigns are used.</p>
-            </article>
-          )}
-        </div>
-      </div>
-    </section>
+            </Box>
+          </Paper>
+
+          <Box className="dynamics-mui-detail">
+            {selection === "new" ? (
+              <DynamicEditor
+                allDynamics={dynamics}
+                dynamic={null}
+                etag={etag}
+                key={`new-${etag}`}
+                onDeleted={() => setSelection(null)}
+                onSaved={(dynamicId) => setSelection(dynamicId)}
+              />
+            ) : selected ? (
+              <>
+                <Paper variant="outlined" sx={{ mb: 1.5, px: 1 }}>
+                  <Tabs
+                    value={tab}
+                    onChange={(_event, value: DetailTab) => setTab(value)}
+                    aria-label="Dynamic detail"
+                  >
+                    <Tab value="editor" label="Campaign" />
+                    <Tab value="participants" label={`Participants${isAdmin ? "" : " · Admin"}`} />
+                  </Tabs>
+                </Paper>
+                {tab === "editor" ? (
+                  <DynamicEditor
+                    allDynamics={dynamics}
+                    dynamic={selected}
+                    etag={etag}
+                    key={`${selected.id}-${etag}`}
+                    onDeleted={() => setSelection(null)}
+                    onSaved={(dynamicId) => setSelection(dynamicId)}
+                  />
+                ) : (
+                  <ParticipantsPanel active={tab === "participants"} dynamicId={selected.id ?? ""} isAdmin={isAdmin} title={selected.title ?? "Campaign"} />
+                )}
+              </>
+            ) : (
+              <Paper variant="outlined" className="dynamics-mui-detail-empty">
+                <Box className="dynamics-mui-detail-empty-icon"><Sparkles size={28} /></Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>Select a campaign</Typography>
+                <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 470 }}>
+                  Choose the existing test campaign from the catalog or create a new one. Campaigns are loaded directly from the FastAPI Draft; no local fixtures are used.
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        </Box>
+      </Stack>
+    </Box>
   );
 }
