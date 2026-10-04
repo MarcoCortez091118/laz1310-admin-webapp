@@ -20,5 +20,9 @@ export function useDynamicParticipationsQuery(dynamicId: string | null, enabled:
     getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
     enabled: Boolean(dynamicId) && enabled,
     retry: false,
+    staleTime: 60_000,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
