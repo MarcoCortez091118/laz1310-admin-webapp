@@ -18,6 +18,7 @@ import {
 import { Clock3, Plus, Search, Sparkles, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
+import { PublishDraftButton } from "../content/PublishDraftButton";
 import { DynamicEditor } from "./DynamicEditor";
 import { lifecycle, type DynamicLifecycle } from "./model";
 import { ParticipantsPanel } from "./ParticipantsPanel";
@@ -170,13 +171,14 @@ export function DynamicsPage() {
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Dynamics</Typography>
             <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 760 }}>
-              Manage contests and promotions in the Draft. Mobile changes only after the global Publish workflow creates an immutable release.
+              Save campaigns to the Draft, then publish the Draft to create the immutable release consumed by Mobile.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip label={`ETag ${etag}`} size="small" variant="outlined" />
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ width: { xs: "100%", md: "auto" } }}>
+            <Chip label={`ETag ${etag}`} size="small" variant="outlined" sx={{ alignSelf: { xs: "flex-start", sm: "center" } }} />
+            <PublishDraftButton isAdmin={isAdmin} />
             <Button
-              variant="contained"
+              variant="outlined"
               startIcon={<Plus size={17} />}
               disabled={dynamics.length >= 100}
               onClick={() => {
@@ -188,6 +190,12 @@ export function DynamicsPage() {
             </Button>
           </Stack>
         </Stack>
+
+        {!isAdmin ? (
+          <Alert severity="info">
+            Editors can save Dynamics to the Draft. A verified administrator must use <strong>Publish changes</strong> before Mobile receives those edits.
+          </Alert>
+        ) : null}
 
         <Box className="dynamics-mui-metrics">
           <MetricCard icon={<Sparkles size={21} />} label="Campaigns" value={dynamics.length} detail="Maximum 100 in Draft catalog" />
@@ -318,7 +326,7 @@ export function DynamicsPage() {
                 <Box className="dynamics-mui-detail-empty-icon"><Sparkles size={28} /></Box>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Select a campaign</Typography>
                 <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 470 }}>
-                  Choose the existing test campaign from the catalog or create a new one. Campaigns are loaded directly from the FastAPI Draft; no local fixtures are used.
+                  Choose an existing campaign or create a new one. Save changes to Draft, then use Publish changes above so Mobile receives the new release.
                 </Typography>
               </Paper>
             )}
