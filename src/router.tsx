@@ -13,6 +13,7 @@ import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
 import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
+import { ReleasesPage } from "./features/releases/ReleasesPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -50,10 +51,7 @@ const radioRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/radio",
   component: () => (
-    <PlaceholderPage
-      dependency="Station / Stream contracts"
-      title="Radio"
-    />
+    <PlaceholderPage dependency="Station / Stream contracts" title="Radio" />
   ),
 });
 
@@ -83,12 +81,7 @@ const mediaRoute = createRoute({
 const releasesRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/releases",
-  component: () => (
-    <PlaceholderPage
-      dependency="Release history; detail contract still required"
-      title="Releases"
-    />
-  ),
+  component: ReleasesPage,
 });
 
 const weatherRoute = createRoute({

@@ -51,6 +51,7 @@ Implemented:
 - Pages editor with Live Preview and Server Draft Preview;
 - Programs editor backed by Station `Show` + `Schedule` contracts;
 - Media Library with secure image upload/listing and reusable Programs artwork picker;
+- Publish + immutable Releases + ETag-protected Rollback administration;
 - optimistic concurrency and request-id aware error handling;
 - OpenAPI-generated API types in CI.
 
@@ -58,10 +59,9 @@ Planned administration surfaces already represented in navigation:
 
 - Radio;
 - Dynamics;
-- Releases / Publish / Rollback;
 - Weather;
 - Notifications;
 - Audit;
 - App Configuration.
 
-See `docs/architecture.md` for platform boundaries, `docs/programs.md` for the Programs workflow, and `docs/media-library.md` for the managed image pipeline.
+See `docs/architecture.md` for platform boundaries, `docs/programs.md` for the Programs workflow, `docs/media-library.md` for the managed image pipeline, and `docs/releases.md` for Publish / Release / Rollback semantics.
