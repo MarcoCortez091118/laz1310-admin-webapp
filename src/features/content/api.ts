@@ -5,6 +5,7 @@ export const adminQueryKeys = {
   draft: ["admin", "draft"] as const,
   preview: ["admin", "preview"] as const,
   publicState: ["admin", "public-state"] as const,
+  releases: ["admin", "releases"] as const,
 };
 
 export function getDraft(signal?: AbortSignal): Promise<ApiResult<Draft>> {
@@ -28,6 +29,22 @@ export function getPublicState(signal?: AbortSignal): Promise<ApiResult<PublicSt
     "/api/v1/admin/public-state",
     { method: "GET" },
     { signal },
+  );
+}
+
+export function publishDraft(
+  note: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<PublicState>> {
+  return apiRequest<PublicState>(
+    "/api/v1/admin/publish",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: note.trim() }),
+    },
+    { ifMatch: etag, signal },
   );
 }
 
