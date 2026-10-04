@@ -10,6 +10,7 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
+import { DynamicsPage } from "./features/dynamics/DynamicsPage";
 import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
@@ -66,12 +67,7 @@ const programsRoute = createRoute({
 const dynamicsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/dynamics",
-  component: () => (
-    <PlaceholderPage
-      dependency="Dynamics + participation contracts"
-      title="Dynamics"
-    />
-  ),
+  component: DynamicsPage,
 });
 
 const mediaRoute = createRoute({
