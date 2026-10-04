@@ -50,18 +50,18 @@ Implemented:
 - Overview / Draft status;
 - Pages editor with Live Preview and Server Draft Preview;
 - Programs editor backed by Station `Show` + `Schedule` contracts;
-- Media Library with secure image upload/listing and reusable Programs artwork picker;
+- Media Library with secure image upload/listing and reusable artwork picker;
 - Publish + immutable Releases + ETag-protected Rollback administration;
+- Dynamics editor with schedule, participation builder, consent configuration, managed artwork and admin-only protected participation viewing;
 - optimistic concurrency and request-id aware error handling;
 - OpenAPI-generated API types in CI.
 
 Planned administration surfaces already represented in navigation:
 
 - Radio;
-- Dynamics;
 - Weather;
 - Notifications;
 - Audit;
 - App Configuration.
 
-See `docs/architecture.md` for platform boundaries, `docs/programs.md` for the Programs workflow, `docs/media-library.md` for the managed image pipeline, and `docs/releases.md` for Publish / Release / Rollback semantics.
+See `docs/architecture.md` for platform boundaries, `docs/programs.md` for the Programs workflow, `docs/media-library.md` for the managed image pipeline, `docs/releases.md` for Publish / Release / Rollback semantics, and `docs/dynamics.md` for campaign and participation security rules.
