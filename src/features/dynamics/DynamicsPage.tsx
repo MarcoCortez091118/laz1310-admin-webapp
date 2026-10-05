@@ -346,7 +346,12 @@ export function DynamicsPage() {
         </Box>
       </Stack>
 
-      <DynamicsTrashDialog open={trashOpen} etag={etag} onClose={() => setTrashOpen(false)} />
+      <DynamicsTrashDialog
+        open={trashOpen}
+        etag={etag}
+        isAdmin={isAdmin}
+        onClose={() => setTrashOpen(false)}
+      />
     </Box>
   );
 }
