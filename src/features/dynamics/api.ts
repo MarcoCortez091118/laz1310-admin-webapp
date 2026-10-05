@@ -1,8 +1,29 @@
 import { apiRequest, type ApiResult } from "../../api/client";
-import type { Draft, Dynamic, ParticipationPage } from "../../api/types";
+import type { Draft, Dynamic, ParticipationPage, PublicState } from "../../api/types";
+
+export interface DynamicTrashItem {
+  id: string;
+  dynamicId: string;
+  snapshot: Dynamic;
+  snapshotDigest: string;
+  deletedAt: string;
+  deletedBy: string;
+  sourceDraftRevision: number;
+  resultingDraftRevision: number;
+  restoredAt: string | null;
+  restoredBy: string | null;
+}
+
+export interface ParticipationServiceStatus {
+  configured: boolean;
+  submissionsEnabled: boolean;
+  retentionDays: number;
+}
 
 export const dynamicsQueryKeys = {
   list: ["admin", "dynamics"] as const,
+  trash: ["admin", "dynamics", "trash"] as const,
+  participationStatus: ["admin", "dynamics", "participation-status"] as const,
   participations: (dynamicId: string) => ["admin", "dynamics", dynamicId, "participations"] as const,
 };
 
@@ -40,6 +61,59 @@ export function deleteDynamic(
     `/api/v1/admin/dynamics/${encodeURIComponent(dynamicId)}`,
     { method: "DELETE" },
     { ifMatch: etag, signal },
+  );
+}
+
+export function publishDynamic(
+  dynamicId: string,
+  note: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<PublicState>> {
+  return apiRequest<PublicState>(
+    `/api/v1/admin/dynamics/${encodeURIComponent(dynamicId)}/publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    },
+    { ifMatch: etag, signal },
+  );
+}
+
+export function getDynamicTrash(
+  limit = 50,
+  after?: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<DynamicTrashItem[]>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (after) params.set("after", after);
+  return apiRequest<DynamicTrashItem[]>(
+    `/api/v1/admin/dynamics/trash?${params.toString()}`,
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function restoreDynamic(
+  trashId: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<Draft>> {
+  return apiRequest<Draft>(
+    `/api/v1/admin/dynamics/trash/${encodeURIComponent(trashId)}/restore`,
+    { method: "POST" },
+    { ifMatch: etag, signal },
+  );
+}
+
+export function getParticipationServiceStatus(
+  signal?: AbortSignal,
+): Promise<ApiResult<ParticipationServiceStatus>> {
+  return apiRequest<ParticipationServiceStatus>(
+    "/api/v1/admin/dynamics/participation-status",
+    { method: "GET" },
+    { signal },
   );
 }
 

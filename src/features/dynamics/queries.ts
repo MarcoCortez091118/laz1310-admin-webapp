@@ -1,11 +1,38 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { dynamicsQueryKeys, getDynamicParticipations, getDynamics } from "./api";
+import {
+  dynamicsQueryKeys,
+  getDynamicParticipations,
+  getDynamics,
+  getDynamicTrash,
+  getParticipationServiceStatus,
+} from "./api";
 
 export function useDynamicsQuery() {
   return useQuery({
     queryKey: dynamicsQueryKeys.list,
     queryFn: ({ signal }) => getDynamics(signal),
     retry: false,
+  });
+}
+
+export function useDynamicTrashQuery(enabled = true) {
+  return useQuery({
+    queryKey: dynamicsQueryKeys.trash,
+    queryFn: ({ signal }) => getDynamicTrash(50, undefined, signal),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useParticipationServiceStatusQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: dynamicsQueryKeys.participationStatus,
+    queryFn: ({ signal }) => getParticipationServiceStatus(signal),
+    enabled,
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 

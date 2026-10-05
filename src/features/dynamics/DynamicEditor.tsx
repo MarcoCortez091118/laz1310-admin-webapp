@@ -17,13 +17,14 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Save, Trash2, X } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import type { Dynamic } from "../../api/types";
 import { ApiError } from "../../api/errors";
 import { adminQueryKeys } from "../content/api";
 import { ManagedImageField } from "../media/ManagedImageField";
-import { deleteDynamic, dynamicsQueryKeys, putDynamic } from "./api";
+import { dynamicsQueryKeys, putDynamic } from "./api";
+import { DynamicLifecycleActions } from "./DynamicLifecycleActions";
 import {
   defaultDynamicForm,
   dynamicFromForm,
@@ -38,6 +39,7 @@ interface DynamicEditorProps {
   dynamic: Dynamic | null;
   allDynamics: Dynamic[];
   etag: string;
+  isAdmin: boolean;
   onDeleted: () => void;
   onSaved: (dynamicId: string) => void;
 }
@@ -70,6 +72,7 @@ export function DynamicEditor({
   dynamic,
   allDynamics,
   etag,
+  isAdmin,
   onDeleted,
   onSaved,
 }: DynamicEditorProps) {
@@ -78,6 +81,7 @@ export function DynamicEditor({
     dynamic ? dynamicToForm(dynamic) : defaultDynamicForm(),
   );
   const [clientError, setClientError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
   const originalId = dynamic?.id;
 
   const saveMutation = useMutation({
@@ -88,6 +92,7 @@ export function DynamicEditor({
     },
     onSuccess: async () => {
       setClientError(null);
+      setDirty(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.draft }),
@@ -97,21 +102,8 @@ export function DynamicEditor({
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteDynamic(form.id, etag),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.draft }),
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
-      ]);
-      onDeleted();
-    },
-  });
-
-  const mutationError = saveMutation.error ?? deleteMutation.error;
-  const error = clientError ?? (mutationError ? mutationMessage(mutationError) : null);
-  const busy = saveMutation.isPending || deleteMutation.isPending;
+  const error = clientError ?? (saveMutation.error ? mutationMessage(saveMutation.error) : null);
+  const busy = saveMutation.isPending;
 
   const fieldContactValid = useMemo(
     () =>
@@ -126,6 +118,7 @@ export function DynamicEditor({
   function update<K extends keyof DynamicFormState>(key: K, value: DynamicFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     setClientError(null);
+    setDirty(true);
   }
 
   return (
@@ -139,12 +132,12 @@ export function DynamicEditor({
             <Typography variant="overline" color="primary.main" sx={{ fontWeight: 800, letterSpacing: ".12em" }}>
               {dynamic ? "Edit campaign" : "New campaign"}
             </Typography>
-            <Chip label="Draft only" size="small" color="warning" variant="outlined" />
+            <Chip label="Draft" size="small" color="warning" variant="outlined" />
             {form.featured ? <Chip label="Featured" size="small" color="primary" /> : null}
           </Stack>
           <Typography variant="h5" sx={{ mt: 0.25, fontWeight: 800 }} noWrap>{form.title || "Create a Dynamic"}</Typography>
           <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-            Writes update only the Draft. Publish remains a separate immutable release step.
+            Save edits to Draft first. Administrators can then publish this campaign independently without releasing unrelated Draft changes.
           </Typography>
           <Typography component="code" variant="caption" color="text.secondary" display="block" sx={{ mt: 1, overflowWrap: "anywhere" }}>
             {form.id}
@@ -285,23 +278,19 @@ export function DynamicEditor({
           </FormSection>
         </fieldset>
 
-        <Box className="dynamics-editor-actions-mui">
+        <Box className="dynamics-editor-actions-mui" sx={{ gap: 1.5, alignItems: { xs: "stretch", md: "flex-end" } }}>
           {dynamic ? (
-            <Button
-              color="error"
-              variant="outlined"
-              startIcon={<Trash2 size={16} />}
-              disabled={busy}
-              onClick={() => {
-                if (window.confirm(`Remove “${dynamic.title}” from the Draft? Existing participations are retained.`)) {
-                  void deleteMutation.mutateAsync();
-                }
-              }}
-            >
-              Remove from Draft
-            </Button>
+            <DynamicLifecycleActions
+              dynamicId={form.id}
+              title={form.title || dynamic.title || "Campaign"}
+              etag={etag}
+              isAdmin={isAdmin}
+              dirty={dirty}
+              busy={busy}
+              onDeleted={onDeleted}
+            />
           ) : <span />}
-          <Button type="submit" variant="contained" startIcon={<Save size={16} />} disabled={busy}>
+          <Button type="submit" variant="contained" startIcon={<Save size={16} />} disabled={busy} sx={{ flexShrink: 0 }}>
             {saveMutation.isPending ? "Saving…" : "Save to Draft"}
           </Button>
         </Box>
