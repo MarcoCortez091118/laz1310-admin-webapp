@@ -15,11 +15,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Clock3, Plus, Search, Sparkles, UsersRound } from "lucide-react";
+import { Clock3, Plus, Search, Sparkles, Trash2, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
-import { PublishDraftButton } from "../content/PublishDraftButton";
 import { DynamicEditor } from "./DynamicEditor";
+import { DynamicsTrashDialog } from "./DynamicsTrashDialog";
 import { lifecycle, type DynamicLifecycle } from "./model";
 import { ParticipantsPanel } from "./ParticipantsPanel";
 import { useDynamicsQuery } from "./queries";
@@ -86,6 +86,7 @@ export function DynamicsPage() {
   const [tab, setTab] = useState<DetailTab>("editor");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LifecycleFilter>("all");
+  const [trashOpen, setTrashOpen] = useState(false);
   const isAdmin = staff.roles?.includes("admin") ?? false;
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
@@ -170,13 +171,15 @@ export function DynamicsPage() {
               Engagement · Draft
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Dynamics</Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 760 }}>
-              Save campaigns to the Draft, then publish the Draft to create the immutable release consumed by Mobile.
+            <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 780 }}>
+              Save campaigns to Draft and publish each campaign independently. Global Draft publication remains an Operations / Releases workflow.
             </Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ width: { xs: "100%", md: "auto" } }}>
             <Chip label={`ETag ${etag}`} size="small" variant="outlined" sx={{ alignSelf: { xs: "flex-start", sm: "center" } }} />
-            <PublishDraftButton isAdmin={isAdmin} />
+            <Button variant="outlined" startIcon={<Trash2 size={16} />} onClick={() => setTrashOpen(true)}>
+              Trash
+            </Button>
             <Button
               variant="outlined"
               startIcon={<Plus size={17} />}
@@ -193,7 +196,7 @@ export function DynamicsPage() {
 
         {!isAdmin ? (
           <Alert severity="info">
-            Editors can save Dynamics to the Draft. A verified administrator must use <strong>Publish changes</strong> before Mobile receives those edits.
+            Editors can create, edit, restore and move Dynamics to trash. A verified administrator publishes an individual campaign from its editor.
           </Alert>
         ) : null}
 
@@ -292,6 +295,7 @@ export function DynamicsPage() {
                 allDynamics={dynamics}
                 dynamic={null}
                 etag={etag}
+                isAdmin={isAdmin}
                 key={`new-${etag}`}
                 onDeleted={() => setSelection(null)}
                 onSaved={(dynamicId) => setSelection(dynamicId)}
@@ -313,26 +317,36 @@ export function DynamicsPage() {
                     allDynamics={dynamics}
                     dynamic={selected}
                     etag={etag}
+                    isAdmin={isAdmin}
                     key={`${selected.id}-${etag}`}
                     onDeleted={() => setSelection(null)}
                     onSaved={(dynamicId) => setSelection(dynamicId)}
                   />
                 ) : (
-                  <ParticipantsPanel active={tab === "participants"} dynamicId={selected.id ?? ""} isAdmin={isAdmin} title={selected.title ?? "Campaign"} />
+                  <ParticipantsPanel
+                    active={tab === "participants"}
+                    dynamicId={selected.id ?? ""}
+                    isAdmin={isAdmin}
+                    title={selected.title ?? "Campaign"}
+                    participationType={selected.participation?.type ?? "external_url"}
+                    participationUrl={selected.participation?.url}
+                  />
                 )}
               </>
             ) : (
               <Paper variant="outlined" className="dynamics-mui-detail-empty">
                 <Box className="dynamics-mui-detail-empty-icon"><Sparkles size={28} /></Box>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Select a campaign</Typography>
-                <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 470 }}>
-                  Choose an existing campaign or create a new one. Save changes to Draft, then use Publish changes above so Mobile receives the new release.
+                <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 500 }}>
+                  Choose an existing campaign or create a new one. Save it to Draft first; administrators can publish that campaign independently from its editor.
                 </Typography>
               </Paper>
             )}
           </Box>
         </Box>
       </Stack>
+
+      <DynamicsTrashDialog open={trashOpen} etag={etag} onClose={() => setTrashOpen(false)} />
     </Box>
   );
 }
