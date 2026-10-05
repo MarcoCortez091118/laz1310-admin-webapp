@@ -171,7 +171,7 @@ export function DynamicLifecycleActions({
         <DialogTitle>Move “{title}” to trash?</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            The complete campaign snapshot is retained in the Dynamics trash and audit log. Participant records are not deleted.
+            The complete campaign snapshot is retained in Dynamics trash. The audit log records the actor, timestamp, Draft revision and a cryptographic digest linking back to that snapshot. Participant records are not deleted.
           </Alert>
           <Typography variant="body2" color="text.secondary">
             Moving to trash removes it from Draft. If it is currently published, Mobile keeps the published version until you publish the removal.
