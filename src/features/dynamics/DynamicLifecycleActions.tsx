@@ -61,7 +61,8 @@ export function DynamicLifecycleActions({
   const queryClient = useQueryClient();
   const [publishOpen, setPublishOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
-  const [note, setNote] = useState(`Publish ${title}`.slice(0, 300));
+  const [publishNote, setPublishNote] = useState(`Publish ${title}`.slice(0, 300));
+  const [removalNote, setRemovalNote] = useState(`Remove ${title}`.slice(0, 300));
 
   async function invalidateAll() {
     await Promise.all([
@@ -77,7 +78,7 @@ export function DynamicLifecycleActions({
 
   const publishMutation = useMutation({
     mutationFn: () => {
-      const normalized = note.trim();
+      const normalized = publishNote.trim();
       if (!normalized) throw new Error("Publication note is required.");
       return publishDynamic(dynamicId, normalized, etag);
     },
@@ -94,7 +95,7 @@ export function DynamicLifecycleActions({
       if (!removed.etag) {
         throw new Error("The API did not return the new Draft ETag after moving this campaign to trash.");
       }
-      await publishRemovalIfNeeded(dynamicId, title, removed.etag, note);
+      await publishRemovalIfNeeded(dynamicId, title, removed.etag, removalNote);
       return removed;
     },
     onSuccess: async () => {
@@ -147,17 +148,17 @@ export function DynamicLifecycleActions({
             autoFocus
             fullWidth
             label="Publication note"
-            value={note}
+            value={publishNote}
             inputProps={{ maxLength: 300 }}
-            onChange={(event) => setNote(event.target.value)}
-            helperText={`${note.length}/300`}
+            onChange={(event) => setPublishNote(event.target.value)}
+            helperText={`${publishNote.length}/300`}
           />
         </DialogContent>
         <DialogActions>
           <Button disabled={publishMutation.isPending} onClick={() => setPublishOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            disabled={publishMutation.isPending || !note.trim()}
+            disabled={publishMutation.isPending || !publishNote.trim()}
             startIcon={<Rocket size={16} />}
             onClick={() => publishMutation.mutate()}
           >
@@ -179,11 +180,11 @@ export function DynamicLifecycleActions({
             <TextField
               fullWidth
               sx={{ mt: 2 }}
-              label="Publication note"
-              value={note}
+              label="Removal publication note"
+              value={removalNote}
               inputProps={{ maxLength: 300 }}
-              onChange={(event) => setNote(event.target.value)}
-              helperText="Used only when you choose Move to trash & publish removal."
+              onChange={(event) => setRemovalNote(event.target.value)}
+              helperText="Stored in the release/audit trail when you publish this removal."
             />
           ) : null}
         </DialogContent>
