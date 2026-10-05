@@ -5,6 +5,7 @@ export interface DynamicTrashItem {
   id: string;
   dynamicId: string;
   snapshot: Dynamic;
+  snapshotDigest: string;
   deletedAt: string;
   deletedBy: string;
   sourceDraftRevision: number;
