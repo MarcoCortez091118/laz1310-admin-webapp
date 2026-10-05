@@ -14,16 +14,21 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Download, ShieldCheck, UsersRound } from "lucide-react";
+import { Download, ExternalLink, ShieldCheck, UsersRound } from "lucide-react";
 import { useMemo } from "react";
 import type { AdminParticipation } from "../../api/types";
-import { useDynamicParticipationsQuery } from "./queries";
+import {
+  useDynamicParticipationsQuery,
+  useParticipationServiceStatusQuery,
+} from "./queries";
 
 interface ParticipantsPanelProps {
   dynamicId: string;
   title: string;
   isAdmin: boolean;
   active: boolean;
+  participationType: "form" | "external_url";
+  participationUrl?: string | null;
 }
 
 function formatDate(value: string | undefined): string {
@@ -58,8 +63,21 @@ function loadedCsv(items: AdminParticipation[]): string {
   return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
-export function ParticipantsPanel({ dynamicId, title, isAdmin, active }: ParticipantsPanelProps) {
-  const query = useDynamicParticipationsQuery(dynamicId, active && isAdmin);
+export function ParticipantsPanel({
+  dynamicId,
+  title,
+  isAdmin,
+  active,
+  participationType,
+  participationUrl,
+}: ParticipantsPanelProps) {
+  const nativeForm = participationType === "form";
+  const status = useParticipationServiceStatusQuery(active && isAdmin && nativeForm);
+  const configured = status.data?.data.configured === true;
+  const query = useDynamicParticipationsQuery(
+    dynamicId,
+    active && isAdmin && nativeForm && configured,
+  );
   const items = useMemo(
     () => query.data?.pages.flatMap((page) => page.data.items ?? []) ?? [],
     [query.data],
@@ -73,6 +91,54 @@ export function ParticipantsPanel({ dynamicId, title, isAdmin, active }: Partici
     return (
       <Alert severity="warning" icon={<ShieldCheck size={22} />}>
         <strong>Administrator access required.</strong> Participant responses contain PII. FastAPI exposes this route only to verified users with the admin role.
+      </Alert>
+    );
+  }
+
+  if (!nativeForm) {
+    return (
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+        <Stack spacing={1.5} alignItems="flex-start">
+          <Box sx={{ width: 42, height: 42, display: "grid", placeItems: "center", borderRadius: 2, bgcolor: "#fff1f2", color: "primary.main" }}>
+            <ExternalLink size={21} />
+          </Box>
+          <Typography variant="h6" fontWeight={800}>Participants are managed externally</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 720 }}>
+            This Dynamic uses <strong>External URL</strong> participation. LA Z does not collect or retain participant responses for this campaign, so there are no native participant records to display here.
+          </Typography>
+          {participationUrl ? (
+            <Button component="a" href={participationUrl} target="_blank" rel="noopener noreferrer" variant="outlined" startIcon={<ExternalLink size={15} />}>
+              Open external registration
+            </Button>
+          ) : null}
+        </Stack>
+      </Paper>
+    );
+  }
+
+  if (status.isPending) {
+    return (
+      <Stack spacing={1.5}>
+        <Skeleton variant="rounded" height={100} />
+        <Skeleton variant="rounded" height={280} />
+      </Stack>
+    );
+  }
+
+  if (status.error) {
+    return (
+      <Alert severity="error" action={<Button color="inherit" onClick={() => void status.refetch()}>Retry</Button>}>
+        <strong>Unable to verify the participation service.</strong>{" "}
+        {status.error instanceof Error ? status.error.message : "Admin API unavailable."}
+      </Alert>
+    );
+  }
+
+  if (!configured) {
+    return (
+      <Alert severity="warning" icon={<ShieldCheck size={22} />}>
+        <strong>Participation encryption is not configured in the API environment.</strong>{" "}
+        Native participant PII cannot be read safely until Azure App Service has both <code>DYNAMICS_PII_KEYS</code> and <code>DYNAMICS_HASH_KEY</code>. The Admin will not bypass encryption or expose unprotected responses.
       </Alert>
     );
   }
@@ -100,6 +166,12 @@ export function ParticipantsPanel({ dynamicId, title, isAdmin, active }: Partici
 
   return (
     <Stack spacing={1.5}>
+      {status.data && !status.data.data.submissionsEnabled ? (
+        <Alert severity="info">
+          Existing retained records can be reviewed, but new native submissions are disabled in this API environment (<code>DYNAMICS_SUBMISSIONS_ENABLED=false</code>).
+        </Alert>
+      ) : null}
+
       <Paper variant="outlined" className="dynamics-participants-header">
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={2}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -108,7 +180,7 @@ export function ParticipantsPanel({ dynamicId, title, isAdmin, active }: Partici
               <Typography variant="overline" color="primary.main" sx={{ fontWeight: 800, letterSpacing: ".12em" }}>Audited PII access</Typography>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>{title}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {items.length} participant record{items.length === 1 ? "" : "s"} loaded. The backend audits each paginated read.
+                {items.length} participant record{items.length === 1 ? "" : "s"} loaded. The backend audits each paginated read and retains records for {status.data?.data.retentionDays ?? "—"} days.
               </Typography>
             </Box>
           </Stack>
@@ -182,7 +254,7 @@ export function ParticipantsPanel({ dynamicId, title, isAdmin, active }: Partici
         <Paper variant="outlined" className="dynamics-mui-empty">
           <UsersRound size={30} />
           <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>No participations yet</Typography>
-          <Typography variant="body2" color="text.secondary">This campaign has no retained participant records.</Typography>
+          <Typography variant="body2" color="text.secondary">This native-form campaign has no retained participant records.</Typography>
         </Paper>
       )}
 
