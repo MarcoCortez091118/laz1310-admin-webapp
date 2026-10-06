@@ -26,11 +26,14 @@ import {
   Plus,
   Radio,
   Search,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Station } from "../../api/types";
+import { useStaff } from "../auth/StaffGate";
 import { useDraftQuery } from "../content/queries";
+import type { ProgramPublicationState } from "./api";
 import { ProgramEditor } from "./ProgramEditor";
 import {
   displayTime,
@@ -39,6 +42,8 @@ import {
   schedulesForProgram,
   WEEKDAYS,
 } from "./model";
+import { ProgramsTrashDialog } from "./ProgramsTrashDialog";
+import { useProgramPublicationStatusQuery } from "./queries";
 import "./programs.css";
 
 type ProgramStatus = "all" | "active" | "inactive";
@@ -58,6 +63,18 @@ function scheduleSummary(station: Station, program: Program): string {
   );
 }
 
+function publicationLabel(status: ProgramPublicationState | null): string {
+  if (status === "live") return "Live";
+  if (status === "changes_pending") return "Changes pending";
+  return "Draft";
+}
+
+function publicationColor(status: ProgramPublicationState | null): "success" | "warning" | "default" {
+  if (status === "live") return "success";
+  if (status === "changes_pending") return "warning";
+  return "default";
+}
+
 function MetricCard({
   icon,
   label,
@@ -74,15 +91,11 @@ function MetricCard({
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <Box className="program-mui-metric-icon">{icon}</Box>
         <Box minWidth={0}>
-          <Typography variant="body2" color="text.secondary">
-            {label}
-          </Typography>
+          <Typography variant="body2" color="text.secondary">{label}</Typography>
           <Typography variant="h5" fontWeight={800} sx={{ mt: 0.25, letterSpacing: "-0.03em" }}>
             {value}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {helper}
-          </Typography>
+          <Typography variant="caption" color="text.secondary">{helper}</Typography>
         </Box>
       </Stack>
     </Paper>
@@ -90,13 +103,17 @@ function MetricCard({
 }
 
 export function ProgramsPage() {
+  const staff = useStaff();
+  const isAdmin = staff.roles.includes("admin");
   const draft = useDraftQuery();
+  const publicationStatus = useProgramPublicationStatusQuery();
   const stations = useMemo(() => draft.data?.data.catalog?.stations ?? [], [draft.data]);
   const [stationId, setStationId] = useState<string>("");
   const [selection, setSelection] = useState<string | "new" | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ProgramStatus>("all");
   const [view, setView] = useState<ProgramsView>("catalog");
+  const [trashOpen, setTrashOpen] = useState(false);
 
   useEffect(() => {
     const firstStationId = stations[0]?.id;
@@ -107,6 +124,22 @@ export function ProgramsPage() {
     () => stations.find((item) => item.id === stationId) ?? stations[0] ?? null,
     [stationId, stations],
   );
+
+  const publicationByKey = useMemo(
+    () =>
+      new Map(
+        (publicationStatus.data?.data ?? []).map((item) => [
+          `${item.stationId}:${item.programId}`,
+          item.status,
+        ]),
+      ),
+    [publicationStatus.data],
+  );
+
+  const programPublication = (programId: string): ProgramPublicationState | null => {
+    if (!station?.id) return null;
+    return publicationByKey.get(`${station.id}:${programId}`) ?? "draft";
+  };
 
   const allPrograms = useMemo(() => (station ? programsForStation(station) : []), [station]);
 
@@ -135,7 +168,17 @@ export function ProgramsPage() {
   );
 
   const weeklySchedule = useMemo(() => {
-    if (!station) return WEEKDAYS.map(() => [] as Array<{ id: string; showId: string; startsAt: string; endsAt: string; isActive?: boolean }>);
+    if (!station) {
+      return WEEKDAYS.map(
+        () => [] as Array<{
+          id: string;
+          showId: string;
+          startsAt: string;
+          endsAt: string;
+          isActive?: boolean;
+        }>,
+      );
+    }
     return WEEKDAYS.map((_, weekday) =>
       (station.schedule ?? [])
         .filter((entry) => entry.id && entry.showId && entry.weekday === weekday)
@@ -167,11 +210,7 @@ export function ProgramsPage() {
       <Box className="modern-page">
         <Alert
           severity="error"
-          action={
-            <Button color="inherit" onClick={() => void draft.refetch()} size="small">
-              Retry
-            </Button>
-          }
+          action={<Button color="inherit" onClick={() => void draft.refetch()} size="small">Retry</Button>}
         >
           {draft.error instanceof Error ? draft.error.message : "Unable to load the Programs Draft."}
         </Alert>
@@ -184,7 +223,8 @@ export function ProgramsPage() {
     return (
       <Box className="modern-page">
         <Alert severity="warning">
-          Draft ETag is missing. Program writes are disabled because optimistic concurrency cannot be enforced safely.
+          Draft ETag is missing. Program writes are disabled because optimistic concurrency cannot
+          be enforced safely.
         </Alert>
       </Box>
     );
@@ -208,6 +248,10 @@ export function ProgramsPage() {
   const inactiveCount = allPrograms.length - activeCount;
   const scheduleSlots = (station.schedule ?? []).length;
   const scheduledPrograms = new Set((station.schedule ?? []).map((entry) => entry.showId)).size;
+  const liveCount = allPrograms.filter((program) => programPublication(program.id) === "live").length;
+  const pendingCount = allPrograms.filter(
+    (program) => programPublication(program.id) === "changes_pending",
+  ).length;
 
   return (
     <Box className="modern-page programs-mui-page">
@@ -225,28 +269,45 @@ export function ProgramsPage() {
             <Typography variant="h4" fontWeight={850} sx={{ letterSpacing: "-0.04em" }}>
               Programs
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: 760 }}>
-              Manage shows and the weekly broadcast schedule delivered to Mobile. Times are interpreted in the station timezone and remain Draft-only until Publish.
+            <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: 800 }}>
+              Save changes to Draft, then publish each Program independently. Active/Inactive is an
+              operational flag; Draft/Live/Changes pending describes what Mobile actually receives.
             </Typography>
           </Box>
-          <Button
-            startIcon={<Plus size={17} />}
-            variant="contained"
-            onClick={() => {
-              setSelection("new");
-              setView("catalog");
-            }}
-          >
-            New program
-          </Button>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Button
+              startIcon={<Trash2 size={17} />}
+              variant="outlined"
+              onClick={() => setTrashOpen(true)}
+            >
+              Trash
+            </Button>
+            <Button
+              startIcon={<Plus size={17} />}
+              variant="contained"
+              onClick={() => {
+                setSelection("new");
+                setView("catalog");
+              }}
+            >
+              New program
+            </Button>
+          </Stack>
         </Stack>
+
+        {publicationStatus.error ? (
+          <Alert severity="warning" action={<Button color="inherit" onClick={() => void publicationStatus.refetch()}>Retry</Button>}>
+            Publication state could not be loaded. Draft editing remains available, but Live status
+            cannot be verified until this request succeeds.
+          </Alert>
+        ) : null}
 
         <Box className="program-mui-metrics">
           <MetricCard
             icon={<UsersRound size={18} />}
             label="Active programs"
             value={activeCount}
-            helper={`${inactiveCount} inactive`}
+            helper={`${inactiveCount} inactive · ${liveCount} live · ${pendingCount} pending`}
           />
           <MetricCard
             icon={<CalendarDays size={18} />}
@@ -261,9 +322,7 @@ export function ProgramsPage() {
             helper="Schedule uses local station time"
           />
           <Paper className="program-mui-metric program-station-control" elevation={0}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Station
-            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Station</Typography>
             <FormControl fullWidth size="small">
               <Select
                 value={station.id ?? ""}
@@ -294,9 +353,7 @@ export function ProgramsPage() {
               onChange={(event) => setSearch(event.target.value)}
               sx={{ minWidth: { xs: "100%", lg: 330 } }}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start"><Search size={17} /></InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment>,
               }}
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -343,6 +400,7 @@ export function ProgramsPage() {
                   <Stack spacing={1}>
                     {entries.length ? entries.map((entry) => {
                       const show = allPrograms.find((program) => program.id === entry.showId);
+                      const publication = show ? programPublication(show.id) : null;
                       return (
                         <Card key={entry.id} className="program-schedule-card" variant="outlined">
                           <CardActionArea
@@ -365,10 +423,16 @@ export function ProgramsPage() {
                                 <Typography variant="body2" fontWeight={750} noWrap>
                                   {show?.name ?? "Missing program reference"}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" noWrap>
-                                  {show?.hostName ?? show?.slug ?? entry.showId}
-                                </Typography>
-                                {!entry.isActive ? <Chip label="Inactive slot" size="small" /> : null}
+                                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                  {show ? (
+                                    <Chip
+                                      size="small"
+                                      color={publicationColor(publication)}
+                                      label={publicationLabel(publication)}
+                                    />
+                                  ) : null}
+                                  {!entry.isActive ? <Chip label="Inactive slot" size="small" /> : null}
+                                </Stack>
                               </Stack>
                             </CardContent>
                           </CardActionArea>
@@ -387,6 +451,7 @@ export function ProgramsPage() {
             <Box className="programs-mui-list" aria-label="Programs catalog">
               {programs.length ? programs.map((program) => {
                 const active = program.isActive ?? true;
+                const publication = programPublication(program.id);
                 return (
                   <Card
                     key={program.id}
@@ -402,13 +467,23 @@ export function ProgramsPage() {
                         )}
                         <Chip
                           className="program-mui-status-chip"
-                          color={active ? "success" : "default"}
-                          label={active ? "Active" : "Inactive"}
+                          color={publicationColor(publication)}
+                          label={publicationLabel(publication)}
                           size="small"
                         />
                       </Box>
                       <CardContent sx={{ p: 1.75 }}>
-                        <Typography variant="subtitle1" fontWeight={800} noWrap>{program.name}</Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                          <Typography variant="subtitle1" fontWeight={800} noWrap sx={{ flex: 1 }}>
+                            {program.name}
+                          </Typography>
+                          <Chip
+                            size="small"
+                            color={active ? "success" : "default"}
+                            variant="outlined"
+                            label={active ? "Active" : "Inactive"}
+                          />
+                        </Stack>
                         <Typography variant="body2" color="text.secondary" noWrap>
                           {program.hostName || "No host assigned"}
                         </Typography>
@@ -418,7 +493,12 @@ export function ProgramsPage() {
                             {scheduleSummary(station, program)}
                           </Typography>
                         </Stack>
-                        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.75, display: "block" }} noWrap>
+                        <Typography
+                          variant="caption"
+                          color="text.disabled"
+                          sx={{ mt: 0.75, display: "block" }}
+                          noWrap
+                        >
                           /{program.slug}
                         </Typography>
                       </CardContent>
@@ -440,11 +520,13 @@ export function ProgramsPage() {
               {selection === "new" || selected ? (
                 <ProgramEditor
                   etag={etag}
+                  isAdmin={isAdmin}
                   key={`${station.id ?? "station"}-${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
                   onDeleted={() => setSelection(null)}
                   onReload={async () => draft.refetch()}
                   onSaved={(programId) => setSelection(programId)}
                   program={selection === "new" ? null : selected}
+                  publicationStatus={selected ? programPublication(selected.id) : null}
                   station={station}
                 />
               ) : (
@@ -452,7 +534,8 @@ export function ProgramsPage() {
                   <ListMusic size={28} />
                   <Typography variant="h6" fontWeight={800}>Select a program to edit</Typography>
                   <Typography color="text.secondary" textAlign="center" maxWidth={520}>
-                    Program metadata and schedules update the Draft only. Mobile stays pinned to the published immutable release until Publish.
+                    Save to Draft, then publish that Program independently. Mobile only reads the
+                    immutable published release.
                   </Typography>
                 </Paper>
               )}
@@ -460,6 +543,13 @@ export function ProgramsPage() {
           </Box>
         )}
       </Stack>
+
+      <ProgramsTrashDialog
+        etag={etag}
+        isAdmin={isAdmin}
+        onClose={() => setTrashOpen(false)}
+        open={trashOpen}
+      />
     </Box>
   );
 }
