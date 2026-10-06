@@ -34,8 +34,6 @@ async function publishRemovalIfNeeded(
   try {
     await publishDynamic(dynamicId, note.trim() || `Remove ${title}`, etag);
   } catch (error) {
-    // A campaign that was never part of the public release is already absent after trashing.
-    // Treat that state as an idempotent successful removal instead of surfacing a false failure.
     if (error instanceof ApiError && error.status === 404) return;
     throw error;
   }
@@ -67,7 +65,9 @@ export function DynamicLifecycleActions({
   async function invalidateAll() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
+      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.status }),
       queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.trash }),
+      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.publishedOutsideDraft }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.draft }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.publicState }),
