@@ -14,7 +14,7 @@ import { DynamicsPage } from "./features/dynamics/DynamicsPage";
 import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
 import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { PagesPage } from "./features/pages/PagesPage";
-import { ProgramsPage } from "./features/programs/ProgramsPage";
+import { ProgramsWorkspace } from "./features/programs/ProgramsWorkspace";
 import { UsersPage } from "./features/users/UsersPage";
 import { WeatherPage } from "./features/weather/WeatherPage";
 
@@ -64,7 +64,7 @@ const radioRoute = createRoute({
 const programsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/programs",
-  component: ProgramsPage,
+  component: ProgramsWorkspace,
 });
 
 const dynamicsRoute = createRoute({
