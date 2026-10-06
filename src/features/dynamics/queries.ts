@@ -5,6 +5,7 @@ import {
   getDynamics,
   getDynamicTrash,
   getParticipationServiceStatus,
+  getPublishedOutsideDraft,
 } from "./api";
 
 export function useDynamicsQuery() {
@@ -18,7 +19,17 @@ export function useDynamicsQuery() {
 export function useDynamicTrashQuery(enabled = true) {
   return useQuery({
     queryKey: dynamicsQueryKeys.trash,
-    queryFn: ({ signal }) => getDynamicTrash(50, undefined, signal),
+    queryFn: ({ signal }) => getDynamicTrash(100, undefined, signal),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function usePublishedOutsideDraftQuery(enabled = true) {
+  return useQuery({
+    queryKey: dynamicsQueryKeys.publishedOutsideDraft,
+    queryFn: ({ signal }) => getPublishedOutsideDraft(signal),
     enabled,
     retry: false,
     refetchOnWindowFocus: false,
