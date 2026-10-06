@@ -18,11 +18,12 @@ import {
 import { Clock3, Plus, Search, Sparkles, Trash2, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
+import type { DynamicPublicationState } from "./api";
 import { DynamicEditor } from "./DynamicEditor";
 import { DynamicsTrashDialog } from "./DynamicsTrashDialog";
 import { lifecycle, type DynamicLifecycle } from "./model";
 import { ParticipantsPanel } from "./ParticipantsPanel";
-import { useDynamicsQuery } from "./queries";
+import { useDynamicPublicationStatusQuery, useDynamicsQuery } from "./queries";
 import "./dynamics.css";
 
 type Selection = string | "new" | null;
@@ -37,6 +38,18 @@ const lifecycleColor: Record<DynamicLifecycle, "success" | "warning" | "default"
   ended: "default",
   closed: "error",
 };
+
+function publicationLabel(status: DynamicPublicationState | null): string {
+  if (status === "live") return "Published";
+  if (status === "changes_pending") return "Changes pending";
+  return "Draft";
+}
+
+function publicationColor(status: DynamicPublicationState | null): "success" | "warning" | "default" {
+  if (status === "live") return "success";
+  if (status === "changes_pending") return "warning";
+  return "default";
+}
 
 function dateSummary(startsAt: string | undefined, endsAt: string | undefined, timezone: string | undefined) {
   if (!startsAt || !endsAt) return "Window unavailable";
@@ -82,6 +95,7 @@ function MetricCard({
 export function DynamicsPage() {
   const staff = useStaff();
   const query = useDynamicsQuery();
+  const publicationQuery = useDynamicPublicationStatusQuery();
   const [selection, setSelection] = useState<Selection>(null);
   const [tab, setTab] = useState<DetailTab>("editor");
   const [search, setSearch] = useState("");
@@ -91,6 +105,12 @@ export function DynamicsPage() {
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
   const now = useMemo(() => new Date(query.dataUpdatedAt || Date.now()), [query.dataUpdatedAt]);
+  const publicationById = useMemo(
+    () => new Map((publicationQuery.data?.data ?? []).map((item) => [item.dynamicId, item.status])),
+    [publicationQuery.data],
+  );
+  const publicationState = (dynamicId: string | undefined): DynamicPublicationState | null =>
+    dynamicId ? publicationById.get(dynamicId) ?? "draft" : null;
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -161,6 +181,8 @@ export function DynamicsPage() {
   const liveCount = dynamics.filter((item) => lifecycle(item, now) === "live").length;
   const scheduledCount = dynamics.filter((item) => lifecycle(item, now) === "scheduled").length;
   const formCount = dynamics.filter((item) => item.participation?.type === "form").length;
+  const publishedCount = dynamics.filter((item) => publicationState(item.id) === "live").length;
+  const pendingCount = dynamics.filter((item) => publicationState(item.id) === "changes_pending").length;
 
   return (
     <Box className="modern-page dynamics-mui-page">
@@ -172,7 +194,8 @@ export function DynamicsPage() {
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Dynamics</Typography>
             <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 780 }}>
-              Save campaigns to Draft and publish each campaign independently. Global Draft publication remains an Operations / Releases workflow.
+              Save campaigns to Draft and publish each campaign independently. Published status is
+              verified against the current immutable Mobile release.
             </Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ width: { xs: "100%", md: "auto" } }}>
@@ -200,8 +223,20 @@ export function DynamicsPage() {
           </Alert>
         ) : null}
 
+        {publicationQuery.error ? (
+          <Alert severity="warning" action={<Button color="inherit" onClick={() => void publicationQuery.refetch()}>Retry</Button>}>
+            Publication state could not be verified. Draft editing remains available, but the UI
+            will not claim a campaign is Live until the status endpoint succeeds.
+          </Alert>
+        ) : null}
+
         <Box className="dynamics-mui-metrics">
-          <MetricCard icon={<Sparkles size={21} />} label="Campaigns" value={dynamics.length} detail="Maximum 100 in Draft catalog" />
+          <MetricCard
+            icon={<Sparkles size={21} />}
+            label="Campaigns"
+            value={dynamics.length}
+            detail={`${publishedCount} published · ${pendingCount} changes pending`}
+          />
           <MetricCard icon={<Clock3 size={21} />} label="Live now" value={liveCount} detail={`${scheduledCount} scheduled`} />
           <MetricCard icon={<UsersRound size={21} />} label="Native forms" value={formCount} detail={`${dynamics.length - formCount} external URL`} />
         </Box>
@@ -238,12 +273,13 @@ export function DynamicsPage() {
                 <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Campaign catalog</Typography>
                 <Typography variant="caption" color="text.secondary">{filtered.length} of {dynamics.length} visible</Typography>
               </Box>
-              <Chip size="small" label="Draft" color="warning" variant="outlined" />
+              <Chip size="small" label={`${publishedCount} published`} color="success" variant="outlined" />
             </Stack>
 
             <Box className="dynamics-mui-campaign-list" aria-label="Dynamics campaigns">
               {filtered.length ? filtered.map((dynamic) => {
                 const current = lifecycle(dynamic, now);
+                const published = publicationState(dynamic.id);
                 const isSelected = selection === dynamic.id;
                 return (
                   <Card
@@ -261,6 +297,12 @@ export function DynamicsPage() {
                         <img alt={dynamic.artworkLabel || dynamic.title || "Campaign"} referrerPolicy="no-referrer" src={dynamic.imageUrl} />
                         <Stack direction="row" spacing={0.6} className="dynamics-mui-campaign-badges">
                           <Chip label={current} color={lifecycleColor[current]} size="small" />
+                          <Chip
+                            label={publicationLabel(published)}
+                            color={publicationColor(published)}
+                            size="small"
+                            variant={published === "live" ? "filled" : "outlined"}
+                          />
                           {dynamic.featured ? <Chip label="Featured" color="primary" size="small" /> : null}
                         </Stack>
                       </Box>
@@ -299,6 +341,7 @@ export function DynamicsPage() {
                 key={`new-${etag}`}
                 onDeleted={() => setSelection(null)}
                 onSaved={(dynamicId) => setSelection(dynamicId)}
+                publicationStatus={null}
               />
             ) : selected ? (
               <>
@@ -321,6 +364,7 @@ export function DynamicsPage() {
                     key={`${selected.id}-${etag}`}
                     onDeleted={() => setSelection(null)}
                     onSaved={(dynamicId) => setSelection(dynamicId)}
+                    publicationStatus={publicationState(selected.id)}
                   />
                 ) : (
                   <ParticipantsPanel
@@ -338,7 +382,8 @@ export function DynamicsPage() {
                 <Box className="dynamics-mui-detail-empty-icon"><Sparkles size={28} /></Box>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Select a campaign</Typography>
                 <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 500 }}>
-                  Choose an existing campaign or create a new one. Save it to Draft first; administrators can publish that campaign independently from its editor.
+                  Choose an existing campaign or create a new one. Save it to Draft first;
+                  administrators can publish that campaign independently from its editor.
                 </Typography>
               </Paper>
             )}
