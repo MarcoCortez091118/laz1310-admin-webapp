@@ -176,7 +176,11 @@ function PublishedOnlyRecoveryRow({
 }) {
   const queryClient = useQueryClient();
   const removal = useMutation({
-    mutationFn: () => publishRemoval(item.dynamic.id, item.dynamic.title, etag),
+    mutationFn: () => {
+      const dynamicId = item.dynamic.id;
+      if (!dynamicId) throw new Error("Published Dynamic is missing its identifier.");
+      return publishRemoval(dynamicId, item.dynamic.title, etag);
+    },
     onSuccess: async () => invalidatePublicationState(queryClient),
   });
 
@@ -193,7 +197,7 @@ function PublishedOnlyRecoveryRow({
             {item.dynamic.slug} · public release {item.releaseId}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4 }}>
-            Published {date(item.publishedAt)} · Dynamic {item.dynamic.id}
+            Published {date(item.publishedAt)} · Dynamic {item.dynamic.id ?? "unknown"}
           </Typography>
           <Alert severity="warning" icon={<TriangleAlert size={19} />} sx={{ mt: 1.25 }}>
             This campaign exists in the current Mobile release but has no matching Draft or Trash entry. This is consistent with a deletion performed before audited Dynamics trash was introduced.
@@ -205,7 +209,7 @@ function PublishedOnlyRecoveryRow({
             color="error"
             variant="contained"
             startIcon={<Rocket size={15} />}
-            disabled={removal.isPending}
+            disabled={removal.isPending || !item.dynamic.id}
             onClick={() => removal.mutate()}
             sx={{ alignSelf: { xs: "stretch", sm: "flex-start" }, flexShrink: 0 }}
           >
@@ -240,7 +244,10 @@ export function DynamicsTrashDialog({
   const items = trashQuery.data?.data ?? [];
   const outsideDraft = outsideDraftQuery.data?.data ?? [];
   const trashDynamicIds = new Set(items.map((item) => item.dynamicId));
-  const recoveryItems = outsideDraft.filter((item) => !trashDynamicIds.has(item.dynamic.id));
+  const recoveryItems = outsideDraft.filter((item) => {
+    const dynamicId = item.dynamic.id;
+    return typeof dynamicId === "string" && !trashDynamicIds.has(dynamicId);
+  });
   const loading = trashQuery.isPending || outsideDraftQuery.isPending;
   const empty = !loading && !trashQuery.error && !outsideDraftQuery.error && items.length === 0 && recoveryItems.length === 0;
 
@@ -276,7 +283,7 @@ export function DynamicsTrashDialog({
                 : `${recoveryItems.length} campaigns are still live in Mobile even though they no longer exist in Draft or Trash.`}
             </Alert>
             {recoveryItems.map((item, index) => (
-              <Box key={item.dynamic.id}>
+              <Box key={item.dynamic.id ?? `${item.releaseId}-${index}`}>
                 {index > 0 ? <Divider /> : null}
                 <PublishedOnlyRecoveryRow item={item} etag={etag} isAdmin={isAdmin} />
               </Box>
