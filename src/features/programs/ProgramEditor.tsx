@@ -4,10 +4,6 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   FormControlLabel,
   IconButton,
@@ -33,7 +29,12 @@ import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
 import { ManagedImageField } from "../media/ManagedImageField";
-import { deleteProgram, putStation } from "./api";
+import {
+  programsQueryKeys,
+  putStation,
+  type ProgramPublicationState,
+} from "./api";
+import { ProgramLifecycleActions } from "./ProgramLifecycleActions";
 import {
   apiTime,
   createProgram,
@@ -61,10 +62,24 @@ function optional(value: string | null | undefined): string | null {
   return normalized || null;
 }
 
+function publicationLabel(status: ProgramPublicationState | null): string {
+  if (status === "live") return "Live";
+  if (status === "changes_pending") return "Changes pending";
+  return "Draft";
+}
+
+function publicationColor(status: ProgramPublicationState | null): "success" | "warning" | "default" {
+  if (status === "live") return "success";
+  if (status === "changes_pending") return "warning";
+  return "default";
+}
+
 export function ProgramEditor({
   station,
   program,
   etag,
+  isAdmin,
+  publicationStatus,
   onSaved,
   onDeleted,
   onReload,
@@ -72,6 +87,8 @@ export function ProgramEditor({
   station: Station;
   program: Program | null;
   etag: string;
+  isAdmin: boolean;
+  publicationStatus: ProgramPublicationState | null;
   onSaved: (programId: string) => void;
   onDeleted: () => void;
   onReload: () => Promise<unknown>;
@@ -84,7 +101,7 @@ export function ProgramEditor({
     program ? schedulesForProgram(station, program.id) : [],
   );
   const [slugTouched, setSlugTouched] = useState(existing);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -105,38 +122,32 @@ export function ProgramEditor({
         isActive: entry.isActive ?? true,
       }));
 
-      // Program + all of its schedule entries are intentionally validated and written
-      // as one Station replacement. The API documents this route as the atomic aggregate
-      // boundary and protects the write with If-Match.
       const nextStation = upsertProgram(station, payload, schedule);
       return putStation(nextStation, etag);
     },
     onSuccess: (result) => {
+      setDirty(false);
       queryClient.setQueryData(adminQueryKeys.draft, result);
-      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview });
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
+        queryClient.invalidateQueries({ queryKey: programsQueryKeys.status }),
+      ]);
       onSaved(workingProgram.id);
     },
   });
 
-  const remove = useMutation({
-    mutationFn: async () => {
-      if (!station.id) throw new Error("Station ID is required to delete a program.");
-      return deleteProgram(station.id, workingProgram.id, etag);
-    },
-    onSuccess: (result) => {
-      queryClient.setQueryData(adminQueryKeys.draft, result);
-      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview });
-      setDeleteOpen(false);
-      onDeleted();
-    },
-  });
-
-  const error = save.error ?? remove.error;
+  const error = save.error;
   const conflict = error instanceof ApiError && error.kind === "conflict";
   const imageUrl = workingProgram.imageUrl?.trim();
-  const busy = save.isPending || remove.isPending;
+  const busy = save.isPending;
+
+  function updateProgram(patch: Partial<Program>) {
+    setDirty(true);
+    setWorkingProgram((current) => ({ ...current, ...patch }));
+  }
 
   function updateSchedule(id: string, patch: Partial<ScheduleEntry>) {
+    setDirty(true);
     setWorkingSchedule((current) =>
       current.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
     );
@@ -159,23 +170,29 @@ export function ProgramEditor({
               {workingProgram.name || "Untitled program"}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Program metadata and weekly schedule are validated together before the Draft is replaced.
+              Save writes Program + Schedule to Draft. Publish is a separate operation that creates
+              an immutable Mobile release for this program only.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            {existing ? (
+              <Chip
+                color={publicationColor(publicationStatus)}
+                label={publicationLabel(publicationStatus)}
+                size="small"
+              />
+            ) : null}
             <Chip
               color={workingProgram.isActive ?? true ? "success" : "default"}
               label={workingProgram.isActive ?? true ? "Active" : "Inactive"}
               size="small"
+              variant="outlined"
             />
-            <Chip label={`${workingSchedule.length} slot${workingSchedule.length === 1 ? "" : "s"}`} size="small" variant="outlined" />
-            {existing ? (
-              <Tooltip title="Remove program from Draft">
-                <IconButton color="error" onClick={() => setDeleteOpen(true)} disabled={busy}>
-                  <Trash2 size={18} />
-                </IconButton>
-              </Tooltip>
-            ) : null}
+            <Chip
+              label={`${workingSchedule.length} slot${workingSchedule.length === 1 ? "" : "s"}`}
+              size="small"
+              variant="outlined"
+            />
           </Stack>
         </Stack>
 
@@ -190,21 +207,34 @@ export function ProgramEditor({
                 onClick={() => {
                   void onReload();
                   save.reset();
-                  remove.reset();
                 }}
               >
                 Reload Draft
               </Button>
             }
           >
-            The Draft changed while you were editing. Reload the current revision before saving; nothing will be overwritten.
+            The Draft changed while you were editing. Reload the current revision before saving;
+            nothing will be overwritten.
           </Alert>
         ) : error ? (
           <Alert severity="error">
-            <strong>Unable to update this program.</strong>{" "}
+            <strong>Unable to save this program to Draft.</strong>{" "}
             {error instanceof Error ? error.message : "Unknown error"}
             {error instanceof ApiError && error.requestId ? ` · Request ID ${error.requestId}` : ""}
           </Alert>
+        ) : null}
+
+        {existing ? (
+          <ProgramLifecycleActions
+            stationId={station.id ?? ""}
+            programId={workingProgram.id}
+            title={workingProgram.name || "Program"}
+            etag={etag}
+            isAdmin={isAdmin}
+            dirty={dirty}
+            busy={busy}
+            onDeleted={onDeleted}
+          />
         ) : null}
 
         <Box className="program-editor-mui-workbench">
@@ -228,6 +258,7 @@ export function ProgramEditor({
                   inputProps={{ maxLength: 160 }}
                   onChange={(event) => {
                     const name = event.target.value;
+                    setDirty(true);
                     setWorkingProgram((current) => ({
                       ...current,
                       name,
@@ -242,10 +273,14 @@ export function ProgramEditor({
                   disabled={existing}
                   value={workingProgram.slug}
                   inputProps={{ maxLength: 100, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" }}
-                  helperText={existing ? "Existing program slugs remain stable." : "Generated from the name; editable before first save."}
+                  helperText={
+                    existing
+                      ? "Existing program slugs remain stable."
+                      : "Generated from the name; editable before first save."
+                  }
                   onChange={(event) => {
                     setSlugTouched(true);
-                    setWorkingProgram((current) => ({ ...current, slug: event.target.value.toLowerCase() }));
+                    updateProgram({ slug: event.target.value.toLowerCase() });
                   }}
                   placeholder="el-show-de-la-z"
                 />
@@ -253,7 +288,7 @@ export function ProgramEditor({
                   label="Host"
                   value={workingProgram.hostName ?? ""}
                   inputProps={{ maxLength: 160 }}
-                  onChange={(event) => setWorkingProgram((current) => ({ ...current, hostName: event.target.value }))}
+                  onChange={(event) => updateProgram({ hostName: event.target.value })}
                   placeholder="Host name"
                 />
                 <Box className="program-field-span">
@@ -261,8 +296,8 @@ export function ProgramEditor({
                     value={workingProgram.imageUrl}
                     label="Program artwork"
                     pickerTitle="Choose program artwork"
-                    description="Upload the program artwork or choose an existing managed asset. The Storage URL is assigned automatically after FastAPI accepts the image."
-                    onChange={(url) => setWorkingProgram((current) => ({ ...current, imageUrl: url }))}
+                    description="Upload artwork or choose an existing managed asset."
+                    onChange={(url) => updateProgram({ imageUrl: url })}
                   />
                 </Box>
                 <TextField
@@ -272,7 +307,7 @@ export function ProgramEditor({
                   minRows={4}
                   value={workingProgram.description ?? ""}
                   inputProps={{ maxLength: 5000 }}
-                  onChange={(event) => setWorkingProgram((current) => ({ ...current, description: event.target.value }))}
+                  onChange={(event) => updateProgram({ description: event.target.value })}
                   placeholder="Describe the program for listeners."
                 />
                 <Box className="program-field-span">
@@ -280,13 +315,14 @@ export function ProgramEditor({
                     control={
                       <Switch
                         checked={workingProgram.isActive ?? true}
-                        onChange={(event) => setWorkingProgram((current) => ({ ...current, isActive: event.target.checked }))}
+                        onChange={(event) => updateProgram({ isActive: event.target.checked })}
                       />
                     }
                     label="Active program"
                   />
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 6 }}>
-                    Inactive programs remain in the Draft but are omitted from active schedule output.
+                    Active controls whether this program is emitted by public Radio endpoints after
+                    publication. It does not mean the Draft is already live.
                   </Typography>
                 </Box>
               </Box>
@@ -313,14 +349,21 @@ export function ProgramEditor({
                   variant="outlined"
                   size="small"
                   startIcon={<Plus size={15} />}
-                  onClick={() => setWorkingSchedule((current) => [...current, createScheduleEntry(workingProgram.id)])}
+                  onClick={() => {
+                    setDirty(true);
+                    setWorkingSchedule((current) => [
+                      ...current,
+                      createScheduleEntry(workingProgram.id),
+                    ]);
+                  }}
                 >
                   Add time
                 </Button>
               </Stack>
 
               <Alert severity="info" icon={<Clock3 size={18} />} sx={{ mb: 1.5 }}>
-                Monday = 0 and Sunday = 6 in the API. Overnight slots are supported; active slots across the station cannot overlap, including Sunday → Monday.
+                Monday = 0 and Sunday = 6 in the API. Overnight slots are supported; active slots
+                across the station cannot overlap, including Sunday → Monday.
               </Alert>
 
               {workingSchedule.length ? (
@@ -335,9 +378,13 @@ export function ProgramEditor({
                         size="small"
                         label="Day"
                         value={entry.weekday}
-                        onChange={(event) => updateSchedule(entry.id, { weekday: Number(event.target.value) })}
+                        onChange={(event) =>
+                          updateSchedule(entry.id, { weekday: Number(event.target.value) })
+                        }
                       >
-                        {WEEKDAYS.map((day, weekday) => <MenuItem key={day} value={weekday}>{day}</MenuItem>)}
+                        {WEEKDAYS.map((day, weekday) => (
+                          <MenuItem key={day} value={weekday}>{day}</MenuItem>
+                        ))}
                       </TextField>
                       <TextField
                         size="small"
@@ -345,7 +392,9 @@ export function ProgramEditor({
                         type="time"
                         value={displayTime(entry.startsAt)}
                         InputLabelProps={{ shrink: true }}
-                        onChange={(event) => updateSchedule(entry.id, { startsAt: apiTime(event.target.value) })}
+                        onChange={(event) =>
+                          updateSchedule(entry.id, { startsAt: apiTime(event.target.value) })
+                        }
                       />
                       <TextField
                         size="small"
@@ -353,14 +402,18 @@ export function ProgramEditor({
                         type="time"
                         value={displayTime(entry.endsAt)}
                         InputLabelProps={{ shrink: true }}
-                        onChange={(event) => updateSchedule(entry.id, { endsAt: apiTime(event.target.value) })}
+                        onChange={(event) =>
+                          updateSchedule(entry.id, { endsAt: apiTime(event.target.value) })
+                        }
                       />
                       <FormControlLabel
                         control={
                           <Switch
                             size="small"
                             checked={entry.isActive ?? true}
-                            onChange={(event) => updateSchedule(entry.id, { isActive: event.target.checked })}
+                            onChange={(event) =>
+                              updateSchedule(entry.id, { isActive: event.target.checked })
+                            }
                           />
                         }
                         label="Active"
@@ -368,7 +421,12 @@ export function ProgramEditor({
                       <Tooltip title="Remove schedule slot">
                         <IconButton
                           color="error"
-                          onClick={() => setWorkingSchedule((current) => current.filter((item) => item.id !== entry.id))}
+                          onClick={() => {
+                            setDirty(true);
+                            setWorkingSchedule((current) =>
+                              current.filter((item) => item.id !== entry.id),
+                            );
+                          }}
                         >
                           <Trash2 size={17} />
                         </IconButton>
@@ -406,7 +464,9 @@ export function ProgramEditor({
               />
             </Box>
             <Box sx={{ p: 2 }}>
-              <Typography variant="overline" color="primary.main" fontWeight={800}>Mobile preview</Typography>
+              <Typography variant="overline" color="primary.main" fontWeight={800}>
+                Mobile preview
+              </Typography>
               <Typography variant="h6" fontWeight={850} sx={{ mt: 0.25 }}>
                 {workingProgram.name || "Program name"}
               </Typography>
@@ -435,35 +495,24 @@ export function ProgramEditor({
             <Typography variant="caption" color="text.secondary">
               Draft write protected by ETag
             </Typography>
-            <Typography variant="caption" component="code" sx={{ display: "block", color: "text.disabled" }}>
+            <Typography
+              variant="caption"
+              component="code"
+              sx={{ display: "block", color: "text.disabled" }}
+            >
               {etag}
             </Typography>
           </Box>
           <Button
-            disabled={busy}
+            disabled={busy || (existing && !dirty)}
             variant="contained"
             startIcon={<Save size={16} />}
             onClick={() => save.mutate()}
           >
-            {save.isPending ? "Saving…" : existing ? "Save program" : "Create program"}
+            {save.isPending ? "Saving…" : existing ? "Save Draft" : "Create Draft"}
           </Button>
         </Box>
       </Stack>
-
-      <Dialog open={deleteOpen} onClose={() => !remove.isPending && setDeleteOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Delete program?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            “{workingProgram.name}” will be removed from the Draft. The backend also removes its schedule entries from this Draft revision. Published releases remain immutable.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)} disabled={remove.isPending}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={() => remove.mutate()} disabled={remove.isPending}>
-            {remove.isPending ? "Deleting…" : "Delete program"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Paper>
   );
 }
