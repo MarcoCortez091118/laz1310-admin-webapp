@@ -12,6 +12,7 @@ export interface DynamicTrashItem {
   resultingDraftRevision: number;
   restoredAt: string | null;
   restoredBy: string | null;
+  published: boolean;
 }
 
 export interface ParticipationServiceStatus {
