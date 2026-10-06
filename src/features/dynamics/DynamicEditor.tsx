@@ -19,11 +19,15 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import type { Dynamic } from "../../api/types";
 import { ApiError } from "../../api/errors";
+import type { Dynamic } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
 import { ManagedImageField } from "../media/ManagedImageField";
-import { dynamicsQueryKeys, putDynamic } from "./api";
+import {
+  dynamicsQueryKeys,
+  putDynamic,
+  type DynamicPublicationState,
+} from "./api";
 import { DynamicLifecycleActions } from "./DynamicLifecycleActions";
 import {
   defaultDynamicForm,
@@ -40,8 +44,21 @@ interface DynamicEditorProps {
   allDynamics: Dynamic[];
   etag: string;
   isAdmin: boolean;
+  publicationStatus: DynamicPublicationState | null;
   onDeleted: () => void;
   onSaved: (dynamicId: string) => void;
+}
+
+function publicationLabel(status: DynamicPublicationState | null): string {
+  if (status === "live") return "Published";
+  if (status === "changes_pending") return "Changes pending";
+  return "Draft";
+}
+
+function publicationColor(status: DynamicPublicationState | null): "success" | "warning" | "default" {
+  if (status === "live") return "success";
+  if (status === "changes_pending") return "warning";
+  return "default";
 }
 
 function mutationMessage(error: unknown): string {
@@ -73,6 +90,7 @@ export function DynamicEditor({
   allDynamics,
   etag,
   isAdmin,
+  publicationStatus,
   onDeleted,
   onSaved,
 }: DynamicEditorProps) {
@@ -95,6 +113,7 @@ export function DynamicEditor({
       setDirty(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
+        queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.status }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.draft }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
       ]);
@@ -125,19 +144,37 @@ export function DynamicEditor({
     <Paper variant="outlined" className="dynamics-editor-shell">
       <Box className="dynamics-editor-hero">
         <Box className="dynamics-editor-preview">
-          {form.imageUrl ? <img src={form.imageUrl} alt={form.artworkLabel || form.title || "Campaign artwork"} referrerPolicy="no-referrer" /> : <span>No artwork</span>}
+          {form.imageUrl ? (
+            <img
+              src={form.imageUrl}
+              alt={form.artworkLabel || form.title || "Campaign artwork"}
+              referrerPolicy="no-referrer"
+            />
+          ) : <span>No artwork</span>}
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
             <Typography variant="overline" color="primary.main" sx={{ fontWeight: 800, letterSpacing: ".12em" }}>
               {dynamic ? "Edit campaign" : "New campaign"}
             </Typography>
-            <Chip label="Draft" size="small" color="warning" variant="outlined" />
+            {dynamic ? (
+              <Chip
+                label={publicationLabel(publicationStatus)}
+                size="small"
+                color={publicationColor(publicationStatus)}
+                variant={publicationStatus === "live" ? "filled" : "outlined"}
+              />
+            ) : (
+              <Chip label="Draft" size="small" color="default" variant="outlined" />
+            )}
             {form.featured ? <Chip label="Featured" size="small" color="primary" /> : null}
           </Stack>
-          <Typography variant="h5" sx={{ mt: 0.25, fontWeight: 800 }} noWrap>{form.title || "Create a Dynamic"}</Typography>
+          <Typography variant="h5" sx={{ mt: 0.25, fontWeight: 800 }} noWrap>
+            {form.title || "Create a Dynamic"}
+          </Typography>
           <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-            Save edits to Draft first. Administrators can then publish this campaign independently without releasing unrelated Draft changes.
+            Save edits to Draft first. Administrators can publish this campaign independently;
+            the badge above is verified against the current immutable Mobile release.
           </Typography>
           <Typography component="code" variant="caption" color="text.secondary" display="block" sx={{ mt: 1, overflowWrap: "anywhere" }}>
             {form.id}
@@ -160,13 +197,54 @@ export function DynamicEditor({
         <fieldset disabled={busy} className="dynamics-editor-fieldset">
           <FormSection title="Campaign identity" description="Public-facing metadata and promotional artwork.">
             <Box className="dynamics-editor-grid two">
-              <TextField label="Title" value={form.title} onChange={(event) => update("title", event.target.value)} required inputProps={{ maxLength: 160 }} />
-              <TextField label="Slug" value={form.slug} onChange={(event) => update("slug", event.target.value.toLowerCase())} required inputProps={{ maxLength: 100, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" }} helperText="Lowercase letters, numbers and hyphens." />
-              <TextField label="Artwork label" value={form.artworkLabel} onChange={(event) => update("artworkLabel", event.target.value)} required inputProps={{ maxLength: 80 }} />
-              <TextField label="Context" value={form.context} onChange={(event) => update("context", event.target.value)} required inputProps={{ maxLength: 100 }} />
+              <TextField
+                label="Title"
+                value={form.title}
+                onChange={(event) => update("title", event.target.value)}
+                required
+                inputProps={{ maxLength: 160 }}
+              />
+              <TextField
+                label="Slug"
+                value={form.slug}
+                onChange={(event) => update("slug", event.target.value.toLowerCase())}
+                required
+                inputProps={{ maxLength: 100, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" }}
+                helperText="Lowercase letters, numbers and hyphens."
+              />
+              <TextField
+                label="Artwork label"
+                value={form.artworkLabel}
+                onChange={(event) => update("artworkLabel", event.target.value)}
+                required
+                inputProps={{ maxLength: 80 }}
+              />
+              <TextField
+                label="Context"
+                value={form.context}
+                onChange={(event) => update("context", event.target.value)}
+                required
+                inputProps={{ maxLength: 100 }}
+              />
             </Box>
-            <TextField label="Description" value={form.description} onChange={(event) => update("description", event.target.value)} required multiline minRows={3} inputProps={{ maxLength: 5000 }} />
-            <TextField label="Instructions" value={form.instructions} onChange={(event) => update("instructions", event.target.value)} required multiline minRows={3} inputProps={{ maxLength: 5000 }} />
+            <TextField
+              label="Description"
+              value={form.description}
+              onChange={(event) => update("description", event.target.value)}
+              required
+              multiline
+              minRows={3}
+              inputProps={{ maxLength: 5000 }}
+            />
+            <TextField
+              label="Instructions"
+              value={form.instructions}
+              onChange={(event) => update("instructions", event.target.value)}
+              required
+              multiline
+              minRows={3}
+              inputProps={{ maxLength: 5000 }}
+            />
             <ManagedImageField
               value={form.imageUrl}
               label="Campaign artwork"
@@ -179,16 +257,49 @@ export function DynamicEditor({
 
           <FormSection title="Schedule & availability" description="Dates are interpreted in the selected IANA timezone and persisted as UTC.">
             <Box className="dynamics-editor-grid three">
-              <TextField label="Starts at" value={form.startsAt} onChange={(event) => update("startsAt", event.target.value)} required type="datetime-local" InputLabelProps={{ shrink: true }} />
-              <TextField label="Ends at" value={form.endsAt} onChange={(event) => update("endsAt", event.target.value)} required type="datetime-local" InputLabelProps={{ shrink: true }} />
-              <TextField label="Campaign timezone" value={form.timezone} onChange={(event) => update("timezone", event.target.value)} required placeholder="America/Detroit" />
+              <TextField
+                label="Starts at"
+                value={form.startsAt}
+                onChange={(event) => update("startsAt", event.target.value)}
+                required
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Ends at"
+                value={form.endsAt}
+                onChange={(event) => update("endsAt", event.target.value)}
+                required
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Campaign timezone"
+                value={form.timezone}
+                onChange={(event) => update("timezone", event.target.value)}
+                required
+                placeholder="America/Detroit"
+              />
             </Box>
             <Box className="dynamics-editor-grid two compact">
-              <TextField select label="Editorial status" value={form.status} onChange={(event) => update("status", event.target.value as "active" | "closed")}>
+              <TextField
+                select
+                label="Editorial status"
+                value={form.status}
+                onChange={(event) => update("status", event.target.value as "active" | "closed")}
+              >
                 <MenuItem value="active">Active — window controls availability</MenuItem>
                 <MenuItem value="closed">Closed — manual override</MenuItem>
               </TextField>
-              <FormControlLabel control={<Switch checked={form.featured} onChange={(event) => update("featured", event.target.checked)} />} label="Featured campaign" />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.featured}
+                    onChange={(event) => update("featured", event.target.checked)}
+                  />
+                }
+                label="Featured campaign"
+              />
             </Box>
           </FormSection>
 
@@ -196,7 +307,9 @@ export function DynamicEditor({
             <ToggleButtonGroup
               exclusive
               value={form.participationType}
-              onChange={(_event, value: "form" | "external_url" | null) => { if (value) update("participationType", value); }}
+              onChange={(_event, value: "form" | "external_url" | null) => {
+                if (value) update("participationType", value);
+              }}
               size="small"
               color="primary"
             >
@@ -215,15 +328,31 @@ export function DynamicEditor({
               />
             ) : (
               <Stack spacing={2}>
-                <FormControlLabel control={<Switch checked={form.requiresAuth} onChange={(event) => update("requiresAuth", event.target.checked)} />} label="Require authenticated Firebase user" />
-                {!fieldContactValid ? <Alert severity="warning">Anonymous forms must include a required email or phone field.</Alert> : null}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.requiresAuth}
+                      onChange={(event) => update("requiresAuth", event.target.checked)}
+                    />
+                  }
+                  label="Require authenticated Firebase user"
+                />
+                {!fieldContactValid ? (
+                  <Alert severity="warning">Anonymous forms must include a required email or phone field.</Alert>
+                ) : null}
 
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Form fields</Typography>
                     <Typography variant="caption" color="text.secondary">{form.fields.length}/12 configured</Typography>
                   </Box>
-                  <Button size="small" variant="outlined" startIcon={<Plus size={15} />} disabled={form.fields.length >= 12} onClick={() => update("fields", [...form.fields, newField()])}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Plus size={15} />}
+                    disabled={form.fields.length >= 12}
+                    onClick={() => update("fields", [...form.fields, newField()])}
+                  >
                     Add field
                   </Button>
                 </Stack>
@@ -235,7 +364,16 @@ export function DynamicEditor({
                         size="small"
                         label="Field key"
                         value={field.key}
-                        onChange={(event) => update("fields", form.fields.map((item) => item.rowId === field.rowId ? { ...item, key: event.target.value.toLowerCase() } : item))}
+                        onChange={(event) =>
+                          update(
+                            "fields",
+                            form.fields.map((item) =>
+                              item.rowId === field.rowId
+                                ? { ...item, key: event.target.value.toLowerCase() }
+                                : item,
+                            ),
+                          )
+                        }
                         required
                         inputProps={{ maxLength: 40, pattern: "[a-z][a-z0-9_]{0,39}" }}
                       />
@@ -244,7 +382,16 @@ export function DynamicEditor({
                         select
                         label="Type"
                         value={field.type}
-                        onChange={(event) => update("fields", form.fields.map((item) => item.rowId === field.rowId ? { ...item, type: event.target.value as typeof field.type } : item))}
+                        onChange={(event) =>
+                          update(
+                            "fields",
+                            form.fields.map((item) =>
+                              item.rowId === field.rowId
+                                ? { ...item, type: event.target.value as typeof field.type }
+                                : item,
+                            ),
+                          )
+                        }
                       >
                         {FIELD_TYPES.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
                       </TextField>
@@ -252,13 +399,45 @@ export function DynamicEditor({
                         size="small"
                         label="Visible label"
                         value={field.label}
-                        onChange={(event) => update("fields", form.fields.map((item) => item.rowId === field.rowId ? { ...item, label: event.target.value } : item))}
+                        onChange={(event) =>
+                          update(
+                            "fields",
+                            form.fields.map((item) =>
+                              item.rowId === field.rowId
+                                ? { ...item, label: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
                         required
                         inputProps={{ maxLength: 100 }}
                       />
-                      <FormControlLabel control={<Switch size="small" checked={field.required} onChange={(event) => update("fields", form.fields.map((item) => item.rowId === field.rowId ? { ...item, required: event.target.checked } : item))} />} label="Required" />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={field.required}
+                            onChange={(event) =>
+                              update(
+                                "fields",
+                                form.fields.map((item) =>
+                                  item.rowId === field.rowId
+                                    ? { ...item, required: event.target.checked }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                        }
+                        label="Required"
+                      />
                       <Tooltip title={`Remove ${field.key || `field ${index + 1}`}`}>
-                        <IconButton color="error" onClick={() => update("fields", form.fields.filter((item) => item.rowId !== field.rowId))}>
+                        <IconButton
+                          color="error"
+                          onClick={() =>
+                            update("fields", form.fields.filter((item) => item.rowId !== field.rowId))
+                          }
+                        >
                           <X size={17} />
                         </IconButton>
                       </Tooltip>
@@ -271,9 +450,27 @@ export function DynamicEditor({
 
           <FormSection title="Consent & policy" description="Increment consentVersion whenever applicable legal terms change.">
             <Box className="dynamics-editor-grid two">
-              <TextField label="Terms URL" value={form.termsUrl} onChange={(event) => update("termsUrl", event.target.value)} required type="url" />
-              <TextField label="Privacy URL" value={form.privacyUrl} onChange={(event) => update("privacyUrl", event.target.value)} required type="url" />
-              <TextField label="Consent version" value={form.consentVersion} onChange={(event) => update("consentVersion", event.target.value)} required inputProps={{ maxLength: 64, pattern: "[A-Za-z0-9._-]+" }} />
+              <TextField
+                label="Terms URL"
+                value={form.termsUrl}
+                onChange={(event) => update("termsUrl", event.target.value)}
+                required
+                type="url"
+              />
+              <TextField
+                label="Privacy URL"
+                value={form.privacyUrl}
+                onChange={(event) => update("privacyUrl", event.target.value)}
+                required
+                type="url"
+              />
+              <TextField
+                label="Consent version"
+                value={form.consentVersion}
+                onChange={(event) => update("consentVersion", event.target.value)}
+                required
+                inputProps={{ maxLength: 64, pattern: "[A-Za-z0-9._-]+" }}
+              />
             </Box>
           </FormSection>
         </fieldset>
@@ -290,7 +487,13 @@ export function DynamicEditor({
               onDeleted={onDeleted}
             />
           ) : <span />}
-          <Button type="submit" variant="contained" startIcon={<Save size={16} />} disabled={busy} sx={{ flexShrink: 0 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            startIcon={<Save size={16} />}
+            disabled={busy || (Boolean(dynamic) && !dirty)}
+            sx={{ flexShrink: 0 }}
+          >
             {saveMutation.isPending ? "Saving…" : "Save to Draft"}
           </Button>
         </Box>

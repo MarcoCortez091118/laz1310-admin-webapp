@@ -14,33 +14,41 @@ import { Rocket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "../../api/errors";
 import { adminQueryKeys } from "../content/api";
-import { deleteDynamic, dynamicsQueryKeys, publishDynamic } from "./api";
+import { programsQueryKeys, publishProgram, trashProgram } from "./api";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.kind === "conflict") return "The Draft changed. Reload Dynamics before retrying.";
-    if (error.kind === "validation") return error.message;
+    if (error.kind === "conflict") {
+      return "The Draft or public release changed. Reload Programs before retrying.";
+    }
     return error.message || "The Admin API rejected this operation.";
   }
-  return error instanceof Error ? error.message : "Unexpected Dynamics error.";
+  return error instanceof Error ? error.message : "Unexpected Programs error.";
 }
 
 async function publishRemovalIfNeeded(
-  dynamicId: string,
+  stationId: string,
+  programId: string,
   title: string,
   etag: string,
   note: string,
 ) {
   try {
-    await publishDynamic(dynamicId, note.trim() || `Remove ${title}`, etag);
+    await publishProgram(
+      stationId,
+      programId,
+      note.trim() || `Remove ${title}`,
+      etag,
+    );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return;
     throw error;
   }
 }
 
-export function DynamicLifecycleActions({
-  dynamicId,
+export function ProgramLifecycleActions({
+  stationId,
+  programId,
   title,
   etag,
   isAdmin,
@@ -48,7 +56,8 @@ export function DynamicLifecycleActions({
   busy,
   onDeleted,
 }: {
-  dynamicId: string;
+  stationId: string;
+  programId: string;
   title: string;
   etag: string;
   isAdmin: boolean;
@@ -64,10 +73,9 @@ export function DynamicLifecycleActions({
 
   async function invalidateAll() {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.list }),
-      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.status }),
-      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.trash }),
-      queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.publishedOutsideDraft }),
+      queryClient.invalidateQueries({ queryKey: programsQueryKeys.status }),
+      queryClient.invalidateQueries({ queryKey: programsQueryKeys.trash }),
+      queryClient.invalidateQueries({ queryKey: programsQueryKeys.publishedOutsideDraft }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.draft }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.publicState }),
@@ -80,7 +88,7 @@ export function DynamicLifecycleActions({
     mutationFn: () => {
       const normalized = publishNote.trim();
       if (!normalized) throw new Error("Publication note is required.");
-      return publishDynamic(dynamicId, normalized, etag);
+      return publishProgram(stationId, programId, normalized, etag);
     },
     onSuccess: async () => {
       await invalidateAll();
@@ -90,12 +98,18 @@ export function DynamicLifecycleActions({
 
   const trashMutation = useMutation({
     mutationFn: async (publishRemoval: boolean) => {
-      const removed = await deleteDynamic(dynamicId, etag);
+      const removed = await trashProgram(stationId, programId, etag);
       if (!publishRemoval) return removed;
       if (!removed.etag) {
-        throw new Error("The API did not return the new Draft ETag after moving this campaign to trash.");
+        throw new Error("The API did not return the new Draft ETag after moving this program to trash.");
       }
-      await publishRemovalIfNeeded(dynamicId, title, removed.etag, removalNote);
+      await publishRemovalIfNeeded(
+        stationId,
+        programId,
+        title,
+        removed.etag,
+        removalNote,
+      );
       return removed;
     },
     onSuccess: async () => {
@@ -117,7 +131,11 @@ export function DynamicLifecycleActions({
             Save the current form to Draft before publishing or moving it to trash.
           </Typography>
         ) : null}
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          justifyContent="space-between"
+        >
           <Button
             color="error"
             variant="outlined"
@@ -125,7 +143,7 @@ export function DynamicLifecycleActions({
             disabled={pending || dirty}
             onClick={() => setTrashOpen(true)}
           >
-            Remove campaign
+            Move to trash
           </Button>
           <Button
             variant="outlined"
@@ -133,16 +151,22 @@ export function DynamicLifecycleActions({
             disabled={!isAdmin || pending || dirty}
             onClick={() => setPublishOpen(true)}
           >
-            {isAdmin ? "Publish campaign" : "Admin required to publish"}
+            {isAdmin ? "Publish program" : "Admin required to publish"}
           </Button>
         </Stack>
       </Stack>
 
-      <Dialog open={publishOpen} onClose={() => !publishMutation.isPending && setPublishOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={publishOpen}
+        onClose={() => !publishMutation.isPending && setPublishOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Publish only “{title}”?</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Only this campaign is rebased from Draft onto the current public catalog. Other pending Draft changes remain unpublished.
+            Only this program and its weekly schedule are rebased from Draft onto the current
+            public catalog. Other pending Draft changes remain unpublished.
           </Alert>
           <TextField
             autoFocus
@@ -155,26 +179,35 @@ export function DynamicLifecycleActions({
           />
         </DialogContent>
         <DialogActions>
-          <Button disabled={publishMutation.isPending} onClick={() => setPublishOpen(false)}>Cancel</Button>
+          <Button disabled={publishMutation.isPending} onClick={() => setPublishOpen(false)}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
             disabled={publishMutation.isPending || !publishNote.trim()}
             startIcon={<Rocket size={16} />}
             onClick={() => publishMutation.mutate()}
           >
-            {publishMutation.isPending ? "Publishing…" : "Publish campaign"}
+            {publishMutation.isPending ? "Publishing…" : "Publish program"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={trashOpen} onClose={() => !trashMutation.isPending && setTrashOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Remove “{title}”?</DialogTitle>
+      <Dialog
+        open={trashOpen}
+        onClose={() => !trashMutation.isPending && setTrashOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Move “{title}” to trash?</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Removing a campaign always keeps its complete snapshot in Dynamics trash for audit and recovery. Participant records are retained.
+            Trash preserves the complete program and schedule snapshot for audit and recovery.
           </Alert>
           <Typography variant="body2" color="text.secondary">
-            <strong>Move to trash only</strong> removes the campaign from Draft but does not remove an already-published version from Mobile. To make it disappear from the app, use <strong>Move to trash & remove from app</strong>.
+            <strong>Move to trash only</strong> removes it from Draft. If it is already live,
+            Mobile keeps the published version. <strong>Move to trash & remove from app</strong>
+            also creates a selective release that removes only this program from Mobile.
           </Typography>
           {isAdmin ? (
             <TextField
@@ -184,12 +217,14 @@ export function DynamicLifecycleActions({
               value={removalNote}
               inputProps={{ maxLength: 300 }}
               onChange={(event) => setRemovalNote(event.target.value)}
-              helperText="Stored in the immutable release and audit trail when the removal is published."
+              helperText="Stored in the immutable release and audit trail when removal is published."
             />
           ) : null}
         </DialogContent>
         <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
-          <Button disabled={trashMutation.isPending} onClick={() => setTrashOpen(false)}>Cancel</Button>
+          <Button disabled={trashMutation.isPending} onClick={() => setTrashOpen(false)}>
+            Cancel
+          </Button>
           <Button
             color="error"
             variant="outlined"

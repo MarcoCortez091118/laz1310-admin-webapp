@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   dynamicsQueryKeys,
   getDynamicParticipations,
+  getDynamicPublicationStatus,
   getDynamics,
   getDynamicTrash,
   getParticipationServiceStatus,
@@ -13,6 +14,15 @@ export function useDynamicsQuery() {
     queryKey: dynamicsQueryKeys.list,
     queryFn: ({ signal }) => getDynamics(signal),
     retry: false,
+  });
+}
+
+export function useDynamicPublicationStatusQuery() {
+  return useQuery({
+    queryKey: dynamicsQueryKeys.status,
+    queryFn: ({ signal }) => getDynamicPublicationStatus(signal),
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 }
 
