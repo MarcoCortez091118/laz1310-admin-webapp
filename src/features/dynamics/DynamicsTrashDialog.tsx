@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Rocket, RotateCcw, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { ApiError } from "../../api/errors";
 import { adminQueryKeys } from "../content/api";
 import {
@@ -40,7 +39,6 @@ function TrashRow({
   isAdmin: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [removalResult, setRemovalResult] = useState<"published" | "already-absent" | null>(null);
 
   const restore = useMutation({
     mutationFn: () => restoreDynamic(item.id, etag),
@@ -63,17 +61,16 @@ function TrashRow({
           `Remove ${item.snapshot.title}`.slice(0, 300),
           etag,
         );
-        return "published" as const;
       } catch (error) {
         // Publishing a removal is idempotent from Trash. A 404 means the Dynamic is already
         // absent from both Draft and the current public release, which is the desired state.
-        if (error instanceof ApiError && error.status === 404) return "already-absent" as const;
+        if (error instanceof ApiError && error.status === 404) return;
         throw error;
       }
     },
-    onSuccess: async (result) => {
-      setRemovalResult(result);
+    onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: dynamicsQueryKeys.trash }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.publicState }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.preview }),
         queryClient.invalidateQueries({ queryKey: ["admin", "releases"] }),
@@ -96,14 +93,12 @@ function TrashRow({
               variant="outlined"
               label={item.restoredAt ? "Restored" : "In trash"}
             />
-            {removalResult ? (
-              <Chip
-                size="small"
-                color="success"
-                variant="outlined"
-                label={removalResult === "published" ? "Removal published" : "Not in public release"}
-              />
-            ) : null}
+            <Chip
+              size="small"
+              color={item.published ? "error" : "success"}
+              variant={item.published ? "filled" : "outlined"}
+              label={item.published ? "Still live in Mobile" : "Removed from Mobile"}
+            />
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
             {item.snapshot.slug} · deleted {date(item.deletedAt)} by {item.deletedBy}
@@ -111,6 +106,11 @@ function TrashRow({
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.4, overflowWrap: "anywhere" }}>
             Dynamic {item.dynamicId} · Trash record {item.id}
           </Typography>
+          {item.published && !item.restoredAt ? (
+            <Alert severity="warning" sx={{ mt: 1.25 }}>
+              This campaign was removed from Draft but is still part of the current public release. Mobile will keep showing it until its removal is published.
+            </Alert>
+          ) : null}
           {item.restoredAt ? (
             <Typography variant="caption" color="success.main" sx={{ display: "block", mt: 0.4 }}>
               Restored {date(item.restoredAt)} by {item.restoredBy ?? "unknown"}
@@ -118,15 +118,16 @@ function TrashRow({
           ) : null}
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}>
-          {isAdmin && !item.restoredAt ? (
+          {isAdmin && !item.restoredAt && item.published ? (
             <Button
               size="small"
-              variant="outlined"
+              color="error"
+              variant="contained"
               startIcon={<Rocket size={15} />}
               disabled={pending}
               onClick={() => publishRemoval.mutate()}
             >
-              {publishRemoval.isPending ? "Publishing…" : "Publish removal"}
+              {publishRemoval.isPending ? "Removing…" : "Remove from app now"}
             </Button>
           ) : null}
           <Button
@@ -178,7 +179,7 @@ export function DynamicsTrashDialog({
       </DialogTitle>
       <DialogContent dividers>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Deleting a campaign is a soft-delete. The full campaign snapshot, actor and timestamp are retained for audit. Restoring returns the snapshot to Draft; it does not publish it automatically. Administrators can also publish a pending removal directly from Trash.
+          Trash preserves the complete campaign snapshot and audit evidence. Each item now also shows whether it is still present in the current public release consumed by Mobile.
         </Alert>
         {query.isPending ? <Typography color="text.secondary">Loading trash…</Typography> : null}
         {query.error ? (
