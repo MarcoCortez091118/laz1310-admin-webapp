@@ -90,7 +90,7 @@ export function DynamicsPage() {
   const isAdmin = staff.roles?.includes("admin") ?? false;
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
-  const now = useMemo(() => new Date(), [query.data]);
+  const now = useMemo(() => new Date(query.dataUpdatedAt || Date.now()), [query.dataUpdatedAt]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();

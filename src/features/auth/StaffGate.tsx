@@ -77,6 +77,7 @@ export function StaffGate({ children }: PropsWithChildren) {
   return <StaffContext.Provider value={staff.data}>{children}</StaffContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStaff(): StaffResponse {
   const staff = useContext(StaffContext);
   if (!staff) {

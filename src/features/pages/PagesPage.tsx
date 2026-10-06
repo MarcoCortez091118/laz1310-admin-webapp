@@ -278,9 +278,9 @@ export function PagesPage() {
   const preview = usePreviewQuery();
   const [selection, setSelection] = useState<string | "new" | null>(null);
 
-  const pages = draft.data?.data.catalog?.pages ?? [];
-  const stations = draft.data?.data.catalog?.stations ?? [];
-  const previewPages = preview.data?.data.catalog?.pages ?? [];
+  const pages = useMemo(() => draft.data?.data.catalog?.pages ?? [], [draft.data]);
+  const stations = useMemo(() => draft.data?.data.catalog?.stations ?? [], [draft.data]);
+  const previewPages = useMemo(() => preview.data?.data.catalog?.pages ?? [], [preview.data]);
 
   const selected = useMemo(
     () => pages.find((page) => page.slug === selection) ?? null,

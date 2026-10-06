@@ -91,7 +91,7 @@ function MetricCard({
 
 export function ProgramsPage() {
   const draft = useDraftQuery();
-  const stations = draft.data?.data.catalog?.stations ?? [];
+  const stations = useMemo(() => draft.data?.data.catalog?.stations ?? [], [draft.data]);
   const [stationId, setStationId] = useState<string>("");
   const [selection, setSelection] = useState<string | "new" | null>(null);
   const [search, setSearch] = useState("");
