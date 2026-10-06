@@ -16,6 +16,7 @@ import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsPage } from "./features/programs/ProgramsPage";
 import { UsersPage } from "./features/users/UsersPage";
+import { WeatherPage } from "./features/weather/WeatherPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -98,12 +99,7 @@ const releasesRoute = createRoute({
 const weatherRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/weather",
-  component: () => (
-    <PlaceholderPage
-      dependency="Public weather + future operational contract"
-      title="Weather"
-    />
-  ),
+  component: WeatherPage,
 });
 
 const notificationsRoute = createRoute({
