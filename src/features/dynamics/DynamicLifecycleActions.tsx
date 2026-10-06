@@ -125,7 +125,7 @@ export function DynamicLifecycleActions({
             disabled={pending || dirty}
             onClick={() => setTrashOpen(true)}
           >
-            Move to trash
+            Remove campaign
           </Button>
           <Button
             variant="outlined"
@@ -168,13 +168,13 @@ export function DynamicLifecycleActions({
       </Dialog>
 
       <Dialog open={trashOpen} onClose={() => !trashMutation.isPending && setTrashOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Move “{title}” to trash?</DialogTitle>
+        <DialogTitle>Remove “{title}”?</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            The complete campaign snapshot is retained in Dynamics trash. The audit log records the actor, timestamp, Draft revision and a cryptographic digest linking back to that snapshot. Participant records are not deleted.
+            Removing a campaign always keeps its complete snapshot in Dynamics trash for audit and recovery. Participant records are retained.
           </Alert>
           <Typography variant="body2" color="text.secondary">
-            Moving to trash removes it from Draft. If it is currently published, Mobile keeps the published version until you publish the removal.
+            <strong>Move to trash only</strong> removes the campaign from Draft but does not remove an already-published version from Mobile. To make it disappear from the app, use <strong>Move to trash & remove from app</strong>.
           </Typography>
           {isAdmin ? (
             <TextField
@@ -184,7 +184,7 @@ export function DynamicLifecycleActions({
               value={removalNote}
               inputProps={{ maxLength: 300 }}
               onChange={(event) => setRemovalNote(event.target.value)}
-              helperText="Stored in the release/audit trail when you publish this removal."
+              helperText="Stored in the immutable release and audit trail when the removal is published."
             />
           ) : null}
         </DialogContent>
@@ -196,7 +196,7 @@ export function DynamicLifecycleActions({
             disabled={trashMutation.isPending}
             onClick={() => trashMutation.mutate(false)}
           >
-            Move to trash
+            Move to trash only
           </Button>
           {isAdmin ? (
             <Button
@@ -205,7 +205,7 @@ export function DynamicLifecycleActions({
               disabled={trashMutation.isPending}
               onClick={() => trashMutation.mutate(true)}
             >
-              {trashMutation.isPending ? "Processing…" : "Trash & publish removal"}
+              {trashMutation.isPending ? "Removing…" : "Move to trash & remove from app"}
             </Button>
           ) : null}
         </DialogActions>

@@ -12,6 +12,13 @@ export interface DynamicTrashItem {
   resultingDraftRevision: number;
   restoredAt: string | null;
   restoredBy: string | null;
+  published: boolean;
+}
+
+export interface PublishedOutsideDraftItem {
+  dynamic: Dynamic;
+  releaseId: string;
+  publishedAt: string;
 }
 
 export interface ParticipationServiceStatus {
@@ -23,6 +30,7 @@ export interface ParticipationServiceStatus {
 export const dynamicsQueryKeys = {
   list: ["admin", "dynamics"] as const,
   trash: ["admin", "dynamics", "trash"] as const,
+  publishedOutsideDraft: ["admin", "dynamics", "published-outside-draft"] as const,
   participationStatus: ["admin", "dynamics", "participation-status"] as const,
   participations: (dynamicId: string) => ["admin", "dynamics", dynamicId, "participations"] as const,
 };
@@ -82,7 +90,7 @@ export function publishDynamic(
 }
 
 export function getDynamicTrash(
-  limit = 50,
+  limit = 100,
   after?: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<DynamicTrashItem[]>> {
@@ -90,6 +98,16 @@ export function getDynamicTrash(
   if (after) params.set("after", after);
   return apiRequest<DynamicTrashItem[]>(
     `/api/v1/admin/dynamics/trash?${params.toString()}`,
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function getPublishedOutsideDraft(
+  signal?: AbortSignal,
+): Promise<ApiResult<PublishedOutsideDraftItem[]>> {
+  return apiRequest<PublishedOutsideDraftItem[]>(
+    "/api/v1/admin/dynamics/published-outside-draft",
     { method: "GET" },
     { signal },
   );
