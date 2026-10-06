@@ -1,6 +1,14 @@
 import { apiRequest, type ApiResult } from "../../api/client";
 import type { Draft, Station } from "../../api/types";
 
+export function listPublishedStations(signal?: AbortSignal): Promise<ApiResult<Station[]>> {
+  return apiRequest<Station[]>(
+    "/api/v1/stations",
+    { method: "GET" },
+    { authenticated: false, signal },
+  );
+}
+
 export function putStation(
   station: Station,
   etag: string,
