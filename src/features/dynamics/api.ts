@@ -1,6 +1,15 @@
 import { apiRequest, type ApiResult } from "../../api/client";
 import type { Draft, Dynamic, ParticipationPage, PublicState } from "../../api/types";
 
+export type DynamicPublicationState = "draft" | "live" | "changes_pending";
+
+export interface DynamicPublicationStatus {
+  dynamicId: string;
+  status: DynamicPublicationState;
+  releaseId: string | null;
+  publishedAt: string | null;
+}
+
 export interface DynamicTrashItem {
   id: string;
   dynamicId: string;
@@ -29,6 +38,7 @@ export interface ParticipationServiceStatus {
 
 export const dynamicsQueryKeys = {
   list: ["admin", "dynamics"] as const,
+  status: ["admin", "dynamics", "status"] as const,
   trash: ["admin", "dynamics", "trash"] as const,
   publishedOutsideDraft: ["admin", "dynamics", "published-outside-draft"] as const,
   participationStatus: ["admin", "dynamics", "participation-status"] as const,
@@ -38,6 +48,16 @@ export const dynamicsQueryKeys = {
 export function getDynamics(signal?: AbortSignal): Promise<ApiResult<Dynamic[]>> {
   return apiRequest<Dynamic[]>(
     "/api/v1/admin/dynamics",
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function getDynamicPublicationStatus(
+  signal?: AbortSignal,
+): Promise<ApiResult<DynamicPublicationStatus[]>> {
+  return apiRequest<DynamicPublicationStatus[]>(
+    "/api/v1/admin/dynamics/status",
     { method: "GET" },
     { signal },
   );
