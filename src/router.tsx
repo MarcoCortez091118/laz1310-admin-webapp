@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { AdminShell } from "./app/AdminShell";
 import { AuthGate } from "./features/auth/AuthGate";
+import { BannersPage } from "./features/banners/BannersPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
@@ -48,6 +49,12 @@ const pagesRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/pages",
   component: PagesPage,
+});
+
+const bannersRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/banners",
+  component: BannersPage,
 });
 
 const radioRoute = createRoute({
@@ -132,6 +139,7 @@ const routeTree = rootRoute.addChildren([
   adminRoute.addChildren([
     overviewRoute,
     pagesRoute,
+    bannersRoute,
     radioRoute,
     programsRoute,
     dynamicsRoute,
