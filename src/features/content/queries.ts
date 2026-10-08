@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { adminQueryKeys, getDraft, getPreview, getPublicState } from "./api";
+import {
+  adminQueryKeys,
+  getDraft,
+  getPagePublicationStatus,
+  getPreview,
+  getPublicState,
+} from "./api";
 
 export function useDraftQuery() {
   return useQuery({
@@ -21,6 +27,15 @@ export function usePublicStateQuery() {
   return useQuery({
     queryKey: adminQueryKeys.publicState,
     queryFn: ({ signal }) => getPublicState(signal),
+    retry: false,
+  });
+}
+
+
+export function usePagePublicationStatusQuery(slug: string) {
+  return useQuery({
+    queryKey: adminQueryKeys.pageStatus(slug),
+    queryFn: ({ signal }) => getPagePublicationStatus(slug, signal),
     retry: false,
   });
 }
