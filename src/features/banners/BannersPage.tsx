@@ -437,7 +437,7 @@ function BannersEditor({
               banner={banner}
               count={items.length}
               index={index}
-              key={`${index}-${banner.title}`}
+              key={index}
               onChange={(next) => updateBanner(index, next)}
               onMove={(direction) => moveBanner(index, direction)}
               onRemove={() =>
