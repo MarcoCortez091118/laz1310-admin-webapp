@@ -6,7 +6,17 @@ export const adminQueryKeys = {
   preview: ["admin", "preview"] as const,
   publicState: ["admin", "public-state"] as const,
   releases: ["admin", "releases"] as const,
+  pageStatus: (slug: string) => ["admin", "pages", slug, "status"] as const,
 };
+
+export interface PagePublicationStatus {
+  slug: string;
+  status: "absent" | "draft" | "live" | "changes_pending";
+  existsInDraft: boolean;
+  existsInPublished: boolean;
+  releaseId: string | null;
+  publishedAt: string | null;
+}
 
 export function getDraft(signal?: AbortSignal): Promise<ApiResult<Draft>> {
   return apiRequest<Draft>(
@@ -72,6 +82,35 @@ export function deletePage(
   return apiRequest<Draft>(
     `/api/v1/admin/pages/${encodeURIComponent(slug)}`,
     { method: "DELETE" },
+    { ifMatch: etag, signal },
+  );
+}
+
+
+export function getPagePublicationStatus(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<PagePublicationStatus>> {
+  return apiRequest<PagePublicationStatus>(
+    `/api/v1/admin/pages/${encodeURIComponent(slug)}/status`,
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function publishPage(
+  slug: string,
+  note: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<PublicState>> {
+  return apiRequest<PublicState>(
+    `/api/v1/admin/pages/${encodeURIComponent(slug)}/publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: note.trim() }),
+    },
     { ifMatch: etag, signal },
   );
 }
