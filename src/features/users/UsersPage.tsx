@@ -117,7 +117,7 @@ function UserCard({ user }: { user: AdminUserSummary }) {
                   variant={enabled ? "filled" : "outlined"}
                   label={`${category} ${enabled ? "ON" : "OFF"}`}
                 />
-              )) : <Chip size="small" variant="outlined" label="Eligibility pending API deployment" />}
+              )) : <Chip size="small" variant="outlined" label="Eligibility unavailable" />}
             </Stack>
           </Box>
 
@@ -168,6 +168,7 @@ export function UsersPage() {
     : allUsers;
   const pushReady = allUsers.filter((user) => user.notificationStatus?.pushEligible).length;
   const verified = allUsers.filter((user) => user.emailVerified).length;
+  const directoryFailed = Boolean(users.error || exactSearch.error);
 
   if (!isAdmin) {
     return (
@@ -186,22 +187,22 @@ export function UsersPage() {
           </Typography>
           <Typography variant="h4" fontWeight={850} sx={{ letterSpacing: "-.035em" }}>Users</Typography>
           <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 800 }}>
-            Real LA Z business accounts created through authenticated Mobile sessions. Push readiness is derived from registered devices, native FCM eligibility and notification preferences; tokens are never exposed here.
+            LA Z listener accounts created by authenticated Mobile/API sessions. Website staff or legacy web accounts are a separate domain and are intentionally excluded. Push readiness is derived from registered devices, native FCM eligibility and notification preferences; tokens are never exposed here.
           </Typography>
         </Box>
 
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
           {[
-            ["Loaded users", allUsers.length, <UsersRound size={20} />],
-            ["Email verified", verified, <CheckCircle2 size={20} />],
-            ["Push ready", pushReady, <BellRing size={20} />],
+            ["Loaded users", directoryFailed ? "—" : allUsers.length, <UsersRound size={20} />],
+            ["Email verified", directoryFailed ? "—" : verified, <CheckCircle2 size={20} />],
+            ["Push ready", directoryFailed ? "—" : pushReady, <BellRing size={20} />],
           ].map(([label, value, icon]) => (
             <Card key={String(label)} variant="outlined" sx={{ borderRadius: 3 }}>
               <CardContent>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography variant="body2" color="text.secondary">{label}</Typography>
-                    <Typography variant="h4" fontWeight={850} mt={0.5}>{value as number}</Typography>
+                    <Typography variant="h4" fontWeight={850} mt={0.5}>{String(value)}</Typography>
                   </Box>
                   <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "#FFF1F2", color: "primary.main", display: "grid", placeItems: "center" }}>
                     {icon}
@@ -222,7 +223,7 @@ export function UsersPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 label="Exact email lookup"
                 placeholder="listener@example.com"
-                helperText="For privacy, server-side lookup is exact email only; browse the paginated directory below."
+                helperText="For privacy, server-side lookup is exact email only; browse the paginated Mobile/API directory below."
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment> }}
               />
               <Button
@@ -237,16 +238,26 @@ export function UsersPage() {
           </CardContent>
         </Card>
 
-        {users.error ? <Alert severity="error">{users.error instanceof Error ? users.error.message : "Unable to load users."}</Alert> : null}
-        {exactSearch.error ? <Alert severity="error">{exactSearch.error instanceof Error ? exactSearch.error.message : "Unable to search user."}</Alert> : null}
+        {users.error ? (
+          <Alert severity="error">
+            <strong>User directory unavailable.</strong>{" "}
+            {users.error instanceof Error ? users.error.message : "Unable to load users."}
+          </Alert>
+        ) : null}
+        {exactSearch.error ? (
+          <Alert severity="error">
+            <strong>User lookup unavailable.</strong>{" "}
+            {exactSearch.error instanceof Error ? exactSearch.error.message : "Unable to search user."}
+          </Alert>
+        ) : null}
 
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "repeat(2,minmax(0,1fr))" }, gap: 1.5 }}>
           {visibleUsers.map((user) => <UserCard key={user.id} user={user} />)}
         </Box>
 
-        {!users.isLoading && visibleUsers.length === 0 ? (
+        {!users.isLoading && !directoryFailed && visibleUsers.length === 0 ? (
           <Alert severity="info" icon={<Smartphone size={20} />}>
-            {normalizedEmail ? "No LA Z business account matches that exact email." : "No authenticated LA Z users exist in this API environment yet."}
+            {normalizedEmail ? "No LA Z Mobile/API account matches that exact email." : "No authenticated LA Z Mobile/API listener accounts exist in this environment yet."}
           </Alert>
         ) : null}
 
