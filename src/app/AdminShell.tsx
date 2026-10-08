@@ -55,6 +55,7 @@ const navigationGroups = [
     label: "Content",
     items: [
       { label: "Pages", to: "/pages", icon: FileText, adminOnly: false },
+      { label: "Banners", to: "/banners", icon: Image, adminOnly: false },
       { label: "Radio", to: "/radio", icon: Radio, adminOnly: false },
       { label: "Programs", to: "/programs", icon: CalendarRange, adminOnly: false },
       { label: "Media", to: "/media", icon: Image, adminOnly: false },
