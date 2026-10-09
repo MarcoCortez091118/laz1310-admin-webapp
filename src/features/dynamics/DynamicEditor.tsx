@@ -335,16 +335,28 @@ export function DynamicEditor({
                       onChange={(event) => update("requiresAuth", event.target.checked)}
                     />
                   }
-                  label="Require authenticated Firebase user"
+                  label="Require authenticated LA Z account"
                 />
+
+                {form.requiresAuth ? (
+                  <Alert severity="info">
+                    <strong>Account identity is automatic.</strong> Mobile sends the authenticated
+                    account identity to FastAPI; the server records the LA Z user, display name,
+                    registered email and verification state. Add fields below only for information
+                    that is specific to this Dynamic. Zero additional fields is valid.
+                  </Alert>
+                ) : null}
+
                 {!fieldContactValid ? (
                   <Alert severity="warning">Anonymous forms must include a required email or phone field.</Alert>
                 ) : null}
 
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Form fields</Typography>
-                    <Typography variant="caption" color="text.secondary">{form.fields.length}/12 configured</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Additional fields</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {form.fields.length}/12 configured{form.requiresAuth ? " · account name/email are automatic" : ""}
+                    </Typography>
                   </Box>
                   <Button
                     size="small"

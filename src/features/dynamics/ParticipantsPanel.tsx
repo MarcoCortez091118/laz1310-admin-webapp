@@ -22,6 +22,17 @@ import {
   useParticipationServiceStatusQuery,
 } from "./queries";
 
+interface AccountSnapshot {
+  userId?: string | null;
+  displayName?: string | null;
+  email?: string | null;
+  emailVerified?: boolean;
+}
+
+type AccountParticipation = AdminParticipation & {
+  account?: AccountSnapshot | null;
+};
+
 interface ParticipantsPanelProps {
   dynamicId: string;
   title: string;
@@ -47,9 +58,22 @@ function csvCell(value: unknown): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-function loadedCsv(items: AdminParticipation[]): string {
+function loadedCsv(items: AccountParticipation[]): string {
   const keys = Array.from(new Set(items.flatMap((item) => Object.keys(item.values ?? {}))));
-  const header = ["id", "dynamicId", "submittedAt", "releaseId", "acceptedReleaseId", "authenticated", "consentVersion", ...keys];
+  const header = [
+    "id",
+    "dynamicId",
+    "submittedAt",
+    "releaseId",
+    "acceptedReleaseId",
+    "authenticated",
+    "accountUserId",
+    "displayName",
+    "email",
+    "emailVerified",
+    "consentVersion",
+    ...keys,
+  ];
   const rows = items.map((item) => [
     item.id,
     item.dynamicId,
@@ -57,6 +81,10 @@ function loadedCsv(items: AdminParticipation[]): string {
     item.releaseId,
     item.acceptedReleaseId,
     item.authenticated,
+    item.account?.userId ?? "",
+    item.account?.displayName ?? "",
+    item.account?.email ?? "",
+    item.account?.emailVerified ?? "",
     item.consent?.version,
     ...keys.map((key) => item.values?.[key] ?? ""),
   ]);
@@ -79,7 +107,9 @@ export function ParticipantsPanel({
     active && isAdmin && nativeForm && configured,
   );
   const items = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data.items ?? []) ?? [],
+    () =>
+      (query.data?.pages.flatMap((page) => page.data.items ?? []) ??
+        []) as AccountParticipation[],
     [query.data],
   );
   const valueKeys = useMemo(
@@ -222,13 +252,30 @@ export function ParticipantsPanel({
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatDate(item.submittedAt)}</Typography>
                     <Typography component="code" variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>{item.id}</Typography>
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item.authenticated ? "Authenticated" : "Anonymous"}
-                      color={item.authenticated ? "success" : "default"}
-                      size="small"
-                      variant={item.authenticated ? "filled" : "outlined"}
-                    />
+                  <TableCell sx={{ minWidth: 220 }}>
+                    {item.account ? (
+                      <Stack spacing={0.35} alignItems="flex-start">
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {item.account.displayName || "LA Z account"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.account.email || "Email unavailable"}
+                        </Typography>
+                        <Chip
+                          label={item.account.emailVerified ? "Verified account" : "Account"}
+                          color={item.account.emailVerified ? "success" : "default"}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Stack>
+                    ) : (
+                      <Chip
+                        label={item.authenticated ? "Authenticated" : "Anonymous"}
+                        color={item.authenticated ? "success" : "default"}
+                        size="small"
+                        variant={item.authenticated ? "filled" : "outlined"}
+                      />
+                    )}
                   </TableCell>
                   {valueKeys.map((key) => (
                     <TableCell key={key} sx={{ minWidth: 140, maxWidth: 300, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
