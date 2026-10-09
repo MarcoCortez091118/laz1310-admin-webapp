@@ -288,7 +288,7 @@ function CardsEditor({
   function updateCard(index: number, card: Card) {
     onChange({
       ...block,
-      items: items.map((current, currentIndex) =>
+      items: items.map((current: Card, currentIndex: number) =>
         currentIndex === index ? card : current,
       ),
     });

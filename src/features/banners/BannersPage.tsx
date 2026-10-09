@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { Card, CardsBlock, Page } from "../../api/types";
+import type { Card, CardsBlock, Page, PageBlock } from "../../api/types";
 import { ApiError } from "../../api/errors";
 import { useStaff } from "../auth/StaffGate";
 import {
@@ -258,7 +258,7 @@ function BannersEditor({
   const existingBlock = useMemo(
     () =>
       page?.blocks?.find(
-        (block): block is CardsBlock => block.type === "cards",
+        (block: PageBlock): block is CardsBlock => block?.type === "cards",
       ) ?? null,
     [page],
   );
@@ -578,7 +578,7 @@ export function BannersPage() {
 
   const page =
     draft.data.data.catalog?.pages?.find(
-      (item) => item.slug === BANNERS_PAGE_SLUG,
+      (item: Page) => item.slug === BANNERS_PAGE_SLUG,
     ) ?? null;
 
   return (

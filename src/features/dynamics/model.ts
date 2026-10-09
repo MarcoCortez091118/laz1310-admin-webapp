@@ -1,4 +1,4 @@
-import type { Dynamic } from "../../api/types";
+import type { Dynamic, DynamicFormField } from "../../api/types";
 
 export const FIELD_TYPES = ["text", "email", "phone", "textarea"] as const;
 export type DynamicFieldType = (typeof FIELD_TYPES)[number];
@@ -162,7 +162,7 @@ export function dynamicToForm(dynamic: Dynamic): DynamicFormState {
     participationType: participation?.type ?? "form",
     participationUrl: participation?.url ?? "",
     requiresAuth: participation?.requiresAuth ?? false,
-    fields: (participation?.fields ?? []).map((field) => ({
+    fields: (participation?.fields ?? []).map((field: DynamicFormField) => ({
       rowId: uuid(),
       key: field.key,
       type: field.type,

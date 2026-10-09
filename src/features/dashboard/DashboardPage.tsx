@@ -31,6 +31,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { Station } from "../../api/types";
 import { useStaff } from "../auth/StaffGate";
 import { useDraftQuery, usePublicStateQuery } from "../content/queries";
 
@@ -93,9 +94,9 @@ export function DashboardPage() {
   const pages = catalog?.pages?.length ?? 0;
   const stations = catalog?.stations?.length ?? 0;
   const programs =
-    catalog?.stations?.reduce((total, station) => total + (station.shows?.length ?? 0), 0) ?? 0;
+    catalog?.stations?.reduce((total: number, station: Station) => total + (station.shows?.length ?? 0), 0) ?? 0;
   const dynamics = catalog?.dynamics?.length ?? 0;
-  const activeStations = catalog?.stations?.filter((station) => station.isActive ?? true).length ?? 0;
+  const activeStations = catalog?.stations?.filter((station: Station) => station.isActive ?? true).length ?? 0;
 
   const inventoryData = [
     { name: "Pages", value: pages },
