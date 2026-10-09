@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc -b && vite build",
@@ -12,7 +14,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
-    "api:generate": "openapi-typescript $OPENAPI_URL -o src/api/generated/schema.d.ts"
+    "api:generate": "node scripts/generate-api-types.mjs --force",
+    "predev": "npm run api:ensure",
+    "prebuild": "npm run api:ensure",
+    "pretypecheck": "npm run api:ensure",
+    "api:ensure": "node scripts/generate-api-types.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
