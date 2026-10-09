@@ -270,13 +270,13 @@ function BrandingEditor({
             {[
               {
                 label: "Dark",
-                overlay: "rgba(5,1,1,0.30)",
+                overlay: "rgba(5,1,1,0.18)",
                 background: "#050101",
                 color: "#FEFEFE",
               },
               {
                 label: "Light",
-                overlay: "rgba(254,254,254,0.68)",
+                overlay: "rgba(254,254,254,0.52)",
                 background: "#FEFEFE",
                 color: "#111111",
               },
