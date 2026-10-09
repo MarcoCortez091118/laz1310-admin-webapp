@@ -72,7 +72,7 @@ describe("Dynamics model", () => {
     expect(validateDynamicForm(form, [], undefined)).toMatch(/required email or phone/i);
   });
 
-  it("builds a valid safe default form", () => {
+  it("builds a valid account-linked form with zero additional fields", () => {
     const form = defaultDynamicForm();
     form.slug = "campana-prueba";
     form.title = "Campaña de prueba";
@@ -81,6 +81,9 @@ describe("Dynamics model", () => {
     form.imageUrl = "https://example.com/image.webp";
     form.termsUrl = "https://example.com/terms";
     form.privacyUrl = "https://example.com/privacy";
+
+    expect(form.requiresAuth).toBe(true);
+    expect(form.fields).toEqual([]);
     expect(validateDynamicForm(form, [])).toBeNull();
   });
 
