@@ -7,6 +7,7 @@ import {
 import { AdminShell } from "./app/AdminShell";
 import { AuthGate } from "./features/auth/AuthGate";
 import { BannersPage } from "./features/banners/BannersPage";
+import { BrandingPage } from "./features/branding/BrandingPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
@@ -123,6 +124,12 @@ const auditRoute = createRoute({
   ),
 });
 
+const brandingRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/branding",
+  component: BrandingPage,
+});
+
 const configurationRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/configuration",
@@ -149,6 +156,7 @@ const routeTree = rootRoute.addChildren([
     weatherRoute,
     notificationsRoute,
     auditRoute,
+    brandingRoute,
     configurationRoute,
   ]),
 ]);

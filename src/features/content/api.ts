@@ -7,7 +7,14 @@ export const adminQueryKeys = {
   publicState: ["admin", "public-state"] as const,
   releases: ["admin", "releases"] as const,
   pageStatus: (slug: string) => ["admin", "pages", slug, "status"] as const,
+  configurationStatus: ["admin", "configuration", "status"] as const,
 };
+
+export interface ConfigurationPublicationStatus {
+  status: "draft" | "live" | "changes_pending";
+  releaseId: string | null;
+  publishedAt: string | null;
+}
 
 export interface PagePublicationStatus {
   slug: string;
@@ -106,6 +113,49 @@ export function publishPage(
 ): Promise<ApiResult<PublicState>> {
   return apiRequest<PublicState>(
     `/api/v1/admin/pages/${encodeURIComponent(slug)}/publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: note.trim() }),
+    },
+    { ifMatch: etag, signal },
+  );
+}
+
+
+export function putConfiguration(
+  configuration: unknown,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<Draft>> {
+  return apiRequest<Draft>(
+    "/api/v1/admin/configuration",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(configuration),
+    },
+    { ifMatch: etag, signal },
+  );
+}
+
+export function getConfigurationPublicationStatus(
+  signal?: AbortSignal,
+): Promise<ApiResult<ConfigurationPublicationStatus>> {
+  return apiRequest<ConfigurationPublicationStatus>(
+    "/api/v1/admin/configuration/status",
+    { method: "GET" },
+    { signal },
+  );
+}
+
+export function publishConfiguration(
+  note: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<PublicState>> {
+  return apiRequest<PublicState>(
+    "/api/v1/admin/configuration/publish",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

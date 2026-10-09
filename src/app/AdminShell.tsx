@@ -28,6 +28,7 @@ import {
   FileText,
   Image,
   LayoutDashboard,
+  Palette,
   LogOut,
   Menu as MenuIcon,
   Radio,
@@ -80,6 +81,7 @@ const navigationGroups = [
   {
     label: "System",
     items: [
+      { label: "Branding", to: "/branding", icon: Palette, adminOnly: true },
       { label: "App Configuration", to: "/configuration", icon: Settings, adminOnly: true },
     ],
   },
