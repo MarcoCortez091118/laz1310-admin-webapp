@@ -8,3 +8,4 @@ test-results
 .env.*.local
 .DS_Store
 *.log
+src/api/generated/schema.d.ts
