@@ -134,12 +134,8 @@ export function defaultDynamicForm(): DynamicFormState {
     status: "active",
     participationType: "form",
     participationUrl: "",
-    requiresAuth: false,
-    fields: [
-      { rowId: uuid(), key: "name", type: "text", label: "Nombre", required: true },
-      { rowId: uuid(), key: "email", type: "email", label: "Correo", required: true },
-      { rowId: uuid(), key: "answer", type: "textarea", label: "Respuesta / comentario", required: true },
-    ],
+    requiresAuth: true,
+    fields: [],
     termsUrl: "",
     privacyUrl: "",
     consentVersion: "1",
@@ -226,7 +222,9 @@ export function validateDynamicForm(
   if (form.participationType === "external_url") {
     if (!validHttps(form.participationUrl)) return "External participation requires a public HTTPS URL.";
   } else {
-    if (!form.fields.length) return "Form participation requires at least one field.";
+    if (!form.requiresAuth && !form.fields.length) {
+      return "Anonymous forms require at least one field.";
+    }
     if (form.fields.length > 12) return "A form can contain at most 12 fields.";
     const keys = new Set<string>();
     for (const field of form.fields) {
