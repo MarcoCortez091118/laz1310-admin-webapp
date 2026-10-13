@@ -568,3 +568,49 @@
     padding: 12px;
   }
 }
+
+/* Modal-first media workflows: keep the two independent tasks in separate tabs. */
+.media-picker-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 18px;
+  background: #fff;
+  border-bottom: 1px solid #e4e4e7;
+}
+.media-picker-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  min-height: 43px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: #f4f4f5;
+  color: #52525b;
+  cursor: pointer;
+  font-weight: 650;
+}
+.media-picker-tabs button.active {
+  background: #fff1f2;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+.media-picker-tabs button:focus-visible {
+  outline: 2px solid #d30a12;
+  outline-offset: 2px;
+}
+.media-picker-shell { grid-template-rows: auto auto minmax(0, 1fr); }
+.media-picker-tab-body { display: block; overflow-y: auto; }
+.media-picker-tab-body > [role="tabpanel"] { max-width: 740px; margin: 0 auto; }
+.media-picker-tab-body > .media-picker-library { max-width: none; }
+@media (prefers-color-scheme: dark) {
+  .media-picker-tabs { background: #111113; border-color: #27272a; }
+  .media-picker-tabs button { background: #27272a; color: #f4f4f5; }
+  .media-picker-tabs button.active { background: #3f1016; border-color: #881337; color: #fecdd3; }
+}
+@media (max-width: 640px) {
+  .media-picker-tabs { padding: 10px; }
+  .media-picker-tabs button { font-size: 12px; }
+}
