@@ -3,7 +3,7 @@ import {
   InputAdornment, InputLabel, ListItemText, MenuItem, Paper, Select,
   Skeleton, Stack, TextField, Tooltip, Typography,
 } from "@mui/material";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen, ChevronLeft, ChevronRight, Columns3,
   Newspaper, RefreshCw, Search,
@@ -22,6 +22,7 @@ import { WebsiteNewsTable } from "./WebsiteNewsTable";
  * Earlier pages remain in TanStack Query cache for instant Back navigation.
  */
 export function WebsiteNewsPage() {
+  const queryClient = useQueryClient();
   const [pageSize, setPageSize] = useState<number>(20);
   const [pageIndex, setPageIndex] = useState(0);
   const tableAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -32,8 +33,9 @@ export function WebsiteNewsPage() {
   ]);
   const [selectedPost, setSelectedPost] = useState<WebsitePost | null>(null);
 
+  const directoryQueryKey = [...websiteNewsKeys.all, "directory", pageSize] as const;
   const posts = useInfiniteQuery({
-    queryKey: [...websiteNewsKeys.all, "directory", pageSize],
+    queryKey: directoryQueryKey,
     queryFn: ({ pageParam, signal }) => listWebsitePosts(pageSize, pageParam, signal),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
@@ -191,7 +193,9 @@ export function WebsiteNewsPage() {
               onClick={() => {
                 setPageIndex(0);
                 clearPageFilters();
-                void posts.refetch();
+                // Reset opaque cursors when articles are added/edited in legacy Firestore.
+                // This refetches page 1 instead of re-requesting all cached pages.
+                void queryClient.resetQueries({ queryKey: directoryQueryKey, exact: true });
               }}
               sx={{ minHeight: 40, flexShrink: 0 }}
             >
