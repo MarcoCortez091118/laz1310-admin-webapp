@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { FolderOpen, Search, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MediaAsset } from "../../api/types";
 import { MediaAssetGrid } from "./MediaAssetGrid";
@@ -24,11 +24,15 @@ export function MediaPickerDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const library = useMediaLibraryQuery();
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"upload" | "library">("library");
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      setActiveTab("library");
+      dialog.showModal();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
@@ -70,9 +74,46 @@ export function MediaPickerDialog({
         </header>
 
         <div className="media-picker-body">
-          <MediaUploadPanel compact onUploaded={select} />
+          <div className="media-picker-tabs" role="tablist" aria-label="Image source">
+            <button
+              aria-controls="media-picker-library-panel"
+              aria-selected={activeTab === "library"}
+              className={activeTab === "library" ? "active" : ""}
+              id="media-library-tab"
+              onClick={() => setActiveTab("library")}
+              role="tab"
+              type="button"
+            >
+              <FolderOpen size={17} /> Choose existing
+            </button>
+            <button
+              aria-controls="media-picker-upload-panel"
+              aria-selected={activeTab === "upload"}
+              className={activeTab === "upload" ? "active" : ""}
+              id="media-upload-tab"
+              onClick={() => setActiveTab("upload")}
+              role="tab"
+              type="button"
+            >
+              <Upload size={17} /> Upload new
+            </button>
+          </div>
+          <div
+            id="media-picker-upload-panel"
+            role="tabpanel"
+            aria-labelledby="media-upload-tab"
+            style={{ display: activeTab === "upload" ? "block" : "none" }}
+          >
+            <MediaUploadPanel compact onUploaded={select} />
+          </div>
 
-          <section className="media-picker-library">
+          <section
+            className="media-picker-library"
+            id="media-picker-library-panel"
+            role="tabpanel"
+            aria-labelledby="media-library-tab"
+            style={{ display: activeTab === "library" ? "grid" : "none" }}
+          >
             <label className="media-search">
               <Search aria-hidden size={17} />
               <input
