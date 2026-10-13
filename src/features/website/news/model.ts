@@ -11,12 +11,17 @@ export type NewsColumn = (typeof NEWS_COLUMNS)[number]["id"];
 
 export const NEWS_PAGE_SIZES = [10, 20, 50] as const;
 
+function normalizeNewsSearch(value: string): string {
+  // Reader-first matching: accents in Spanish headings must not block discovery.
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+}
+
 export function filterNewsPage(
   posts: WebsitePost[],
   search: string,
   category: string,
 ): WebsitePost[] {
-  const term = search.trim().toLocaleLowerCase();
+  const term = normalizeNewsSearch(search.trim());
   return posts.filter((post) => {
     if (category !== "all" && post.category !== category) return false;
     if (!term) return true;
@@ -26,7 +31,7 @@ export function filterNewsPage(
       post.category,
       post.sourceName,
       post.id,
-    ].some((field) => field.toLocaleLowerCase().includes(term));
+    ].some((field) => normalizeNewsSearch(field).includes(term));
   });
 }
 
