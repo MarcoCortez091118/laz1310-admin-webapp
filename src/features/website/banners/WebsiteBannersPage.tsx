@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Image as ImageIcon, Plus, Rocket, Save, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
+import { WebsiteBannerMediaControls } from "./WebsiteBannerMediaControls";
 import { useStaff } from "../../auth/StaffGate";
 import {
   importLegacyBanners, publishBannerDraft, readBannerDraft, readBannerPublication,
@@ -54,8 +55,12 @@ function BannerEditorDialog({
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
             {editor?.layout === "desktop" ? "Desktop website" : "Mobile website layout"} ·
-            images are linked, not uploaded to the native Mobile media namespace.
+            artwork is uploaded to an isolated Website media namespace.
           </Typography>
+          <WebsiteBannerMediaControls
+            description={editor?.layout === "desktop" ? "LA Z Website desktop banner" : "LA Z Website mobile banner"}
+            onChoose={(url) => setValue((current) => ({ ...current, url }))}
+          />
           <TextField label="Direct HTTPS image URL" value={value.url} fullWidth required
             onChange={(event) => setValue((current) => ({ ...current, url: event.target.value.trim() }))}
             helperText="Use an existing public image or managed Website asset URL." />
