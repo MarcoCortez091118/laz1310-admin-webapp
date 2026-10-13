@@ -24,7 +24,7 @@ const NEW_CONTENT: PromotionContent = {
 
 function message(error: unknown): string {
   if (error instanceof ApiError && error.status === 409) {
-    return "The show was changed by another editor. Reload it before retrying.";
+    return "The promotion was changed by another editor. Reload it before retrying.";
   }
   return error instanceof Error ? error.message : "Operation failed.";
 }
@@ -212,11 +212,11 @@ export function WebsiteTicketPromotionsPage() {
         <h1>Website Ticket Promotions</h1>
         <p className="muted">
           Manage the SHOWS carousel separately from native Mobile Programs.
-          Every show has independent drafts, releases, and a recoverable recycle bin.
+          Each promotion has an independent draft, release history, and recycle bin.
         </p>
       </header>
       <Alert severity="info">
-        Editing does not publish. Moving an active published show to trash immediately hides it.
+        Editing does not publish. Moving a published promotion to trash immediately hides it.
         Restoring from trash restores only the draft; publishing is a separate admin action.
         Permanent deletion is restricted for 30 days and retains audit and release history.
       </Alert>
@@ -257,7 +257,7 @@ export function WebsiteTicketPromotionsPage() {
                     </Typography>
                   </Box>
                   <Button disabled={busy} onClick={() => void execute(
-                    () => importPromotion(show), "Legacy show recovered to private draft.",
+                    () => importPromotion(show), "Legacy promotion recovered to private draft.",
                   )}>Recover as draft</Button>
                 </Stack>
               </Paper>
@@ -277,21 +277,21 @@ export function WebsiteTicketPromotionsPage() {
               action={perform} confirm={setConfirming} />
           ))}
           {!list.data?.items.length && <Alert severity="info">
-            {view === "trashed" ? "Trash is empty." : "No Website promotions yet. Create or recover a show."}
+            {view === "trashed" ? "Trash is empty." : "No Website promotions yet. Create or recover a promotion."}
           </Alert>}
         </Stack>
       )}
       <PromotionEditDialog editor={editor} close={() => setEditor(null)} save={save} busy={busy} />
       <Dialog open={Boolean(confirming)} onClose={() => !busy && setConfirming(null)}>
         <DialogTitle>{confirming?.action === "purge" ? "Delete promotion permanently?" :
-          confirming?.action === "trash" ? "Move promotion to trash?" : "Unpublish show?"}</DialogTitle>
+          confirming?.action === "trash" ? "Move promotion to trash?" : "Unpublish promotion?"}</DialogTitle>
         <DialogContent>
           <Typography>
             {confirming?.action === "purge" ?
               "Only promotions kept in trash for at least 30 days can be deleted permanently. Old releases and audit records remain." :
               confirming?.action === "trash" ?
               "This removes the promotion from the public Website immediately. You may restore its private draft later." :
-              "This removes the selected show from the public Website but preserves its draft."}
+              "This removes the promotion from the public Website while preserving its draft."}
           </Typography>
         </DialogContent>
         <DialogActions>
