@@ -36,6 +36,7 @@ import {
   usePagePublicationStatusQuery,
 } from "../content/queries";
 import { MediaPickerDialog } from "../media/MediaPickerDialog";
+import { bannerDraftError, stageBanner } from "./bannerDraft";
 
 const BANNERS_PAGE_SLUG = "home-banners";
 const BANNERS_PAGE_TITLE = "Home Banners";
@@ -301,23 +302,12 @@ function BannersEditor({
   function applyBanner() {
     if (!editing) return;
     const { index, banner } = editing;
-    if (!banner.title.trim()) {
-      setBannerError("Banner title is required.");
+    const validationError = bannerDraftError(banner);
+    if (validationError) {
+      setBannerError(validationError);
       return;
     }
-    if (!banner.imageUrl?.startsWith("https://")) {
-      setBannerError("Choose a managed image before applying this banner.");
-      return;
-    }
-    if (banner.link?.kind === "external" && !banner.link.target.startsWith("https://")) {
-      setBannerError("Destination URL must start with https://.");
-      return;
-    }
-    setItems((current) =>
-      index === null
-        ? [...current, banner]
-        : current.map((item, position) => position === index ? banner : item),
-    );
+    setItems((current) => stageBanner(current, { index, banner }));
     setEditing(null);
     setBannerError(null);
   }
