@@ -1,139 +1,41 @@
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
-  Divider,
   InputAdornment,
+  MenuItem,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { BellRing, CheckCircle2, Mail, Search, Smartphone, UserRound, UsersRound } from "lucide-react";
+import { BellRing, CheckCircle2, Search, Smartphone, UserRound, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
 import {
   findAdminUserByEmail,
+  findAdminUserById,
   listAdminUsers,
   type AdminUserSummary,
 } from "../notifications/users";
 
+import { UsersTable } from "./UsersTable";
+import { UserDetailsDialog } from "./UserDetailsDialog";
+
 const usersQueryKey = ["admin", "users-directory"] as const;
-
-function nameOf(user: AdminUserSummary) {
-  return user.displayName || user.email || "Unnamed listener";
-}
-
-function initials(user: AdminUserSummary) {
-  const value = nameOf(user).trim();
-  return value
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "U";
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Never";
-  return new Date(value).toLocaleString();
-}
-
-function UserCard({ user }: { user: AdminUserSummary }) {
-  const status = user.notificationStatus;
-  const preferenceEntries = status ? Object.entries(status.preferences) : [];
-
-  return (
-    <Card variant="outlined" sx={{ borderRadius: 3, minWidth: 0 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 2.25 } }}>
-        <Stack spacing={1.75} minWidth={0}>
-          <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
-            <Avatar sx={{ bgcolor: "#2F0908", width: 44, height: 44, fontWeight: 800 }}>
-              {initials(user)}
-            </Avatar>
-            <Box minWidth={0} flex={1}>
-              <Typography fontWeight={850} noWrap title={nameOf(user)}>{nameOf(user)}</Typography>
-              <Stack direction="row" spacing={0.75} alignItems="center" minWidth={0}>
-                <Mail size={13} />
-                <Typography variant="caption" color="text.secondary" noWrap title={user.email ?? "No email"}>
-                  {user.email ?? "No email"}
-                </Typography>
-              </Stack>
-            </Box>
-            <Chip
-              size="small"
-              color={status?.pushEligible ? "success" : "default"}
-              variant={status?.pushEligible ? "filled" : "outlined"}
-              label={status?.pushEligible ? "Push ready" : "No push"}
-            />
-          </Stack>
-
-          <Divider />
-
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.25 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">Devices</Typography>
-              <Typography fontWeight={800}>{status?.registeredDeviceCount ?? 0}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">Push enabled</Typography>
-              <Typography fontWeight={800}>{status?.notificationsEnabledDeviceCount ?? 0}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">FCM eligible</Typography>
-              <Typography fontWeight={800}>{status?.pushEligibleDeviceCount ?? 0}</Typography>
-            </Box>
-          </Box>
-
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            <Chip
-              size="small"
-              variant="outlined"
-              color={user.emailVerified ? "success" : "default"}
-              label={user.emailVerified ? "Email verified" : "Email unverified"}
-            />
-            <Chip
-              size="small"
-              variant="outlined"
-              color={user.profileCompleted ? "success" : "default"}
-              label={user.profileCompleted ? "Profile complete" : "Profile incomplete"}
-            />
-          </Stack>
-
-          <Box>
-            <Typography variant="caption" color="text.secondary" display="block" mb={0.75}>
-              Notification categories
-            </Typography>
-            <Stack direction="row" spacing={0.6} flexWrap="wrap" useFlexGap>
-              {preferenceEntries.length ? preferenceEntries.map(([category, enabled]) => (
-                <Chip
-                  key={category}
-                  size="small"
-                  color={enabled ? "success" : "default"}
-                  variant={enabled ? "filled" : "outlined"}
-                  label={`${category} ${enabled ? "ON" : "OFF"}`}
-                />
-              )) : <Chip size="small" variant="outlined" label="Eligibility pending API deployment" />}
-            </Stack>
-          </Box>
-
-          <Typography variant="caption" color="text.secondary">
-            Last session: {formatDate(user.lastSeenAt)} · Created: {formatDate(user.createdAt)}
-          </Typography>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
 
 export function UsersPage() {
   const staff = useStaff();
   const isAdmin = staff.roles.includes("admin");
   const [email, setEmail] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
+    const queryId = new URLSearchParams(window.location.search).get("userId");
+    return queryId && /^[a-f0-9-]{36}$/i.test(queryId) ? queryId : null;
+  });
   const normalizedEmail = email.trim().toLowerCase();
 
   const users = useInfiniteQuery({
@@ -154,6 +56,14 @@ export function UsersPage() {
     refetchOnWindowFocus: false,
   });
 
+  const userById = useQuery({
+    queryKey: [...usersQueryKey, "userId", selectedUserId],
+    queryFn: ({ signal }) => findAdminUserById(selectedUserId ?? "", signal),
+    enabled: isAdmin && Boolean(selectedUserId),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allUsers = useMemo(() => {
     const map = new Map<string, AdminUserSummary>();
     users.data?.pages.flatMap((page) => page.data.items).forEach((user) => map.set(user.id, user));
@@ -163,9 +73,25 @@ export function UsersPage() {
     return [...map.values()];
   }, [exactSearch.data, normalizedEmail, users.data]);
 
-  const visibleUsers = normalizedEmail
-    ? (exactSearch.data?.data.items ?? [])
-    : allUsers;
+  const visibleUsers = (
+    normalizedEmail.includes("@")
+      ? (exactSearch.data?.data.items ?? [])
+      : allUsers.filter((user) =>
+          !normalizedEmail ||
+          (user.displayName ?? "").toLowerCase().includes(normalizedEmail) ||
+          (user.email ?? "").toLowerCase().includes(normalizedEmail))
+  ).filter((user) =>
+    statusFilter === "all" ||
+    (statusFilter === "verified" && user.emailVerified) ||
+    (statusFilter === "unverified" && !user.emailVerified) ||
+    (statusFilter === "push" && user.notificationStatus?.pushEligible)
+  );
+  const selectedUser = selectedUserId
+    ? (allUsers.find((user) => user.id === selectedUserId)
+      ?? exactSearch.data?.data.items.find((user) => user.id === selectedUserId)
+      ?? userById.data?.data.items.find((user) => user.id === selectedUserId)
+      ?? null)
+    : null;
   const pushReady = allUsers.filter((user) => user.notificationStatus?.pushEligible).length;
   const verified = allUsers.filter((user) => user.emailVerified).length;
 
@@ -220,11 +146,18 @@ export function UsersPage() {
                 size="small"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                label="Exact email lookup"
+                label="Search users / exact email"
                 placeholder="listener@example.com"
-                helperText="For privacy, server-side lookup is exact email only; browse the paginated directory below."
+                helperText={normalizedEmail.includes("@") ? "Exact email lookup through FastAPI." : "Name search filters loaded users. Load more to expand results."}
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment> }}
               />
+              <TextField select size="small" label="Status" value={statusFilter} sx={{ minWidth: 160 }}
+                onChange={(event) => setStatusFilter(event.target.value)}>
+                <MenuItem value="all">All statuses</MenuItem>
+                <MenuItem value="verified">Verified</MenuItem>
+                <MenuItem value="unverified">Unverified</MenuItem>
+                <MenuItem value="push">Push ready</MenuItem>
+              </TextField>
               <Button
                 variant="outlined"
                 disabled={users.isFetching}
@@ -239,18 +172,17 @@ export function UsersPage() {
 
         {users.error ? <Alert severity="error">{users.error instanceof Error ? users.error.message : "Unable to load users."}</Alert> : null}
         {exactSearch.error ? <Alert severity="error">{exactSearch.error instanceof Error ? exactSearch.error.message : "Unable to search user."}</Alert> : null}
+        {userById.error ? <Alert severity="error">Unable to open linked user profile.</Alert> : null}
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "repeat(2,minmax(0,1fr))" }, gap: 1.5 }}>
-          {visibleUsers.map((user) => <UserCard key={user.id} user={user} />)}
-        </Box>
+        <UsersTable items={visibleUsers} onOpen={(user) => setSelectedUserId(user.id)} />
 
-        {!users.isLoading && visibleUsers.length === 0 ? (
+        {!users.isLoading && !users.error && !exactSearch.error && visibleUsers.length === 0 ? (
           <Alert severity="info" icon={<Smartphone size={20} />}>
-            {normalizedEmail ? "No LA Z business account matches that exact email." : "No authenticated LA Z users exist in this API environment yet."}
+            {normalizedEmail ? "No matching user is in the current loaded set or exact email lookup." : "No authenticated LA Z users exist in this API environment yet."}
           </Alert>
         ) : null}
 
-        {!normalizedEmail && users.hasNextPage ? (
+        {!normalizedEmail.includes("@") && users.hasNextPage ? (
           <Button
             variant="outlined"
             disabled={users.isFetchingNextPage}
@@ -261,6 +193,19 @@ export function UsersPage() {
           </Button>
         ) : null}
       </Stack>
+      <UserDetailsDialog
+        key={selectedUser?.id ?? "none"}
+        user={selectedUser}
+        open={Boolean(selectedUser)}
+        onClose={() => {
+          setSelectedUserId(null);
+          if (window.location.search.includes("userId=")) {
+            const destination = new URL(window.location.href);
+            destination.searchParams.delete("userId");
+            window.history.replaceState(null, "", destination.toString());
+          }
+        }}
+      />
     </Box>
   );
 }
