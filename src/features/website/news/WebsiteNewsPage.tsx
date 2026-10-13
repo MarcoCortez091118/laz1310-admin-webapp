@@ -6,7 +6,7 @@ import {
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen, ChevronLeft, ChevronRight, Columns3,
-  Newspaper, RefreshCw, Search,
+  Newspaper, Plus, RefreshCw, Search,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { listWebsitePosts, type WebsitePost, websiteNewsKeys } from "./api";
@@ -15,6 +15,9 @@ import {
   newsPageCategories, type NewsColumn,
 } from "./model";
 import { WebsiteNewsDetailsDialog } from "./WebsiteNewsDetailsDialog";
+import { WebsitePostEditorDialog } from "./WebsitePostEditorDialog";
+import { WebsiteDraftsPanel } from "./WebsiteDraftsPanel";
+import { websiteDraftKeys, type WebsiteNewsDraft } from "./draftsApi";
 import { WebsiteNewsTable } from "./WebsiteNewsTable";
 
 /**
@@ -32,6 +35,15 @@ export function WebsiteNewsPage() {
     "category", "date", "source",
   ]);
   const [selectedPost, setSelectedPost] = useState<WebsitePost | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<WebsitePost | null>(null);
+  const [editingDraft, setEditingDraft] = useState<WebsiteNewsDraft | null>(null);
+
+  function openEditor(post: WebsitePost | null, draft: WebsiteNewsDraft | null = null) {
+    setEditingPost(post);
+    setEditingDraft(draft);
+    setEditorOpen(true);
+  }
 
   const directoryQueryKey = [...websiteNewsKeys.all, "directory", pageSize] as const;
   const posts = useInfiniteQuery({
@@ -114,9 +126,19 @@ export function WebsiteNewsPage() {
         </Box>
 
         <Alert severity="info" icon={<BookOpen size={20} />}>
-          Read-only catalog. Creating, editing and publishing Website articles will be
-          available after the independent Website Draft/Publish workflow is released.
+          Website News V2: prepare and save editorial drafts securely. The existing live
+          website and Mobile releases remain unchanged until Website publication is approved.
         </Alert>
+
+        <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }}
+          justifyContent="space-between" spacing={1.5}>
+          <Typography variant="subtitle1" fontWeight={800}>Editorial workspace</Typography>
+          <Button variant="contained" startIcon={<Plus size={17} />}
+            onClick={() => openEditor(null)}>
+            Create article draft
+          </Button>
+        </Stack>
+        <WebsiteDraftsPanel onEdit={(draft) => openEditor(null, draft)} />
 
         <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1} alignItems="center">
           <Chip variant="outlined" color="primary"
@@ -233,6 +255,7 @@ export function WebsiteNewsPage() {
                 columns={visibleColumns}
                 hasFilters={hasFilters}
                 onOpen={setSelectedPost}
+                onPrepareDraft={(post) => openEditor(post)}
               />
             </Box>
 
@@ -286,6 +309,15 @@ export function WebsiteNewsPage() {
       </Stack>
       <WebsiteNewsDetailsDialog post={selectedPost}
         onClose={() => setSelectedPost(null)} />
+      <WebsitePostEditorDialog
+        open={editorOpen}
+        initialPost={editingPost}
+        initialDraft={editingDraft}
+        onClose={() => setEditorOpen(false)}
+        onSaved={() => {
+          void queryClient.invalidateQueries({ queryKey: websiteDraftKeys });
+        }}
+      />
     </Box>
   );
 }

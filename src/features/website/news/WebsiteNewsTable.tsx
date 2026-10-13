@@ -2,7 +2,7 @@ import {
   Avatar, Box, Button, Chip, Paper, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Tooltip, Typography,
 } from "@mui/material";
-import { Eye, Newspaper } from "lucide-react";
+import { Eye, FilePenLine, Newspaper } from "lucide-react";
 import type { WebsitePost } from "./api";
 import { displayNewsDate, type NewsColumn } from "./model";
 
@@ -11,6 +11,7 @@ interface WebsiteNewsTableProps {
   columns: NewsColumn[];
   hasFilters: boolean;
   onOpen: (post: WebsitePost) => void;
+  onPrepareDraft?: (post: WebsitePost) => void;
 }
 
 export function WebsiteNewsTable({
@@ -18,6 +19,7 @@ export function WebsiteNewsTable({
   columns,
   hasFilters,
   onOpen,
+  onPrepareDraft,
 }: WebsiteNewsTableProps) {
   return (
     <TableContainer component={Paper} variant="outlined"
@@ -86,11 +88,21 @@ export function WebsiteNewsTable({
                 </TableCell>
               )}
               <TableCell align="right">
-                <Button variant="outlined" size="small" onClick={() => onOpen(post)}
-                  startIcon={<Eye size={15} />}
-                  aria-label={`Preview article: ${post.headline}`}>
-                  View
-                </Button>
+                <Stack direction="row" spacing={0.75} justifyContent="flex-end">
+                  <Button variant="outlined" size="small" onClick={() => onOpen(post)}
+                    startIcon={<Eye size={15} />}
+                    aria-label={`Preview article: ${post.headline}`}>
+                    View
+                  </Button>
+                  {onPrepareDraft && (
+                    <Button variant="contained" size="small"
+                      onClick={() => onPrepareDraft(post)}
+                      startIcon={<FilePenLine size={15} />}
+                      aria-label={`Prepare Website draft for: ${post.headline}`}>
+                      Edit
+                    </Button>
+                  )}
+                </Stack>
               </TableCell>
             </TableRow>
           ))}
