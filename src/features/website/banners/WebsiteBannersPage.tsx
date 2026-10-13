@@ -29,7 +29,7 @@ function draftChanges(content: WebsiteBannerContent, saved: WebsiteBannerContent
   return JSON.stringify(content) !== JSON.stringify(saved);
 }
 
-function bannerEditorInitial(layout: Layout): WebsiteBanner {
+function bannerEditorInitial(): WebsiteBanner {
   return { id: crypto.randomUUID(), url: "", linkUrl: null, active: true };
 }
 
@@ -40,7 +40,7 @@ function BannerEditorDialog({
   onClose: () => void;
   onCommit: (value: WebsiteBanner) => void;
 }) {
-  const [value, setValue] = useState<WebsiteBanner>(editor?.value ?? bannerEditorInitial("desktop"));
+  const [value, setValue] = useState<WebsiteBanner>(editor?.value ?? bannerEditorInitial());
   useEffect(() => {
     if (editor) setValue(editor.value);
   }, [editor]);
@@ -283,7 +283,7 @@ export function WebsiteBannersPage() {
               )}
               <Button variant="outlined" startIcon={<Plus size={16} />}
                 disabled={disabled || cards.length >= 40 || legacyRequiresImport}
-                onClick={() => setEditor({ layout, index: -1, value: bannerEditorInitial(layout) })}>
+                onClick={() => setEditor({ layout, index: -1, value: bannerEditorInitial() })}>
                 Add {layout} banner
               </Button>
             </Stack>
