@@ -10,17 +10,13 @@ import {
   Typography,
 } from "@mui/material";
 import { X } from "lucide-react";
+import { editorCloseBehavior } from "./editorCloseBehavior";
 import { useId, useState, type ReactNode } from "react";
 
 /**
  * One accessible, responsive editing surface shared by editorial domains.
  * Domain forms keep their own validation, mutations, ETag and publish behavior.
  */
-/** Keep closure decisions testable even in Node-only Vitest. */
-export function editorCloseBehavior(dirty: boolean): "confirm" | "close" {
-  return dirty ? "confirm" : "close";
-}
-
 export function ResourceEditorDialog({
   open,
   title,
