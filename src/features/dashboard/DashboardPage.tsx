@@ -133,10 +133,10 @@ export function DashboardPage() {
       >
         <Box>
           <Typography color="primary.main" fontSize={11} fontWeight={800} letterSpacing="0.12em" textTransform="uppercase">
-            Control plane
+            Android / iOS · Control plane
           </Typography>
           <Typography component="h1" variant="h4" mt={0.5}>
-            Overview
+            App Dashboard
           </Typography>
           <Typography color="text.secondary" fontSize={14} mt={0.6}>
             Real editorial state from FastAPI for {staff.roles.join(", ")} access.
