@@ -10,8 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import { X } from "lucide-react";
-import { editorCloseBehavior } from "./editorCloseBehavior";
 import { useId, useState, type ReactNode } from "react";
+import { editorCloseBehavior } from "./editorCloseBehavior";
 
 /**
  * One accessible, responsive editing surface shared by editorial domains.
