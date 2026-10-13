@@ -6,6 +6,8 @@ import { FilePenLine, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { ManagedImageField } from "../../media/ManagedImageField";
+import { WebsiteAdvertisingImageField } from "./WebsiteAdvertisingImageField";
+import { safeAdvertisingImageUrl } from "./advertisingImage";
 import type { WebsitePost } from "./api";
 import {
   importWebsiteDraft, readWebsiteDraft, saveWebsiteDraft,
@@ -99,6 +101,10 @@ export function WebsitePostEditorDialog({
       setError("Complete the title, category, summary and article body before saving.");
       return;
     }
+    if (form.adImageUrl.trim() && !safeAdvertisingImageUrl(form.adImageUrl)) {
+      setError("Advertising must be a direct HTTPS image URL. Upload an ad or correct its address.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -188,9 +194,11 @@ export function WebsitePostEditorDialog({
               <TextField label="Source link (optional, HTTPS)" fullWidth disabled={saving}
                 value={form.sourceUrl} inputProps={{ maxLength: 2048 }}
                 onChange={(event) => update("sourceUrl", event.target.value)} />
-              <TextField label="Advertising image URL (optional, HTTPS)"
-                fullWidth disabled={saving} value={form.adImageUrl}
-                onChange={(event) => update("adImageUrl", event.target.value)} />
+              <WebsiteAdvertisingImageField
+                value={form.adImageUrl}
+                onChange={(url) => update("adImageUrl", url)}
+                disabled={saving}
+              />
             </>
           )}
           {error && <Alert severity="error" role="alert">{error}</Alert>}
