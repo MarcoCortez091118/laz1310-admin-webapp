@@ -22,6 +22,7 @@ import { WeatherPage } from "./features/weather/WeatherPage";
 import { WebsiteNewsPage } from "./features/website/news/WebsiteNewsPage";
 import { WebsiteBannersPage } from "./features/website/banners/WebsiteBannersPage";
 import { WebsiteShowsPage } from "./features/website/shows/WebsiteShowsPage";
+import { WebsiteTicketPromotionsPage } from "./features/website/tickets/WebsiteTicketPromotionsPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -94,6 +95,12 @@ const websiteShowsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/website/shows",
   component: WebsiteShowsPage,
+});
+
+const websiteTicketPromotionsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/website/ticket-promotions",
+  component: WebsiteTicketPromotionsPage,
 });
 
 const websiteNewsRoute = createRoute({
@@ -175,6 +182,7 @@ const routeTree = rootRoute.addChildren([
     websiteNewsRoute,
     websiteBannersRoute,
     websiteShowsRoute,
+    websiteTicketPromotionsRoute,
     usersRoute,
     releasesRoute,
     weatherRoute,
