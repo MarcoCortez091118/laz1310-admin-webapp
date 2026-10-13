@@ -1,5 +1,5 @@
 import { FileImage, ShieldCheck, Upload, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { MediaAsset } from "../../api/types";
 import type { MediaAssetId } from "./api";
@@ -15,9 +15,11 @@ import { useUploadMediaMutation } from "./queries";
 export function MediaUploadPanel({
   onUploaded,
   compact = false,
+  onDirtyChange,
 }: {
   onUploaded?: (asset: MediaAsset) => void;
   compact?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const inputId = useId();
   const [file, setFile] = useState<File | null>(null);
@@ -26,6 +28,10 @@ export function MediaUploadPanel({
   const [localError, setLocalError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const upload = useUploadMediaMutation();
+
+  useEffect(() => {
+    onDirtyChange?.(Boolean(file || alt.trim() || upload.isPending));
+  }, [file, alt, upload.isPending, onDirtyChange]);
 
   function chooseFile(next: File | null) {
     upload.reset();
