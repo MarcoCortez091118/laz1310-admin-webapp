@@ -115,7 +115,10 @@ export function WebsitePostEditorDialog({
         setRevision(nextRevision);
         setRequiresImport(false);
       }
-      const result = await saveWebsiteDraft(slug, nextRevision, form);
+      const result = await saveWebsiteDraft(slug, nextRevision, {
+        ...form,
+        adImageUrl: safeAdvertisingImageUrl(form.adImageUrl) ?? "",
+      });
       onSaved(result.data);
       onClose();
     } catch (err) {
