@@ -41,7 +41,7 @@ function PromotionEditDialog({ editor, close, save, busy }: {
 
   return (
     <Dialog open={Boolean(editor)} onClose={busy ? undefined : close} fullWidth maxWidth="sm">
-      <DialogTitle>{editor?.revision === 0 ? "Create Website show" : "Edit Website show draft"}</DialogTitle>
+      <DialogTitle>{editor?.revision === 0 ? "Create Website promotion" : "Edit Website promotion draft"}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Alert severity="info">Saving a draft does not publish it. Registration forms and n8n remain unchanged.</Alert>
@@ -187,12 +187,12 @@ export function WebsiteTicketPromotionsPage() {
 
   function save(content: PromotionContent) {
     if (!editor) return;
-    void execute(() => savePromotion(editor.id, editor.revision, content), "Show draft saved. Publish separately.");
+    void execute(() => savePromotion(editor.id, editor.revision, content), "Promotion draft saved. Publish separately.");
   }
 
   function perform(id: string, action: "publish" | "restore", revision: number) {
     void execute(() => promotionAction(id, action, revision),
-      action === "publish" ? "Show published." : "Show restored as a draft (not published).");
+      action === "publish" ? "Promotion published." : "Promotion restored as a draft (not published).");
   }
 
   function confirmAction() {
@@ -201,7 +201,7 @@ export function WebsiteTicketPromotionsPage() {
     void execute(() => action === "purge" ? purgePromotion(id, revision) :
       promotionAction(id, action, revision),
       action === "trash" ? "Moved to trash and unpublished." :
-      action === "purge" ? "Show draft deleted permanently; audit and releases retained." :
+      action === "purge" ? "Promotion draft deleted permanently; audit and releases retained." :
       "Show removed from public Website.");
   }
 
@@ -231,7 +231,7 @@ export function WebsiteTicketPromotionsPage() {
         <Stack direction="row" spacing={1}>
           <Button startIcon={<RefreshCw size={16} />} onClick={reload}>Refresh</Button>
           {view === "active" && <Button variant="contained" startIcon={<Plus size={17}/>}
-            onClick={create}>Create show</Button>}
+            onClick={create}>Create promotion</Button>}
         </Stack>
       </Stack>
       <Divider />
@@ -242,7 +242,7 @@ export function WebsiteTicketPromotionsPage() {
           <Stack spacing={2}>
             {legacy.data?.warnings.map(warning => <Alert key={warning} severity="warning">{warning}</Alert>)}
             <Typography color="text.secondary">
-              {legacy.data?.items.length ?? 0} posters found in Firebase Storage /settings/tickets.
+              {legacy.data?.items.length ?? 0} promotional slides found in the legacy Firestore settings/tickets document.
               Importing creates a private draft and never publishes it.
             </Typography>
             {legacy.data?.items.map((show: LegacyPromotion) => (
@@ -283,14 +283,14 @@ export function WebsiteTicketPromotionsPage() {
       )}
       <PromotionEditDialog editor={editor} close={() => setEditor(null)} save={save} busy={busy} />
       <Dialog open={Boolean(confirming)} onClose={() => !busy && setConfirming(null)}>
-        <DialogTitle>{confirming?.action === "purge" ? "Delete permanently?" :
-          confirming?.action === "trash" ? "Move show to trash?" : "Unpublish show?"}</DialogTitle>
+        <DialogTitle>{confirming?.action === "purge" ? "Delete promotion permanently?" :
+          confirming?.action === "trash" ? "Move promotion to trash?" : "Unpublish show?"}</DialogTitle>
         <DialogContent>
           <Typography>
             {confirming?.action === "purge" ?
               "Only promotions kept in trash for at least 30 days can be deleted permanently. Old releases and audit records remain." :
               confirming?.action === "trash" ?
-              "This removes the show from the public Website immediately. You may restore its private draft later." :
+              "This removes the promotion from the public Website immediately. You may restore its private draft later." :
               "This removes the selected show from the public Website but preserves its draft."}
           </Typography>
         </DialogContent>
