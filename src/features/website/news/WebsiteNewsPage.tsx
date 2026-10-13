@@ -8,7 +8,7 @@ import {
   BookOpen, ChevronLeft, ChevronRight, Columns3,
   Newspaper, RefreshCw, Search,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { listWebsitePosts, type WebsitePost, websiteNewsKeys } from "./api";
 import {
   canAdvanceNewsPage, filterNewsPage, NEWS_COLUMNS, NEWS_PAGE_SIZES,
@@ -24,6 +24,7 @@ import { WebsiteNewsTable } from "./WebsiteNewsTable";
 export function WebsiteNewsPage() {
   const [pageSize, setPageSize] = useState<number>(20);
   const [pageIndex, setPageIndex] = useState(0);
+  const tableAnchorRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [visibleColumns, setVisibleColumns] = useState<NewsColumn[]>([
@@ -69,23 +70,27 @@ export function WebsiteNewsPage() {
     clearPageFilters();
   }
 
+  function showPage(index: number) {
+    clearPageFilters();
+    setPageIndex(index);
+    // Keep the first article visible on every page; no manual scrolling required.
+    tableAnchorRef.current?.scrollIntoView({ block: "start" });
+  }
+
   function previousPage() {
     if (activeIndex === 0) return;
-    clearPageFilters();
-    setPageIndex(activeIndex - 1);
+    showPage(activeIndex - 1);
   }
 
   async function nextPage() {
     if (pageBusy || !canGoNext) return;
     if (pages && activeIndex + 1 < pages.length) {
-      clearPageFilters();
-      setPageIndex(activeIndex + 1);
+      showPage(activeIndex + 1);
       return;
     }
     const result = await posts.fetchNextPage();
     if (!result.isError && (result.data?.pages.length ?? 0) > activeIndex + 1) {
-      clearPageFilters();
-      setPageIndex(activeIndex + 1);
+      showPage(activeIndex + 1);
     }
   }
 
@@ -207,7 +212,7 @@ export function WebsiteNewsPage() {
           <Alert severity="error"
             action={<Button color="inherit"
               onClick={() => posts.isFetchNextPageError
-                ? void posts.fetchNextPage() : void posts.refetch()}>
+                ? void nextPage() : void posts.refetch()}>
               Retry
             </Button>}>
             Could not load Website articles. The current page will remain available
@@ -218,12 +223,14 @@ export function WebsiteNewsPage() {
 
         {pages && (
           <>
-            <WebsiteNewsTable
-              posts={visibleItems}
-              columns={visibleColumns}
-              hasFilters={hasFilters}
-              onOpen={setSelectedPost}
-            />
+            <Box ref={tableAnchorRef} sx={{ scrollMarginTop: "96px" }}>
+              <WebsiteNewsTable
+                posts={visibleItems}
+                columns={visibleColumns}
+                hasFilters={hasFilters}
+                onOpen={setSelectedPost}
+              />
+            </Box>
 
             <Paper variant="outlined" sx={{ borderRadius: 3, p: 1.5 }}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}
@@ -231,6 +238,7 @@ export function WebsiteNewsPage() {
                 <Stack direction="row" spacing={1} alignItems="center"
                   justifyContent={{ xs: "space-between", sm: "flex-start" }}>
                   <TextField select size="small" label="Rows per page"
+                    disabled={pageBusy}
                     value={pageSize}
                     onChange={(event) => changePageSize(Number(event.target.value))}
                     sx={{ width: 155 }}>
