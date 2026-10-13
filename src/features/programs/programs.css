@@ -343,3 +343,13 @@
     grid-column: auto;
   }
 }
+
+/* Modal-first workflow: the catalog is visible; editors have their own scroll area. */
+.programs-mui-page .programs-mui-layout {
+  display: block;
+}
+.programs-mui-page .programs-mui-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  max-height: none;
+  overflow: visible;
+}
