@@ -22,7 +22,7 @@ describe("Website Banners isolated API contract", () => {
   });
 
   it("uses If-Match for import, edits and administrator publication", () => {
-    importLegacyBanners();
+    importLegacyBanners("a".repeat(64));
     saveBannerDraft(3, {
       desktop: [{ id: "hero", url: "https://example.org/a.webp", linkUrl: null, active: true }],
       mobile: [],
@@ -31,7 +31,9 @@ describe("Website Banners isolated API contract", () => {
     rollbackBannerRelease(5, "02dc13ff-9d79-4a1d-aedb-e9a7ad4e8f0e");
 
     expect(apiRequest).toHaveBeenCalledWith(
-      "/api/v1/admin/website/banners/draft/import", { method: "POST" }, { ifMatch: '"0"' },
+      "/api/v1/admin/website/banners/draft/import",
+      expect.objectContaining({ method: "POST", body: expect.stringContaining('"fingerprint"') }),
+      { ifMatch: '"0"' },
     );
     expect(apiRequest).toHaveBeenCalledWith(
       "/api/v1/admin/website/banners/draft",
