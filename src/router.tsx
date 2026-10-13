@@ -20,6 +20,7 @@ import { ProgramsWorkspace } from "./features/programs/ProgramsWorkspace";
 import { UsersPage } from "./features/users/UsersPage";
 import { WeatherPage } from "./features/weather/WeatherPage";
 import { WebsiteNewsPage } from "./features/website/news/WebsiteNewsPage";
+import { WebsiteBannersPage } from "./features/website/banners/WebsiteBannersPage";
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -80,6 +81,12 @@ const dynamicsRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/dynamics",
   component: DynamicsPage,
+});
+
+const websiteBannersRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/website/banners",
+  component: WebsiteBannersPage,
 });
 
 const websiteNewsRoute = createRoute({
@@ -159,6 +166,7 @@ const routeTree = rootRoute.addChildren([
     dynamicsRoute,
     mediaRoute,
     websiteNewsRoute,
+    websiteBannersRoute,
     usersRoute,
     releasesRoute,
     weatherRoute,
