@@ -26,6 +26,7 @@ import {
   CloudSun,
   FileClock,
   FileText,
+  Globe,
   Image,
   LayoutDashboard,
   Palette,
@@ -60,6 +61,12 @@ const navigationGroups = [
       { label: "Radio", to: "/radio", icon: Radio, adminOnly: false },
       { label: "Programs", to: "/programs", icon: CalendarRange, adminOnly: false },
       { label: "Media", to: "/media", icon: Image, adminOnly: false },
+    ],
+  },
+  {
+    label: "Website",
+    items: [
+      { label: "Website Banners", to: "/website/banners", icon: Globe, adminOnly: true },
     ],
   },
   {
