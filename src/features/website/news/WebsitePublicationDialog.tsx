@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Eye, History, Rocket, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
+import { websitePublicationErrorMessage } from "./publicationError";
 import { useStaff } from "../../auth/StaffGate";
 import { websiteDraftKeys } from "./draftsApi";
 import type { WebsiteNewsDraft } from "./draftsApi";
@@ -17,13 +18,6 @@ import {
 } from "./publicationApi";
 
 type ConfirmAction = { kind: "publish" } | { kind: "rollback"; release: WebsiteRelease };
-
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 409) {
-    return `Publication was rejected (409): ${error.message}. Check the source article and revision before retrying.`;
-  }
-  return error instanceof Error ? error.message : "Website publishing request failed.";
-}
 
 /** Exact server draft preview plus independently versioned publication controls. */
 export function WebsitePublicationDialog({
@@ -115,7 +109,7 @@ export function WebsitePublicationDialog({
       await queryClient.invalidateQueries({ queryKey: websiteDraftKeys });
       await refresh();
     } catch (reason) {
-      setError(errorMessage(reason));
+      setError(websitePublicationErrorMessage(reason));
       setConfirmation(null);
       await refresh();
     } finally {
@@ -141,7 +135,7 @@ export function WebsitePublicationDialog({
       await queryClient.invalidateQueries({ queryKey: ["admin", "website", "draft-preview", slug] });
       await queryClient.invalidateQueries({ queryKey: ["admin", "website", "legacy-review", slug] });
     } catch (reason) {
-      setError(errorMessage(reason));
+      setError(websitePublicationErrorMessage(reason));
       setReviewAcknowledged(false);
       await legacyReview.refetch();
     } finally {
@@ -177,7 +171,7 @@ export function WebsitePublicationDialog({
             <Alert severity="error" action={
               <Button color="inherit" onClick={() => { setError(""); void refresh(); }}>Retry</Button>
             }>
-              {errorMessage(preview.error ?? publication.error ?? history.error)}
+              {websitePublicationErrorMessage(preview.error ?? publication.error ?? history.error)}
             </Alert>
           )}
           {error && <Alert severity="error">{error}</Alert>}
@@ -185,7 +179,7 @@ export function WebsitePublicationDialog({
           {draft?.origin === "legacy" && legacyReview.error && (
             <Alert severity="error">
               Cannot verify the current legacy article. Publishing remains blocked.
-              {" "}{errorMessage(legacyReview.error)}
+              {" "}{websitePublicationErrorMessage(legacyReview.error)}
               <Button size="small" color="inherit"
                 onClick={() => void legacyReview.refetch()}>Retry review</Button>
             </Alert>
