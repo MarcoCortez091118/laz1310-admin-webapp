@@ -72,7 +72,6 @@ export function WebsitePublicationDialog({
   const isLoading = preview.isPending || publication.isPending;
 
   async function refresh() {
-    setError("");
     await Promise.all([
       preview.refetch(), publication.refetch(), history.refetch(),
     ]);
@@ -129,7 +128,7 @@ export function WebsitePublicationDialog({
           </Alert>
           {(preview.error || publication.error || history.error) && (
             <Alert severity="error" action={
-              <Button color="inherit" onClick={() => void refresh()}>Retry</Button>
+              <Button color="inherit" onClick={() => { setError(""); void refresh(); }}>Retry</Button>
             }>
               {errorMessage(preview.error ?? publication.error ?? history.error)}
             </Alert>
