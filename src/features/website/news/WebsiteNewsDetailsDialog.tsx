@@ -1,8 +1,10 @@
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent,
+  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent,
   DialogTitle, Stack, Typography,
 } from "@mui/material";
 import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { safeAdvertisingImageUrl } from "./advertisingImage";
 import type { WebsitePost } from "./api";
 import { displayNewsDate } from "./model";
 
@@ -22,6 +24,8 @@ export function WebsiteNewsDetailsDialog({
   onClose: () => void;
 }) {
   const sourceUrl = safeSourceUrl(post?.sourceUrl ?? "");
+  const adUrl = safeAdvertisingImageUrl(post?.adImageUrl ?? "");
+  const [failedAdUrl, setFailedAdUrl] = useState<string | null>(null);
   return (
     <Dialog open={Boolean(post)} onClose={onClose} fullWidth maxWidth="md"
       aria-labelledby="website-news-preview-title"
@@ -51,6 +55,25 @@ export function WebsiteNewsDetailsDialog({
               sx={{ overflowWrap: "anywhere" }}>
               Legacy post ID: {post.id} · Source: {post.sourceName || "Not specified"}
             </Typography>
+            {post.adImageUrl && (
+              <Stack spacing={1.5}>
+                <Typography fontWeight={800}>Article advertising · 1:1</Typography>
+                {adUrl && failedAdUrl !== adUrl ? (
+                  <Box component="img" src={adUrl}
+                    alt="Advertisement for this Website article"
+                    referrerPolicy="no-referrer"
+                    onError={() => setFailedAdUrl(adUrl)}
+                    sx={{ aspectRatio: "1 / 1", width: "100%", maxWidth: 320,
+                      objectFit: "cover", borderRadius: 2 }}
+                  />
+                ) : (
+                  <Alert severity="warning">
+                    This advertising image is unavailable. Verify its URL or upload
+                    a managed image in the article editor.
+                  </Alert>
+                )}
+              </Stack>
+            )}
             {sourceUrl && (
               <Button component="a" href={sourceUrl} target="_blank"
                 rel="noopener noreferrer" variant="outlined"
