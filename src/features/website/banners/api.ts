@@ -61,9 +61,14 @@ export function readLegacyBanners(): Promise<ApiResult<WebsiteLegacyBanners>> {
   return apiRequest<WebsiteLegacyBanners>(ROOT + "/legacy");
 }
 
-export function importLegacyBanners(): Promise<ApiResult<WebsiteBannerDraft>> {
+export function importLegacyBanners(fingerprint: string): Promise<ApiResult<WebsiteBannerDraft>> {
   return apiRequest<WebsiteBannerDraft>(
-    ROOT + "/draft/import", { method: "POST" }, { ifMatch: '"0"' },
+    ROOT + "/draft/import",
+    {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fingerprint }),
+    },
+    { ifMatch: '"0"' },
   );
 }
 
