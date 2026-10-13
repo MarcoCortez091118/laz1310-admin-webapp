@@ -12,7 +12,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
-  ExternalLink,
   Image as ImageIcon,
   Plus,
   Rocket,
@@ -34,7 +33,7 @@ import {
   useDraftQuery,
   usePagePublicationStatusQuery,
 } from "../content/queries";
-import { MediaPickerDialog } from "../media/MediaPickerDialog";
+import { BannerFormDialog } from "./BannerFormDialog";
 
 const BANNERS_PAGE_SLUG = "home-banners";
 const BANNERS_PAGE_TITLE = "Home Banners";
@@ -64,12 +63,7 @@ function publicationLabel(
 }
 
 function BannerCardEditor({
-  banner,
-  index,
-  count,
-  onChange,
-  onMove,
-  onRemove,
+  banner, index, count, onChange, onMove, onRemove,
 }: {
   banner: Card;
   index: number;
@@ -78,166 +72,39 @@ function BannerCardEditor({
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(Boolean(externalLinkValue(banner)));
-
+  const [editing, setEditing] = useState(false);
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-      <Stack spacing={1.75} sx={{ p: 2 }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ sm: "center" }}
-          spacing={1}
-        >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip label={index + 1} color="primary" size="small" />
-            <Box>
-              <Typography fontWeight={800}>
-                {banner.title || `Banner ${index + 1}`}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Home carousel · position {index + 1}
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Stack direction="row" spacing={0.5}>
-            <Button
-              aria-label="Move banner up"
-              disabled={index === 0}
-              onClick={() => onMove(-1)}
-              size="small"
-            >
-              <ArrowUp size={16} />
-            </Button>
-            <Button
-              aria-label="Move banner down"
-              disabled={index === count - 1}
-              onClick={() => onMove(1)}
-              size="small"
-            >
-              <ArrowDown size={16} />
-            </Button>
-            <Button
-              color="error"
-              onClick={onRemove}
-              size="small"
-              startIcon={<Trash2 size={15} />}
-            >
-              Remove
-            </Button>
-          </Stack>
-        </Stack>
-
-        <Box
-          sx={{
-            aspectRatio: "3 / 1",
-            bgcolor: "#f8fafc",
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 2.5,
-            display: "grid",
-            overflow: "hidden",
-            placeItems: "center",
-            position: "relative",
-          }}
-        >
+    <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} spacing={2}>
+        <Box sx={{ width: { xs: "100%", sm: 210 }, borderRadius: 2, overflow: "hidden", bgcolor: "#f8fafc", flexShrink: 0, aspectRatio: "3/1", display: "grid", placeItems: "center" }}>
           {banner.imageUrl ? (
-            <Box
-              alt={banner.title || `Banner ${index + 1}`}
-              component="img"
-              referrerPolicy="no-referrer"
-              src={banner.imageUrl}
-              sx={{
-                display: "block",
-                height: "100%",
-                objectFit: "cover",
-                width: "100%",
-              }}
-            />
-          ) : (
-            <Stack alignItems="center" color="text.secondary" spacing={0.75}>
-              <ImageIcon size={28} />
-              <Typography variant="body2">Choose banner artwork</Typography>
-            </Stack>
-          )}
-
-          <Button
-            onClick={() => setPickerOpen(true)}
-            size="small"
-            sx={{
-              bgcolor: "rgba(255,255,255,0.94)",
-              position: "absolute",
-              right: 12,
-              top: 12,
-              "&:hover": { bgcolor: "#fff" },
-            }}
-            variant="outlined"
-          >
-            {banner.imageUrl ? "Change image" : "Choose image"}
-          </Button>
+            <Box component="img" src={banner.imageUrl} alt={banner.title} referrerPolicy="no-referrer"
+              sx={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : <ImageIcon size={27} />}
         </Box>
-
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={1.5}
-          alignItems={{ md: "flex-start" }}
-        >
-          <TextField
-            fullWidth
-            helperText="Internal/accessibility label; not rendered over the banner."
-            label="Banner title"
-            onChange={(event) =>
-              onChange({ ...banner, title: event.target.value })
-            }
-            size="small"
-            value={banner.title}
-          />
-
-          {!linkOpen ? (
-            <Button
-              onClick={() => setLinkOpen(true)}
-              size="small"
-              startIcon={<ExternalLink size={15} />}
-              sx={{ minWidth: 140, mt: { md: 0.5 } }}
-              variant="text"
-            >
-              Add link
-            </Button>
-          ) : (
-            <TextField
-              fullWidth
-              helperText="Optional HTTPS destination."
-              label="Destination URL"
-              onChange={(event) => {
-                const value = event.target.value.trim();
-                onChange({
-                  ...banner,
-                  link: value
-                    ? { kind: "external", target: value }
-                    : null,
-                });
-              }}
-              placeholder="https://..."
-              size="small"
-              type="url"
-              value={externalLinkValue(banner)}
-            />
-          )}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label={index + 1} size="small" color="primary" />
+            <Typography fontWeight={800} noWrap>{banner.title || `Banner ${index + 1}`}</Typography>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }} noWrap>
+            {externalLinkValue(banner) || "No destination link"} · position {index + 1}
+          </Typography>
+        </Box>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Button size="small" aria-label="Move banner up" disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp size={16}/></Button>
+          <Button size="small" aria-label="Move banner down" disabled={index === count - 1} onClick={() => onMove(1)}><ArrowDown size={16}/></Button>
+          <Button variant="outlined" size="small" onClick={() => setEditing(true)}>Edit</Button>
+          <Button color="error" size="small" aria-label={`Remove ${banner.title}`} onClick={onRemove}><Trash2 size={16}/></Button>
         </Stack>
-
-        <MediaPickerDialog
-          currentUrl={banner.imageUrl}
-          onClose={() => setPickerOpen(false)}
-          onSelect={(asset) => {
-            onChange({ ...banner, imageUrl: asset.url });
-            setPickerOpen(false);
-          }}
-          open={pickerOpen}
-          title="Choose banner artwork"
-        />
       </Stack>
+      <BannerFormDialog
+        open={editing}
+        initial={banner}
+        mode="edit"
+        onClose={() => setEditing(false)}
+        onConfirm={onChange}
+      />
     </Paper>
   );
 }
@@ -267,6 +134,8 @@ function BannersEditor({
   );
   const initialItems = existingBlock?.items ?? [];
   const [items, setItems] = useState<Card[]>(() => initialItems);
+  const [createOpen, setCreateOpen] = useState(false);
+  const newItem = useMemo(() => newBanner(items.length), [items.length]);
   const dirty =
     JSON.stringify(items) !== JSON.stringify(initialItems);
 
@@ -420,15 +289,21 @@ function BannersEditor({
         </Box>
         <Button
           disabled={items.length >= MAX_BANNERS}
-          onClick={() =>
-            setItems((current) => [...current, newBanner(current.length)])
-          }
+          onClick={() => setCreateOpen(true)}
           startIcon={<Plus size={16} />}
           variant="contained"
         >
           Add banner
         </Button>
       </Stack>
+
+      <BannerFormDialog
+        open={createOpen}
+        initial={newItem}
+        mode="create"
+        onClose={() => setCreateOpen(false)}
+        onConfirm={(banner) => setItems((current) => [...current, banner])}
+      />
 
       {items.length ? (
         <Stack spacing={1.5}>
