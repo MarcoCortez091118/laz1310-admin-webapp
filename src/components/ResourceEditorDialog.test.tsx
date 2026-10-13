@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editorCloseBehavior } from "./ResourceEditorDialog";
+import { editorCloseBehavior } from "./editorCloseBehavior";
 
 describe("editorCloseBehavior", () => {
   it("closes immediately when the editor is clean", () => {
