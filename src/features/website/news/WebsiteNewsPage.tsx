@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import { listWebsitePosts, type WebsitePost, websiteNewsKeys } from "./api";
 
 function displayDate(post: WebsitePost) {
-  const date = new Date(post.timestamp);
   // Legacy posts use Unix milliseconds, but some may be supplied in seconds.
   const millis = post.timestamp < 10_000_000_000 ? post.timestamp * 1000 : post.timestamp;
   const parsed = new Date(millis);
