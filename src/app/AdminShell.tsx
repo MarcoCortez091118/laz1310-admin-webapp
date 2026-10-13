@@ -149,6 +149,7 @@ export function AdminShell() {
                 const Icon = item.icon;
                 return (
                   <Link
+                    activeOptions={{ exact: true }}
                     activeProps={{ className: "mui-nav-link active" }}
                     className="mui-nav-link"
                     key={item.to}
