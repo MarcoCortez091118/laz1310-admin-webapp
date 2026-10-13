@@ -44,6 +44,14 @@ describe("Website News V1 table model", () => {
     ]);
   });
 
+  it("matches accented Spanish categories and headings without typing accents", () => {
+    const accented = [post("articulo-2026", "MÚSICA", "Canción y tradición")];
+    expect(filterNewsPage(accented, "musica", "all")).toEqual(accented);
+    expect(filterNewsPage(accented, "cancion", "all")).toEqual(accented);
+    expect(filterNewsPage(accented, "MÚSICA", "MÚSICA")).toEqual(accented);
+    expect(filterNewsPage(accented, "musica", "DETROIT")).toEqual([]);
+  });
+
   it("combines category and search and preserves empty state", () => {
     expect(filterNewsPage(items, "Detroit", "MÚSICA").map((item) => item.id))
       .toEqual(["musica-concierto"]);
