@@ -67,6 +67,7 @@ const navigationGroups = [
     label: "Website",
     items: [
       { label: "News / Blog", to: "/website/news", icon: Globe, adminOnly: false },
+      { label: "Website Banners", to: "/website/banners", icon: Image, adminOnly: false },
     ],
   },
   {
