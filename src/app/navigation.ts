@@ -18,9 +18,16 @@ import {
 
 export type AdminWorkspace = "website" | "app";
 
+export type NavigationPath =
+  | "/" | "/website" | "/website/news" | "/website/banners"
+  | "/website/shows" | "/website/ticket-promotions"
+  | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
+  | "/dynamics" | "/notifications" | "/users" | "/weather"
+  | "/releases" | "/audit" | "/branding" | "/configuration";
+
 export interface NavigationItem {
   readonly label: string;
-  readonly to: string;
+  readonly to: NavigationPath;
   readonly icon: LucideIcon;
   readonly adminOnly: boolean;
 }
