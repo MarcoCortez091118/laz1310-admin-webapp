@@ -15,6 +15,15 @@ function displayDate(post: WebsitePost) {
   return Number.isNaN(parsed.getTime()) ? post.date : parsed.toLocaleDateString();
 }
 
+function safeSourceUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function PostDetails({ post, onClose }: { post: WebsitePost | null; onClose: () => void }) {
   return (
     <Dialog open={Boolean(post)} onClose={onClose} fullWidth maxWidth="md"
@@ -37,8 +46,8 @@ function PostDetails({ post, onClose }: { post: WebsitePost | null; onClose: () 
           <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
             Legacy post ID: {post.id} · Source: {post.sourceName || "Not specified"}
           </Typography>
-          {post.sourceUrl && (
-            <Button component="a" href={post.sourceUrl} target="_blank"
+          {safeSourceUrl(post.sourceUrl) && (
+            <Button component="a" href={safeSourceUrl(post.sourceUrl) ?? undefined} target="_blank"
               rel="noopener noreferrer" variant="outlined"
               startIcon={<ExternalLink size={16} />} sx={{ alignSelf: "flex-start" }}>
               External source
