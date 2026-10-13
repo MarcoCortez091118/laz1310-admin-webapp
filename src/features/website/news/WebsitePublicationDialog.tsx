@@ -1,14 +1,15 @@
 import {
-  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
-  DialogContent, DialogTitle, Divider, Stack, Typography,
+  Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogTitle, Divider, FormControlLabel, Stack, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Eye, History, Rocket, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
 import { websiteDraftKeys } from "./draftsApi";
 import type { WebsiteNewsDraft } from "./draftsApi";
+import { reconcileWebsiteLegacy, reviewWebsiteLegacy } from "./legacyReconciliationApi";
 import {
   listWebsiteReleases, previewWebsiteDraft, publishWebsiteDraft,
   readWebsitePublication, rollbackWebsiteRelease, websitePublicationKeys,
@@ -19,7 +20,7 @@ type ConfirmAction = { kind: "publish" } | { kind: "rollback"; release: WebsiteR
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 409) {
-    return "The draft, legacy website article, or publication changed. Reload the latest version before retrying.";
+    return `Publication was rejected (409): ${error.message}. Check the source article and revision before retrying.`;
   }
   return error instanceof Error ? error.message : "Website publishing request failed.";
 }
@@ -39,6 +40,8 @@ export function WebsitePublicationDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [reviewAcknowledged, setReviewAcknowledged] = useState(false);
 
   const preview = useQuery({
     queryKey: ["admin", "website", "draft-preview", slug],
@@ -68,12 +71,30 @@ export function WebsitePublicationDialog({
     refetchOnWindowFocus: false,
   });
   const draft: WebsiteNewsDraft | null = preview.data?.data ?? null;
+  const legacyReview = useQuery({
+    queryKey: ["admin", "website", "legacy-review", slug],
+    queryFn: async () => (await reviewWebsiteLegacy(slug!)).data,
+    enabled: open && Boolean(slug) && draft?.origin === "legacy",
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const legacyNeedsReconciliation = draft?.origin === "legacy" &&
+    (legacyReview.data?.status !== "ready" || Boolean(legacyReview.error));
   const live = publication.data ?? null;
-  const isLoading = preview.isPending || publication.isPending;
+  const isLoading = preview.isPending || publication.isPending ||
+    (draft?.origin === "legacy" && legacyReview.isPending);
+
+  useEffect(() => {
+    setReviewExpanded(false);
+    setReviewAcknowledged(false);
+  }, [slug]);
 
   async function refresh() {
     await Promise.all([
-      preview.refetch(), publication.refetch(), history.refetch(),
+      preview.refetch(),
+      publication.refetch(),
+      ...(live ? [history.refetch()] : []),
+      ...(draft?.origin === "legacy" ? [legacyReview.refetch()] : []),
     ]);
   }
 
@@ -97,6 +118,32 @@ export function WebsitePublicationDialog({
       setError(errorMessage(reason));
       setConfirmation(null);
       await refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function reconcile() {
+    const review = legacyReview.data;
+    if (!slug || !draft || !review || !canPublish || !reviewAcknowledged ||
+        pending || review.status === "ready") return;
+    setPending(true);
+    setError("");
+    setSuccess("");
+    try {
+      const updated = await reconcileWebsiteLegacy(
+        slug, draft.revision, review.legacyFingerprint,
+      );
+      setSuccess(`Legacy article reviewed and draft revision ${updated.data.revision} recorded. Review again, then click Publish separately.`);
+      setReviewExpanded(false);
+      setReviewAcknowledged(false);
+      await queryClient.invalidateQueries({ queryKey: websiteDraftKeys });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "website", "draft-preview", slug] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "website", "legacy-review", slug] });
+    } catch (reason) {
+      setError(errorMessage(reason));
+      setReviewAcknowledged(false);
+      await legacyReview.refetch();
     } finally {
       setPending(false);
     }
@@ -135,6 +182,74 @@ export function WebsitePublicationDialog({
           )}
           {error && <Alert severity="error">{error}</Alert>}
           {success && <Alert severity="success">{success}</Alert>}
+          {draft?.origin === "legacy" && legacyReview.error && (
+            <Alert severity="error">
+              Cannot verify the current legacy article. Publishing remains blocked.
+              {" "}{errorMessage(legacyReview.error)}
+              <Button size="small" color="inherit"
+                onClick={() => void legacyReview.refetch()}>Retry review</Button>
+            </Alert>
+          )}
+          {draft?.origin === "legacy" && legacyReview.data?.status !== "ready" &&
+            legacyReview.data && (
+            <Stack spacing={1.5}>
+              <Alert severity="warning">
+                {legacyReview.data.status === "missing_baseline"
+                  ? "This article was imported before baseline tracking was introduced. Publish is blocked until an administrator reviews the original Website article."
+                  : "The original Website article has changed since it was imported. An administrator must compare both versions before publishing."}
+              </Alert>
+              {canPublish && (
+                <Button variant="outlined" disabled={pending}
+                  onClick={() => {
+                    setReviewExpanded((expanded) => !expanded);
+                    setReviewAcknowledged(false);
+                  }}>
+                  {reviewExpanded ? "Hide source comparison" : "Compare Website source and draft"}
+                </Button>
+              )}
+              {canPublish && reviewExpanded && (
+                <Stack spacing={1.5}>
+                  {([
+                    ["Headline", "headline"],
+                    ["Summary", "summary"],
+                    ["Complete article", "fullArticle"],
+                    ["Cover image URL", "imageUrl"],
+                    ["Advertising image URL", "adImageUrl"],
+                    ["Category", "category"],
+                    ["Source name", "sourceName"],
+                    ["Source URL", "sourceUrl"],
+                  ] as const).map(([title, field]) => (
+                    <Box key={field} sx={{ border: "1px solid", borderColor: "divider", p: 1.5, borderRadius: 2 }}>
+                      <Typography fontWeight={800} variant="caption">{title}</Typography>
+                      <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ mt: 1 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="caption" color="text.secondary">Current public Website</Typography>
+                          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                            {legacyReview.data.legacyPost[field] || "(empty)"}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="caption" color="text.secondary">Saved draft</Typography>
+                          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                            {draft.post[field] || "(empty)"}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  ))}
+                  <FormControlLabel
+                    control={<Checkbox checked={reviewAcknowledged}
+                      onChange={(event) => setReviewAcknowledged(event.target.checked)} />}
+                    label="I compared the current Website article with the saved draft and approve updating only the draft baseline. Nothing is published by this action."
+                  />
+                  <Button variant="contained" disabled={!reviewAcknowledged || pending}
+                    onClick={() => void reconcile()}>
+                    Confirm source review (new draft revision)
+                  </Button>
+                </Stack>
+              )}
+            </Stack>
+          )}
           {isLoading && <Stack direction="row" gap={1} alignItems="center">
             <CircularProgress size={19}/>
             <Typography>Loading current Website revisions…</Typography>
@@ -170,7 +285,8 @@ export function WebsitePublicationDialog({
           </Alert>}
           {canPublish && draft && !isLoading && !preview.error && !publication.error && (
             <Button variant="contained" startIcon={<Rocket size={16}/>}
-              disabled={pending || (live?.draftRevision === draft.revision)}
+              disabled={pending || Boolean(legacyNeedsReconciliation) ||
+                (live?.draftRevision === draft.revision)}
               onClick={() => setConfirmation({ kind: "publish" })}>
               {live ? "Update published article" : "Publish article"}
             </Button>
@@ -183,6 +299,11 @@ export function WebsitePublicationDialog({
             <History size={18}/><Typography fontWeight={800}>Website release history</Typography>
           </Stack>
           {history.isPending && live && <CircularProgress size={18}/>}
+          {!live && (
+            <Typography variant="body2" color="text.secondary">
+              No Website release yet. The 404 publication status is expected before first publish.
+            </Typography>
+          )}
           {history.data?.items.map((release) => (
             <Stack key={release.id} direction={{ xs: "column", sm: "row" }}
               spacing={1} justifyContent="space-between" alignItems={{ sm: "center" }}
