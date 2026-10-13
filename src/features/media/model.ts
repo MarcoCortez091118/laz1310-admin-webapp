@@ -34,3 +34,19 @@ export function formatBytes(value: number): string {
   const mib = kib / 1024;
   return `${mib.toFixed(mib >= 10 ? 0 : 1)} MiB`;
 }
+
+/** A managed asset must resolve to a usable browser URL before leaving the picker. */
+export function validateMediaAssetUrl(raw: string): string | null {
+  try {
+    const url = new URL(raw.trim());
+    const localhost = url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+    if (!url.hostname || url.username || url.password ||
+        (url.protocol !== "https:" && !localhost)) {
+      return "The selected asset has no valid HTTPS image URL. Refresh the Media Library.";
+    }
+    return null;
+  } catch {
+    return "The selected asset has no valid HTTPS image URL. Refresh the Media Library.";
+  }
+}
