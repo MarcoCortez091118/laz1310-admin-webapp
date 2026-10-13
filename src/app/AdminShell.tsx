@@ -5,10 +5,13 @@ import {
   Chip,
   Divider,
   Drawer,
+  FormControl,
   IconButton,
   InputAdornment,
+  InputLabel,
   Menu,
   MenuItem,
+  Select,
   Stack,
   TextField,
   Toolbar,
@@ -17,94 +20,58 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { signOut } from "firebase/auth";
 import {
   Bell,
-  CalendarRange,
   ChevronDown,
-  CloudSun,
-  FileClock,
-  FileText,
   Globe,
-  Image,
-  LayoutDashboard,
-  Palette,
   LogOut,
   Menu as MenuIcon,
-  Radio,
-  ScrollText,
   Search,
-  Settings,
-  Sparkles,
-  UsersRound,
 } from "lucide-react";
-import { useMemo, useState, type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
+import {
+  visibleNavigationGroups,
+  workspaceDashboard,
+  workspaceFromPath,
+  type AdminWorkspace,
+} from "./navigation";
 import { useStaff } from "../features/auth/StaffGate";
 import { useDraftQuery, usePublicStateQuery } from "../features/content/queries";
 import { auth } from "../lib/firebase";
 
 const DRAWER_WIDTH = 272;
 
-const navigationGroups = [
-  {
-    label: "General",
-    items: [
-      { label: "Overview", to: "/", icon: LayoutDashboard, adminOnly: false },
-    ],
-  },
-  {
-    label: "Content",
-    items: [
-      { label: "Pages", to: "/pages", icon: FileText, adminOnly: false },
-      { label: "Banners", to: "/banners", icon: Image, adminOnly: false },
-      { label: "Radio", to: "/radio", icon: Radio, adminOnly: false },
-      { label: "Programs", to: "/programs", icon: CalendarRange, adminOnly: false },
-      { label: "Media", to: "/media", icon: Image, adminOnly: false },
-    ],
-  },
-  {
-    label: "Website",
-    items: [
-      { label: "News / Blog", to: "/website/news", icon: Globe, adminOnly: false },
-      { label: "Website Banners", to: "/website/banners", icon: Image, adminOnly: false },
-      { label: "Website Shows", to: "/website/shows", icon: Radio, adminOnly: false },
-      { label: "Ticket Promotions", to: "/website/ticket-promotions", icon: Image, adminOnly: false },
-    ],
-  },
-  {
-    label: "Engagement",
-    items: [
-      { label: "Dynamics", to: "/dynamics", icon: Sparkles, adminOnly: false },
-      { label: "Notifications", to: "/notifications", icon: Bell, adminOnly: false },
-      { label: "Users", to: "/users", icon: UsersRound, adminOnly: true },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { label: "Weather", to: "/weather", icon: CloudSun, adminOnly: false },
-      { label: "Releases", to: "/releases", icon: FileClock, adminOnly: true },
-      { label: "Audit", to: "/audit", icon: ScrollText, adminOnly: true },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Branding", to: "/branding", icon: Palette, adminOnly: true },
-      { label: "App Configuration", to: "/configuration", icon: Settings, adminOnly: true },
-    ],
-  },
-] as const;
 
 function shortRelease(value: string | null | undefined): string {
   return value ? value.slice(0, 8) : "Unpublished";
 }
 
-export function AdminShell() {
-  const staff = useStaff();
+function AppReleaseStatus() {
   const draft = useDraftQuery();
   const publicState = usePublicStateQuery();
+  return (
+    <Stack direction="row" spacing={1} alignItems="center" className="topbar-state-chips">
+      <Chip
+        label={`Draft ${draft.data?.data.revision ?? "…"}`}
+        size="small"
+        sx={{ bgcolor: "#FFF1F2", color: "#B42318" }}
+      />
+      <Chip
+        label={`Published ${shortRelease(publicState.data?.data.releaseId)}`}
+        size="small"
+        variant="outlined"
+      />
+    </Stack>
+  );
+}
+
+export function AdminShell() {
+  const staff = useStaff();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: state => state.location.pathname });
+  const workspace = workspaceFromPath(pathname);
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up("lg"));
   const admin = staff.roles.includes("admin");
@@ -112,19 +79,14 @@ export function AdminShell() {
   const [navigationSearch, setNavigationSearch] = useState("");
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
-  const visibleGroups = useMemo(() => {
-    const query = navigationSearch.trim().toLowerCase();
-    return navigationGroups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
-          (item) =>
-            (!item.adminOnly || admin) &&
-            (!query || item.label.toLowerCase().includes(query)),
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [admin, navigationSearch]);
+  const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch);
+
+  function changeWorkspace(next: AdminWorkspace) {
+    if (next === workspace) return;
+    setNavigationSearch("");
+    closeMobileNavigation();
+    void navigate({ to: workspaceDashboard(next) });
+  }
 
   function closeMobileNavigation() {
     if (!desktop) setMobileOpen(false);
@@ -150,7 +112,30 @@ export function AdminShell() {
 
       <Divider />
 
-      <Box component="nav" aria-label="Administration" className="modern-navigation">
+      <Box sx={{ px: 2, pt: 2, pb: 0.75 }}>
+        <FormControl fullWidth size="small">
+          <InputLabel id="admin-workspace-label">Manage platform</InputLabel>
+          <Select
+            labelId="admin-workspace-label"
+            id="admin-workspace-select"
+            label="Manage platform"
+            value={workspace}
+            onChange={event => {
+              const next = event.target.value;
+              if (next === "website" || next === "app") changeWorkspace(next);
+            }}
+            sx={{ borderRadius: 2, fontWeight: 750, bgcolor: "#F8F9FB" }}
+          >
+            <MenuItem value="website">Website</MenuItem>
+            <MenuItem value="app">App Android / iOS</MenuItem>
+          </Select>
+        </FormControl>
+        <Typography fontSize={11} color="text.secondary" mt={1} px={0.5}>
+          {workspace === "website" ? "Official website content" : "Android / iOS app content"}
+        </Typography>
+      </Box>
+
+      <Box component="nav" aria-label={workspace === "website" ? "Website navigation" : "Android/iOS app navigation"} className="modern-navigation">
         {visibleGroups.map((group) => (
           <Box key={group.label} className="modern-nav-group">
             <Typography className="modern-nav-label">{group.label}</Typography>
@@ -238,26 +223,25 @@ export function AdminShell() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Stack direction="row" spacing={1} alignItems="center" className="topbar-state-chips">
+          {workspace === "app" ? (
+            <>
+              <AppReleaseStatus />
+              <Tooltip title="App notifications">
+                <Link to="/notifications" style={{ display: "inline-flex" }}>
+                  <IconButton aria-label="App notifications" color="inherit">
+                    <Bell size={19} />
+                  </IconButton>
+                </Link>
+              </Tooltip>
+            </>
+          ) : (
             <Chip
-              label={`Draft ${draft.data?.data.revision ?? "…"}`}
-              size="small"
-              sx={{ bgcolor: "#FFF1F2", color: "#B42318" }}
-            />
-            <Chip
-              label={`Published ${shortRelease(publicState.data?.data.releaseId)}`}
+              icon={<Globe size={15} aria-hidden />}
+              label="Website"
               size="small"
               variant="outlined"
             />
-          </Stack>
-
-          <Tooltip title="Notifications">
-            <Link to="/notifications" style={{ display: "inline-flex" }}>
-              <IconButton aria-label="Notifications" color="inherit">
-                <Bell size={19} />
-              </IconButton>
-            </Link>
-          </Tooltip>
+          )}
 
           <Box>
             <Box
