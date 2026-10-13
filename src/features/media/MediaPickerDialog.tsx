@@ -1,6 +1,8 @@
+import { Dialog } from "@mui/material";
 import { FolderOpen, Search, Upload, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { MediaAsset } from "../../api/types";
+import { validateMediaAssetUrl } from "./model";
 import { MediaAssetGrid } from "./MediaAssetGrid";
 import { MediaUploadPanel } from "./MediaUploadPanel";
 import { useMediaLibraryQuery } from "./queries";
@@ -21,20 +23,17 @@ export function MediaPickerDialog({
   onClose: () => void;
   onSelect: (asset: MediaAsset) => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const library = useMediaLibraryQuery();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"existing" | "upload">("existing");
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      setActiveTab("existing");
-      setSearch("");
-      dialog.showModal();
-    }
-    if (!open && dialog.open) dialog.close();
+    if (!open) return;
+    setActiveTab("existing");
+    setSearch("");
+    setSelectionError(null);
   }, [open]);
 
   const assets = useMemo(
@@ -48,25 +47,47 @@ export function MediaPickerDialog({
   }, [assets, search]);
 
   function select(asset: MediaAsset) {
+    const issue = validateMediaAssetUrl(asset.url);
+    if (issue) {
+      setSelectionError(issue);
+      return;
+    }
+    setSelectionError(null);
     onSelect(asset);
     onClose();
   }
 
   return (
-    <dialog
-      aria-labelledby="media-picker-title"
-      className="media-picker-dialog"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
+    <Dialog
+      open={open}
+      onClose={onClose}
+      aria-labelledby={titleId}
+      maxWidth={false}
+      slotProps={{
+        paper: {
+          className: "media-picker-dialog",
+          sx: {
+            width: "min(1180px, calc(100vw - 32px))",
+            height: "min(860px, calc(100dvh - 32px))",
+            maxHeight: "calc(100dvh - 32px)",
+            m: 1,
+            overflow: "hidden",
+            borderRadius: 2.5,
+          },
+        },
+        backdrop: {
+          sx: {
+            backgroundColor: "rgb(9 9 11 / 0.58)",
+            backdropFilter: "blur(5px)",
+          },
+        },
       }}
-      ref={dialogRef}
     >
       <div className="media-picker-shell">
         <header className="media-picker-header">
           <div>
             <p className="eyebrow">Media Library</p>
-            <h2 id="media-picker-title">{title}</h2>
+            <h2 id={titleId}>{title}</h2>
             <p className="muted">{description}</p>
           </div>
           <button aria-label="Close media picker" className="icon-button" onClick={onClose} type="button">
@@ -86,6 +107,9 @@ export function MediaPickerDialog({
             <Upload size={17} /> Upload image
           </button>
         </div>
+        {selectionError ? (
+          <div className="error-banner" role="alert">{selectionError}</div>
+        ) : null}
         <div className="media-picker-body media-picker-tab-body">
           {activeTab === "upload" ? (
             <div role="tabpanel" aria-label="Upload image">
@@ -131,6 +155,6 @@ export function MediaPickerDialog({
           )}
         </div>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

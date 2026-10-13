@@ -24,6 +24,7 @@ export function WebsiteAdvertisingImageField({
   disabled?: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [chosenAsset, setChosenAsset] = useState<{ url: string; alt: string } | null>(null);
   const [imageState, setImageState] = useState<ImageState>({ kind: "loading" });
   const source = safeAdvertisingImageUrl(value);
   const hasUrl = value.trim().length > 0;
@@ -61,7 +62,10 @@ export function WebsiteAdvertisingImageField({
           </Button>
           {hasUrl && (
             <Button variant="text" color="error" startIcon={<Trash2 size={16} />}
-              disabled={disabled} onClick={() => onChange("")}>
+              disabled={disabled} onClick={() => {
+                setChosenAsset(null);
+                onChange("");
+              }}>
               Clear ad
             </Button>
           )}
@@ -73,11 +77,20 @@ export function WebsiteAdvertisingImageField({
           placeholder="https://example.com/advertisement.webp"
           disabled={disabled}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            setChosenAsset(null);
+            onChange(event.target.value);
+          }}
           helperText="Use a direct HTTPS image address, not a file-sharing preview page."
           inputProps={{ maxLength: 2048 }}
           error={hasUrl && !source}
         />
+        {chosenAsset && source === chosenAsset.url ? (
+          <Alert severity="success" role="status">
+            Selected from Media Library: {chosenAsset.alt}. Press “Save Website draft”
+            to persist this advertising image.
+          </Alert>
+        ) : null}
 
         {hasUrl && !source && (
           <Alert severity="error" role="alert">
@@ -175,7 +188,10 @@ export function WebsiteAdvertisingImageField({
         title="Upload or choose article advertisement"
         description="Managed upload: JPEG, PNG or WebP, up to 5 MiB. Square 1:1 artwork recommended."
         onClose={() => setPickerOpen(false)}
-        onSelect={(asset) => onChange(asset.url)}
+        onSelect={(asset) => {
+          setChosenAsset({ url: asset.url, alt: asset.alt });
+          onChange(asset.url);
+        }}
       />
     </Paper>
   );

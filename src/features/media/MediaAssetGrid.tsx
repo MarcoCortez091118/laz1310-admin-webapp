@@ -32,13 +32,30 @@ export function MediaAssetGrid({
         return (
           <article className={`media-card ${selected ? "selected" : ""}`} key={asset.id}>
             <div className="media-card-image">
-              <img
-                alt={asset.alt}
-                decoding="async"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                src={asset.url}
-              />
+              {onSelect ? (
+                <button
+                  type="button"
+                  className="media-image-select"
+                  aria-label={`Use image: ${asset.alt}`}
+                  onClick={() => onSelect(asset)}
+                >
+                  <img
+                    alt={asset.alt}
+                    decoding="async"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    src={asset.url}
+                  />
+                </button>
+              ) : (
+                <img
+                  alt={asset.alt}
+                  decoding="async"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  src={asset.url}
+                />
+              )}
               {selected ? (
                 <span className="media-selected-badge">
                   <Check size={13} /> Selected
@@ -68,11 +85,10 @@ export function MediaAssetGrid({
                 {onSelect ? (
                   <button
                     className={selected ? "secondary-button" : ""}
-                    disabled={selected}
                     onClick={() => onSelect(asset)}
                     type="button"
                   >
-                    {selected ? "Selected" : "Use image"}
+                    {selected ? "Use selected image" : "Use image"}
                   </button>
                 ) : null}
               </div>

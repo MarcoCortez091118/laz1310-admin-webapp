@@ -4,6 +4,7 @@ import {
   MAX_MEDIA_BYTES,
   validateAltText,
   validateMediaFile,
+  validateMediaAssetUrl,
 } from "./model";
 
 describe("media model", () => {
@@ -34,6 +35,19 @@ describe("media model", () => {
     expect(validateAltText("a".repeat(501))).toBe(
       "Image description must be 500 characters or fewer.",
     );
+  });
+
+  it("requires selectable managed assets to expose usable image URLs", () => {
+    expect(validateMediaAssetUrl("https://firebasestorage.googleapis.com/v0/b/app/o/ad.webp?alt=media"))
+      .toBeNull();
+    expect(validateMediaAssetUrl("http://localhost:8080/emulator/media.webp")).toBeNull();
+
+    for (const value of [
+      "", "   ", "not-a-url", "javascript:alert(1)", "file:///tmp/ad.jpg",
+      "http://public.example.com/ad.jpg", "https://user:pass@files.example.com/ad.jpg",
+    ]) {
+      expect(validateMediaAssetUrl(value)).toMatch(/valid HTTPS image URL/);
+    }
   });
 
   it("formats stored asset sizes for editorial display", () => {
