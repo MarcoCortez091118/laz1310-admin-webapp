@@ -17,6 +17,7 @@ import {
 import { WebsiteNewsDetailsDialog } from "./WebsiteNewsDetailsDialog";
 import { WebsitePostEditorDialog } from "./WebsitePostEditorDialog";
 import { WebsiteDraftsPanel } from "./WebsiteDraftsPanel";
+import { WebsitePublicationDialog } from "./WebsitePublicationDialog";
 import { websiteDraftKeys, type WebsiteNewsDraft } from "./draftsApi";
 import { WebsiteNewsTable } from "./WebsiteNewsTable";
 
@@ -36,6 +37,7 @@ export function WebsiteNewsPage() {
   ]);
   const [selectedPost, setSelectedPost] = useState<WebsitePost | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [publicationSlug, setPublicationSlug] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<WebsitePost | null>(null);
   const [editingDraft, setEditingDraft] = useState<WebsiteNewsDraft | null>(null);
 
@@ -138,7 +140,10 @@ export function WebsiteNewsPage() {
             Create article draft
           </Button>
         </Stack>
-        <WebsiteDraftsPanel onEdit={(draft) => openEditor(null, draft)} />
+        <WebsiteDraftsPanel
+          onEdit={(draft) => openEditor(null, draft)}
+          onPreview={(slug) => setPublicationSlug(slug)}
+        />
 
         <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1} alignItems="center">
           <Chip variant="outlined" color="primary"
@@ -309,6 +314,11 @@ export function WebsiteNewsPage() {
       </Stack>
       <WebsiteNewsDetailsDialog post={selectedPost}
         onClose={() => setSelectedPost(null)} />
+      <WebsitePublicationDialog
+        slug={publicationSlug}
+        open={Boolean(publicationSlug)}
+        onClose={() => setPublicationSlug(null)}
+      />
       <WebsitePostEditorDialog
         open={editorOpen}
         initialPost={editingPost}
