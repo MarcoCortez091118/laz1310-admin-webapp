@@ -3,12 +3,12 @@ import {
   DialogTitle, Divider, Paper, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Image as ImageIcon, Plus, RefreshCw, Rocket, Trash2, Undo2 } from "lucide-react";
+import { Plus, RefreshCw, Rocket, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
 import {
-  importShow, legacyShows, listShows, purgeShow, saveShow, showAction, showHistory,
+  importShow, legacyShows, listShows, purgeShow, saveShow, showAction,
   showKeys, showPublication, type LegacyShow, type ShowContent, type ShowDraft,
 } from "./api";
 import { ShowPosterField } from "./ShowPosterField";
@@ -153,7 +153,6 @@ export function WebsiteShowsPage() {
     queryKey: showKeys.legacy, queryFn: async () => (await legacyShows()).data,
     enabled: view === "legacy", retry: false,
   });
-  const knownIds = new Set(list.data?.items.map(show => show.id) ?? []);
 
   function reload() {
     void client.invalidateQueries({ queryKey: ["website", "shows"] });
