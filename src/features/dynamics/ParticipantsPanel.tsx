@@ -2,36 +2,19 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Paper,
   Skeleton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
 } from "@mui/material";
 import { Download, ExternalLink, ShieldCheck, UsersRound } from "lucide-react";
 import { useMemo } from "react";
-import type { AdminParticipation } from "../../api/types";
+import { ParticipantsTable } from "./ParticipantsTable";
+import type { AccountParticipation } from "./participantTypes";
 import {
   useDynamicParticipationsQuery,
   useParticipationServiceStatusQuery,
 } from "./queries";
-
-interface AccountSnapshot {
-  userId?: string | null;
-  displayName?: string | null;
-  email?: string | null;
-  emailVerified?: boolean;
-}
-
-type AccountParticipation = AdminParticipation & {
-  account?: AccountSnapshot | null;
-};
 
 interface ParticipantsPanelProps {
   dynamicId: string;
@@ -40,12 +23,6 @@ interface ParticipantsPanelProps {
   active: boolean;
   participationType: "form" | "external_url";
   participationUrl?: string | null;
-}
-
-function formatDate(value: string | undefined): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 function spreadsheetSafe(value: unknown): string {
@@ -111,10 +88,6 @@ export function ParticipantsPanel({
       (query.data?.pages.flatMap((page) => page.data.items ?? []) ??
         []) as AccountParticipation[],
     [query.data],
-  );
-  const valueKeys = useMemo(
-    () => Array.from(new Set(items.flatMap((item) => Object.keys(item.values ?? {})))),
-    [items],
   );
 
   if (!isAdmin) {
@@ -234,74 +207,14 @@ export function ParticipantsPanel({
       </Paper>
 
       {items.length ? (
-        <TableContainer component={Paper} variant="outlined" className="dynamics-participants-table">
-          <Table stickyHeader size="small" aria-label={`${title} participants`}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Submitted</TableCell>
-                <TableCell>Identity</TableCell>
-                {valueKeys.map((key) => <TableCell key={key}>{key}</TableCell>)}
-                <TableCell>Consent</TableCell>
-                <TableCell>Release evidence</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id} hover>
-                  <TableCell sx={{ minWidth: 170 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatDate(item.submittedAt)}</Typography>
-                    <Typography component="code" variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>{item.id}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 220 }}>
-                    {item.account ? (
-                      <Stack spacing={0.35} alignItems="flex-start">
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                          {item.account.displayName || "LA Z account"}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {item.account.email || "Email unavailable"}
-                        </Typography>
-                        <Chip
-                          label={item.account.emailVerified ? "Verified account" : "Account"}
-                          color={item.account.emailVerified ? "success" : "default"}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Stack>
-                    ) : (
-                      <Chip
-                        label={item.authenticated ? "Authenticated" : "Anonymous"}
-                        color={item.authenticated ? "success" : "default"}
-                        size="small"
-                        variant={item.authenticated ? "filled" : "outlined"}
-                      />
-                    )}
-                  </TableCell>
-                  {valueKeys.map((key) => (
-                    <TableCell key={key} sx={{ minWidth: 140, maxWidth: 300, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                      {String(item.values?.[key] ?? "—")}
-                    </TableCell>
-                  ))}
-                  <TableCell sx={{ minWidth: 170 }}>
-                    <Typography variant="body2">v{item.consent?.version ?? "—"}</Typography>
-                    <Typography variant="caption" color="text.secondary">{formatDate(item.consent?.acceptedAt)}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 220 }}>
-                    <Typography variant="caption" color="text.secondary" display="block">Presented</Typography>
-                    <Typography component="code" variant="caption" sx={{ overflowWrap: "anywhere" }}>{item.releaseId}</Typography>
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>Accepted</Typography>
-                    <Typography component="code" variant="caption" sx={{ overflowWrap: "anywhere" }}>{item.acceptedReleaseId}</Typography>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ParticipantsTable items={items} title={title} />
       ) : (
         <Paper variant="outlined" className="dynamics-mui-empty">
           <UsersRound size={30} />
           <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>No participations yet</Typography>
-          <Typography variant="body2" color="text.secondary">This native-form campaign has no retained participant records.</Typography>
+          <Typography variant="body2" color="text.secondary">
+            This native-form campaign has no retained participant records.
+          </Typography>
         </Paper>
       )}
 
