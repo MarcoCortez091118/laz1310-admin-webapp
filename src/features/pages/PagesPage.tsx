@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { ApiError } from "../../api/errors";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import type { Page, Station } from "../../api/types";
 import { adminQueryKeys, deletePage, putPage } from "../content/api";
 import { useDraftQuery, usePreviewQuery } from "../content/queries";
@@ -25,6 +26,7 @@ function PageEditor({
   onSaved,
   onDeleted,
   onReload,
+  onDirtyChange,
 }: {
   page: Page | null;
   pages: Page[];
@@ -38,6 +40,7 @@ function PageEditor({
   onSaved: (slug: string) => void;
   onDeleted: () => void;
   onReload: () => Promise<unknown>;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const existing = page !== null;
@@ -45,6 +48,11 @@ function PageEditor({
     page ?? { slug: "", title: "", blocks: [] },
   );
   const [previewMode, setPreviewMode] = useState<PreviewMode>("live");
+  const dirty = JSON.stringify(workingPage) !== JSON.stringify(page ?? { slug: "", title: "", blocks: [] });
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const save = useMutation({
     mutationFn: async () => {
