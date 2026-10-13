@@ -22,6 +22,7 @@ import {
 import { useMemo, useState } from "react";
 
 import type { Card, CardsBlock, Page, PageBlock } from "../../api/types";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import { ApiError } from "../../api/errors";
 import { useStaff } from "../auth/StaffGate";
 import {
@@ -66,17 +67,11 @@ function publicationLabel(
 function BannerCardEditor({
   banner,
   index,
-  count,
   onChange,
-  onMove,
-  onRemove,
 }: {
   banner: Card;
   index: number;
-  count: number;
   onChange: (next: Card) => void;
-  onMove: (direction: -1 | 1) => void;
-  onRemove: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(Boolean(externalLinkValue(banner)));
@@ -84,52 +79,6 @@ function BannerCardEditor({
   return (
     <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
       <Stack spacing={1.75} sx={{ p: 2 }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ sm: "center" }}
-          spacing={1}
-        >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip label={index + 1} color="primary" size="small" />
-            <Box>
-              <Typography fontWeight={800}>
-                {banner.title || `Banner ${index + 1}`}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Home carousel · position {index + 1}
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Stack direction="row" spacing={0.5}>
-            <Button
-              aria-label="Move banner up"
-              disabled={index === 0}
-              onClick={() => onMove(-1)}
-              size="small"
-            >
-              <ArrowUp size={16} />
-            </Button>
-            <Button
-              aria-label="Move banner down"
-              disabled={index === count - 1}
-              onClick={() => onMove(1)}
-              size="small"
-            >
-              <ArrowDown size={16} />
-            </Button>
-            <Button
-              color="error"
-              onClick={onRemove}
-              size="small"
-              startIcon={<Trash2 size={15} />}
-            >
-              Remove
-            </Button>
-          </Stack>
-        </Stack>
-
         <Box
           sx={{
             aspectRatio: "3 / 1",
@@ -267,6 +216,8 @@ function BannersEditor({
   );
   const initialItems = existingBlock?.items ?? [];
   const [items, setItems] = useState<Card[]>(() => initialItems);
+  const [editing, setEditing] = useState<{ index: number | null; banner: Card } | null>(null);
+  const [bannerError, setBannerError] = useState<string | null>(null);
   const dirty =
     JSON.stringify(items) !== JSON.stringify(initialItems);
 
@@ -339,12 +290,36 @@ function BannersEditor({
     },
   });
 
-  function updateBanner(index: number, next: Card) {
+  function openBanner(index: number | null) {
+    setBannerError(null);
+    setEditing({
+      index,
+      banner: index === null ? newBanner(items.length) : { ...items[index] },
+    });
+  }
+
+  function applyBanner() {
+    if (!editing) return;
+    const { index, banner } = editing;
+    if (!banner.title.trim()) {
+      setBannerError("Banner title is required.");
+      return;
+    }
+    if (!banner.imageUrl?.startsWith("https://")) {
+      setBannerError("Choose a managed image before applying this banner.");
+      return;
+    }
+    if (banner.link?.kind === "external" && !banner.link.target.startsWith("https://")) {
+      setBannerError("Destination URL must start with https://.");
+      return;
+    }
     setItems((current) =>
-      current.map((item, currentIndex) =>
-        currentIndex === index ? next : item,
-      ),
+      index === null
+        ? [...current, banner]
+        : current.map((item, position) => position === index ? banner : item),
     );
+    setEditing(null);
+    setBannerError(null);
   }
 
   function moveBanner(index: number, direction: -1 | 1) {
@@ -420,9 +395,7 @@ function BannersEditor({
         </Box>
         <Button
           disabled={items.length >= MAX_BANNERS}
-          onClick={() =>
-            setItems((current) => [...current, newBanner(current.length)])
-          }
+          onClick={() => openBanner(null)}
           startIcon={<Plus size={16} />}
           variant="contained"
         >
@@ -431,21 +404,36 @@ function BannersEditor({
       </Stack>
 
       {items.length ? (
-        <Stack spacing={1.5}>
+        <Stack spacing={1.25}>
           {items.map((banner, index) => (
-            <BannerCardEditor
-              banner={banner}
-              count={items.length}
-              index={index}
-              key={index}
-              onChange={(next) => updateBanner(index, next)}
-              onMove={(direction) => moveBanner(index, direction)}
-              onRemove={() =>
-                setItems((current) =>
-                  current.filter((_, currentIndex) => currentIndex !== index),
-                )
-              }
-            />
+            <Paper key={index} variant="outlined" sx={{ borderRadius: 3, p: 1.5 }}>
+              <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} spacing={1.5}>
+                {banner.imageUrl ? (
+                  <Box
+                    component="img"
+                    src={banner.imageUrl}
+                    alt={banner.title}
+                    sx={{ width: { xs: "100%", sm: 190 }, aspectRatio: "3 / 1", objectFit: "cover", borderRadius: 2 }}
+                  />
+                ) : (
+                  <Box sx={{ width: { xs: "100%", sm: 190 }, aspectRatio: "3 / 1", bgcolor: "action.hover", display: "grid", placeItems: "center", borderRadius: 2 }}>
+                    <ImageIcon size={24} />
+                  </Box>
+                )}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography fontWeight={800}>{banner.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Position {index + 1} · {banner.link?.kind === "external" ? "With link" : "No link"}
+                  </Typography>
+                </Box>
+                <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap" useFlexGap>
+                  <Button aria-label={`Move banner ${index + 1} up`} disabled={index === 0} onClick={() => moveBanner(index, -1)} size="small"><ArrowUp size={16} /></Button>
+                  <Button aria-label={`Move banner ${index + 1} down`} disabled={index === items.length - 1} onClick={() => moveBanner(index, 1)} size="small"><ArrowDown size={16} /></Button>
+                  <Button size="small" variant="outlined" onClick={() => openBanner(index)}>Edit</Button>
+                  <Button color="error" size="small" aria-label={`Remove banner ${index + 1}`} onClick={() => setItems((current) => current.filter((_, position) => position !== index))}><Trash2 size={15} /></Button>
+                </Stack>
+              </Stack>
+            </Paper>
           ))}
         </Stack>
       ) : (
@@ -469,6 +457,30 @@ function BannersEditor({
           </Stack>
         </Paper>
       )}
+
+      <ResourceEditorDialog
+        open={Boolean(editing)}
+        title={editing?.index === null ? "Create banner" : "Edit banner"}
+        description="Choose a managed image and optionally add a destination. Apply locally, then Save Draft."
+        dirty={Boolean(editing && JSON.stringify(editing.banner) !== JSON.stringify(
+          editing.index === null ? newBanner(items.length) : items[editing.index],
+        ))}
+        onClose={() => { setEditing(null); setBannerError(null); }}
+      >
+        {editing ? (
+          <Stack spacing={2}>
+            <BannerCardEditor
+              banner={editing.banner}
+              index={editing.index ?? items.length}
+              onChange={(next) => { setEditing((current) => current ? { ...current, banner: next } : null); setBannerError(null); }}
+            />
+            {bannerError ? <Alert severity="error">{bannerError}</Alert> : null}
+            <Button variant="contained" onClick={applyBanner} sx={{ alignSelf: "flex-end" }}>
+              {editing.index === null ? "Add to Draft" : "Apply changes"}
+            </Button>
+          </Stack>
+        ) : null}
+      </ResourceEditorDialog>
 
       <Paper
         elevation={3}
