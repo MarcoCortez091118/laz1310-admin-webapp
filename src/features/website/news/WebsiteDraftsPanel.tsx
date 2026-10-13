@@ -2,11 +2,12 @@ import {
   Alert, Box, Button, Chip, CircularProgress, Paper, Stack, Typography,
 } from "@mui/material";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { FilePenLine } from "lucide-react";
+import { Eye, FilePenLine } from "lucide-react";
 import { listWebsiteDrafts, type WebsiteNewsDraft, websiteDraftKeys } from "./draftsApi";
 
-export function WebsiteDraftsPanel({ onEdit }: {
+export function WebsiteDraftsPanel({ onEdit, onPreview }: {
   onEdit: (draft: WebsiteNewsDraft) => void;
+  onPreview: (slug: string) => void;
 }) {
   const drafts = useInfiniteQuery({
     queryKey: websiteDraftKeys,
@@ -51,10 +52,14 @@ export function WebsiteDraftsPanel({ onEdit }: {
                   ? "Imported from website" : "New article"}
               </Typography>
             </Box>
-            <Button variant="outlined" size="small" startIcon={<FilePenLine size={15} />}
-              sx={{ flexShrink: 0 }} onClick={() => onEdit(draft)}>
-              Continue editing
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" size="small" startIcon={<FilePenLine size={15} />}
+                onClick={() => onEdit(draft)}>Edit draft</Button>
+              <Button variant="contained" size="small" startIcon={<Eye size={15} />}
+                onClick={() => onPreview(draft.post.id)}>
+                Preview / Publish
+              </Button>
+            </Stack>
           </Stack>
         ))}
         {drafts.hasNextPage && (
