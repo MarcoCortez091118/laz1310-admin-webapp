@@ -1,5 +1,5 @@
-import { Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { FolderOpen, Search, Upload, X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { MediaAsset } from "../../api/types";
 import { MediaAssetGrid } from "./MediaAssetGrid";
 import { MediaUploadPanel } from "./MediaUploadPanel";
@@ -22,8 +22,10 @@ export function MediaPickerDialog({
   onSelect: (asset: MediaAsset) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogId = useId();
   const library = useMediaLibraryQuery();
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"upload" | "library">("library");
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -49,7 +51,7 @@ export function MediaPickerDialog({
 
   return (
     <dialog
-      aria-labelledby="media-picker-title"
+      aria-labelledby={`${dialogId}-title`}
       className="media-picker-dialog"
       onCancel={(event) => {
         event.preventDefault();
@@ -61,7 +63,7 @@ export function MediaPickerDialog({
         <header className="media-picker-header">
           <div>
             <p className="eyebrow">Media Library</p>
-            <h2 id="media-picker-title">{title}</h2>
+            <h2 id={`${dialogId}-title`}>{title}</h2>
             <p className="muted">{description}</p>
           </div>
           <button aria-label="Close media picker" className="icon-button" onClick={onClose} type="button">
@@ -70,9 +72,46 @@ export function MediaPickerDialog({
         </header>
 
         <div className="media-picker-body">
-          <MediaUploadPanel compact onUploaded={select} />
+          <div className="media-picker-tabs" role="tablist" aria-label="Image source">
+            <button
+              aria-controls={`${dialogId}-library-panel`}
+              aria-selected={activeTab === "library"}
+              className={activeTab === "library" ? "active" : ""}
+              id={`${dialogId}-library-tab`}
+              onClick={() => setActiveTab("library")}
+              role="tab"
+              type="button"
+            >
+              <FolderOpen size={17} /> Choose existing
+            </button>
+            <button
+              aria-controls={`${dialogId}-upload-panel`}
+              aria-selected={activeTab === "upload"}
+              className={activeTab === "upload" ? "active" : ""}
+              id={`${dialogId}-upload-tab`}
+              onClick={() => setActiveTab("upload")}
+              role="tab"
+              type="button"
+            >
+              <Upload size={17} /> Upload new
+            </button>
+          </div>
+          <div
+            id={`${dialogId}-upload-panel`}
+            role="tabpanel"
+            aria-labelledby={`${dialogId}-upload-tab`}
+            style={{ display: activeTab === "upload" ? "block" : "none" }}
+          >
+            <MediaUploadPanel compact onUploaded={select} />
+          </div>
 
-          <section className="media-picker-library">
+          <section
+            className="media-picker-library"
+            id={`${dialogId}-library-panel`}
+            role="tabpanel"
+            aria-labelledby={`${dialogId}-library-tab`}
+            style={{ display: activeTab === "library" ? "grid" : "none" }}
+          >
             <label className="media-search">
               <Search aria-hidden size={17} />
               <input

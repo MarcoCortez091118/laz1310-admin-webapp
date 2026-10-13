@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { ApiError } from "../../api/errors";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import type { Page, Station } from "../../api/types";
 import { adminQueryKeys, deletePage, putPage } from "../content/api";
 import { useDraftQuery, usePreviewQuery } from "../content/queries";
@@ -25,6 +26,7 @@ function PageEditor({
   onSaved,
   onDeleted,
   onReload,
+  onDirtyChange,
 }: {
   page: Page | null;
   pages: Page[];
@@ -38,6 +40,7 @@ function PageEditor({
   onSaved: (slug: string) => void;
   onDeleted: () => void;
   onReload: () => Promise<unknown>;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const existing = page !== null;
@@ -45,6 +48,11 @@ function PageEditor({
     page ?? { slug: "", title: "", blocks: [] },
   );
   const [previewMode, setPreviewMode] = useState<PreviewMode>("live");
+  const dirty = JSON.stringify(workingPage) !== JSON.stringify(page ?? { slug: "", title: "", blocks: [] });
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -277,6 +285,8 @@ export function PagesPage() {
   const draft = useDraftQuery();
   const preview = usePreviewQuery();
   const [selection, setSelection] = useState<string | "new" | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorDirty, setEditorDirty] = useState(false);
 
   const pages = useMemo(() => draft.data?.data.catalog?.pages ?? [], [draft.data]);
   const stations = useMemo(() => draft.data?.data.catalog?.stations ?? [], [draft.data]);
@@ -340,7 +350,7 @@ export function PagesPage() {
             Compose page blocks visually, preview locally, then persist to the Draft.
           </p>
         </div>
-        <button onClick={() => setSelection("new")} type="button">
+        <button onClick={() => { setEditorDirty(false); setSelection("new"); setEditorOpen(true); }} type="button">
           <Plus size={16} />
           New page
         </button>
@@ -360,7 +370,7 @@ export function PagesPage() {
                 <button
                   className={selection === page.slug ? "selected" : ""}
                   key={page.slug}
-                  onClick={() => setSelection(page.slug)}
+                  onClick={() => { setEditorDirty(false); setSelection(page.slug); setEditorOpen(true); }}
                   type="button"
                 >
                   <span>{page.title}</span>
@@ -374,35 +384,50 @@ export function PagesPage() {
           )}
         </aside>
 
+        <article className="panel empty-editor">
+          <p className="eyebrow">Pages · Modal editing</p>
+          <h2>{selected ? selected.title : "Create or edit a page"}</h2>
+          <p className="muted">
+            Click a page or New page to open its editor. Add content blocks, upload or
+            choose managed images, preview, and save to Draft without navigating away.
+          </p>
+          {selected ? (
+            <button type="button" onClick={() => { setEditorDirty(false); setEditorOpen(true); }}>
+              Edit page
+            </button>
+          ) : null}
+        </article>
+      </div>
+      <ResourceEditorDialog
+        open={editorOpen && (selection === "new" || Boolean(selected))}
+        title={selection === "new" ? "Create page" : `Edit ${selected?.title ?? "page"}`}
+        description="Edit blocks and artwork in one place. Save to Draft before publishing."
+        dirty={editorDirty}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditorDirty(false);
+          if (selection === "new") setSelection(null);
+        }}
+      >
         {selection === "new" || selected ? (
           <PageEditor
             etag={etag}
             key={`${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
-            onDeleted={() => setSelection(null)}
+            onDeleted={() => { setEditorDirty(false); setEditorOpen(false); setSelection(null); }}
+            onDirtyChange={setEditorDirty}
             onRefreshServerPreview={async () => preview.refetch()}
             onReload={async () => draft.refetch()}
-            onSaved={(savedSlug) => setSelection(savedSlug)}
+            onSaved={(savedSlug) => { setEditorDirty(false); setEditorOpen(false); setSelection(savedSlug); }}
             page={selection === "new" ? null : selected}
             pages={pages}
             serverPage={selection === "new" ? null : serverSelected}
-            serverPreviewError={
-              preview.error instanceof Error ? preview.error : null
-            }
+            serverPreviewError={preview.error instanceof Error ? preview.error : null}
             serverPreviewPending={preview.isPending || preview.isFetching}
             serverRevision={preview.data?.data.revision}
             stations={stations}
           />
-        ) : (
-          <article className="panel empty-editor">
-            <p className="eyebrow">Pages</p>
-            <h2>Select a page or create a new one.</h2>
-            <p className="muted">
-              Changes remain local until Save. Saving updates only the Draft; Mobile and
-              Web remain on the current immutable release.
-            </p>
-          </article>
-        )}
-      </div>
+        ) : null}
+      </ResourceEditorDialog>
     </section>
   );
 }

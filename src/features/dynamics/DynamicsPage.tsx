@@ -18,6 +18,7 @@ import {
 import { Clock3, Plus, Search, Sparkles, Trash2, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import type { DynamicPublicationState } from "./api";
 import { DynamicEditor } from "./DynamicEditor";
 import { DynamicsTrashDialog } from "./DynamicsTrashDialog";
@@ -101,6 +102,8 @@ export function DynamicsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LifecycleFilter>("all");
   const [trashOpen, setTrashOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorDirty, setEditorDirty] = useState(false);
   const isAdmin = staff.roles?.includes("admin") ?? false;
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
@@ -208,8 +211,10 @@ export function DynamicsPage() {
               startIcon={<Plus size={17} />}
               disabled={dynamics.length >= 100}
               onClick={() => {
+                setEditorDirty(false);
                 setSelection("new");
                 setTab("editor");
+                setEditorOpen(true);
               }}
             >
               New campaign
@@ -289,8 +294,10 @@ export function DynamicsPage() {
                   >
                     <CardActionArea
                       onClick={() => {
+                        setEditorDirty(false);
                         setSelection(dynamic.id ?? null);
                         setTab("editor");
+                        setEditorOpen(true);
                       }}
                     >
                       <Box className="dynamics-mui-campaign-image">
@@ -332,18 +339,7 @@ export function DynamicsPage() {
           </Paper>
 
           <Box className="dynamics-mui-detail">
-            {selection === "new" ? (
-              <DynamicEditor
-                allDynamics={dynamics}
-                dynamic={null}
-                etag={etag}
-                isAdmin={isAdmin}
-                key={`new-${etag}`}
-                onDeleted={() => setSelection(null)}
-                onSaved={(dynamicId) => setSelection(dynamicId)}
-                publicationStatus={null}
-              />
-            ) : selected ? (
+            {selected ? (
               <>
                 <Paper variant="outlined" sx={{ mb: 1.5, px: 1 }}>
                   <Tabs
@@ -356,16 +352,16 @@ export function DynamicsPage() {
                   </Tabs>
                 </Paper>
                 {tab === "editor" ? (
-                  <DynamicEditor
-                    allDynamics={dynamics}
-                    dynamic={selected}
-                    etag={etag}
-                    isAdmin={isAdmin}
-                    key={`${selected.id}-${etag}`}
-                    onDeleted={() => setSelection(null)}
-                    onSaved={(dynamicId) => setSelection(dynamicId)}
-                    publicationStatus={publicationState(selected.id)}
-                  />
+                  <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+                    <Typography variant="h6" fontWeight={800}>{selected.title}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
+                      Edit artwork, dates, entry rules and content in a focused dialog. Saving
+                      updates Draft; publishing remains a separate administrator action.
+                    </Typography>
+                    <Button variant="contained" onClick={() => { setEditorDirty(false); setEditorOpen(true); }}>
+                      Edit campaign
+                    </Button>
+                  </Paper>
                 ) : (
                   <ParticipantsPanel
                     active={tab === "participants"}
@@ -382,14 +378,40 @@ export function DynamicsPage() {
                 <Box className="dynamics-mui-detail-empty-icon"><Sparkles size={28} /></Box>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Select a campaign</Typography>
                 <Typography color="text.secondary" textAlign="center" sx={{ maxWidth: 500 }}>
-                  Choose an existing campaign or create a new one. Save it to Draft first;
-                  administrators can publish that campaign independently from its editor.
+                  Create or edit a campaign in a dialog. Save it to Draft first;
+                  administrators can publish independently.
                 </Typography>
               </Paper>
             )}
           </Box>
         </Box>
       </Stack>
+
+      <ResourceEditorDialog
+        open={editorOpen && (selection === "new" || Boolean(selected))}
+        title={selection === "new" ? "Create campaign" : `Edit ${selected?.title ?? "campaign"}`}
+        description="Set up promotional artwork and participation details; only saved and published content appears in Mobile."
+        dirty={editorDirty}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditorDirty(false);
+          if (selection === "new") setSelection(null);
+        }}
+      >
+        {selection === "new" || selected ? (
+          <DynamicEditor
+            allDynamics={dynamics}
+            dynamic={selection === "new" ? null : selected}
+            etag={etag}
+            isAdmin={isAdmin}
+            key={`${selection}-${etag}`}
+            onDeleted={() => { setEditorDirty(false); setEditorOpen(false); setSelection(null); }}
+            onDirtyChange={setEditorDirty}
+            onSaved={(dynamicId) => { setEditorDirty(false); setEditorOpen(false); setSelection(dynamicId); }}
+            publicationStatus={selected ? publicationState(selected.id) : null}
+          />
+        ) : null}
+      </ResourceEditorDialog>
 
       <DynamicsTrashDialog
         open={trashOpen}

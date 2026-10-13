@@ -24,7 +24,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
@@ -83,6 +83,7 @@ export function ProgramEditor({
   onSaved,
   onDeleted,
   onReload,
+  onDirtyChange,
 }: {
   station: Station;
   program: Program | null;
@@ -92,6 +93,7 @@ export function ProgramEditor({
   onSaved: (programId: string) => void;
   onDeleted: () => void;
   onReload: () => Promise<unknown>;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const existing = program !== null;
@@ -102,6 +104,10 @@ export function ProgramEditor({
   );
   const [slugTouched, setSlugTouched] = useState(existing);
   const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const save = useMutation({
     mutationFn: async () => {

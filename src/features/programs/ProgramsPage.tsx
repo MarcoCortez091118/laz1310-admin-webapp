@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Station } from "../../api/types";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import { useStaff } from "../auth/StaffGate";
 import { useDraftQuery } from "../content/queries";
 import type { ProgramPublicationState } from "./api";
@@ -114,6 +115,7 @@ export function ProgramsPage() {
   const [status, setStatus] = useState<ProgramStatus>("all");
   const [view, setView] = useState<ProgramsView>("catalog");
   const [trashOpen, setTrashOpen] = useState(false);
+  const [editorDirty, setEditorDirty] = useState(false);
 
   useEffect(() => {
     const firstStationId = stations[0]?.id;
@@ -286,6 +288,7 @@ export function ProgramsPage() {
               startIcon={<Plus size={17} />}
               variant="contained"
               onClick={() => {
+                setEditorDirty(false);
                 setSelection("new");
                 setView("catalog");
               }}
@@ -406,6 +409,7 @@ export function ProgramsPage() {
                           <CardActionArea
                             onClick={() => {
                               if (show) {
+                                setEditorDirty(false);
                                 setSelection(show.id);
                                 setView("catalog");
                               }
@@ -458,7 +462,7 @@ export function ProgramsPage() {
                     className={selection === program.id ? "program-mui-card selected" : "program-mui-card"}
                     variant="outlined"
                   >
-                    <CardActionArea onClick={() => setSelection(program.id)}>
+                    <CardActionArea onClick={() => { setEditorDirty(false); setSelection(program.id); }}>
                       <Box className="program-mui-art-wrap">
                         {program.imageUrl ? (
                           <CardMedia component="img" height="130" image={program.imageUrl} alt="" />
@@ -516,33 +520,32 @@ export function ProgramsPage() {
               )}
             </Box>
 
-            <Box minWidth={0}>
-              {selection === "new" || selected ? (
-                <ProgramEditor
-                  etag={etag}
-                  isAdmin={isAdmin}
-                  key={`${station.id ?? "station"}-${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
-                  onDeleted={() => setSelection(null)}
-                  onReload={async () => draft.refetch()}
-                  onSaved={(programId) => setSelection(programId)}
-                  program={selection === "new" ? null : selected}
-                  publicationStatus={selected ? programPublication(selected.id) : null}
-                  station={station}
-                />
-              ) : (
-                <Paper className="program-empty-state editor" elevation={0}>
-                  <ListMusic size={28} />
-                  <Typography variant="h6" fontWeight={800}>Select a program to edit</Typography>
-                  <Typography color="text.secondary" textAlign="center" maxWidth={520}>
-                    Save to Draft, then publish that Program independently. Mobile only reads the
-                    immutable published release.
-                  </Typography>
-                </Paper>
-              )}
-            </Box>
           </Box>
         )}
       </Stack>
+
+      <ResourceEditorDialog
+        open={selection === "new" || Boolean(selected)}
+        title={selection === "new" ? "Create program" : `Edit ${selected?.name ?? "program"}`}
+        description="Add artwork and program details without leaving the catalog. Save to Draft before publishing."
+        dirty={editorDirty}
+        onClose={() => { setEditorDirty(false); setSelection(null); }}
+      >
+        {selection === "new" || selected ? (
+          <ProgramEditor
+            etag={etag}
+            isAdmin={isAdmin}
+            key={`${station.id ?? "station"}-${selection ?? "none"}-${draft.data.data.revision ?? 0}`}
+            onDeleted={() => { setEditorDirty(false); setSelection(null); }}
+            onReload={async () => draft.refetch()}
+            onDirtyChange={setEditorDirty}
+            onSaved={() => { setEditorDirty(false); setSelection(null); }}
+            program={selection === "new" ? null : selected}
+            publicationStatus={selected ? programPublication(selected.id) : null}
+            station={station}
+          />
+        ) : null}
+      </ResourceEditorDialog>
 
       <ProgramsTrashDialog
         etag={etag}

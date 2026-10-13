@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, X } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApiError } from "../../api/errors";
 import type { Dynamic } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
@@ -47,6 +47,7 @@ interface DynamicEditorProps {
   publicationStatus: DynamicPublicationState | null;
   onDeleted: () => void;
   onSaved: (dynamicId: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function publicationLabel(status: DynamicPublicationState | null): string {
@@ -93,6 +94,7 @@ export function DynamicEditor({
   publicationStatus,
   onDeleted,
   onSaved,
+  onDirtyChange,
 }: DynamicEditorProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<DynamicFormState>(() =>
@@ -100,6 +102,10 @@ export function DynamicEditor({
   );
   const [clientError, setClientError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
   const originalId = dynamic?.id;
 
   const saveMutation = useMutation({

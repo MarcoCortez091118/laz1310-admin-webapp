@@ -568,3 +568,45 @@
     padding: 12px;
   }
 }
+
+/* Focused media picker: a single workflow is visible at a time. */
+.media-picker-body {
+  display: block;
+}
+.media-picker-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 5px;
+  border-radius: 13px;
+  background: #e9e9ed;
+}
+.media-picker-tabs button {
+  flex: 1;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 11px;
+  border: 0;
+  border-radius: 10px;
+  color: #51525c;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+.media-picker-tabs button.active {
+  color: #2f0908;
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(16 24 40 / 0.09);
+}
+.media-picker-tabs button:focus-visible {
+  outline: 2px solid #d30a12;
+  outline-offset: 2px;
+}
+.media-picker-body .media-picker-library {
+  width: 100%;
+}
+@media (max-width: 560px) {
+  .media-picker-tabs button { font-size: 13px; }
+}

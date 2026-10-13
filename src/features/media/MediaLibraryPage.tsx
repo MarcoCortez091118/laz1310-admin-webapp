@@ -1,6 +1,7 @@
-import { Database, Image as ImageIcon, Search, ShieldCheck } from "lucide-react";
+import { Database, Image as ImageIcon, Search, ShieldCheck, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
+import { ResourceEditorDialog } from "../../components/ResourceEditorDialog";
 import type { MediaAsset } from "../../api/types";
 import { MediaAssetGrid } from "./MediaAssetGrid";
 import { MediaUploadPanel } from "./MediaUploadPanel";
@@ -11,6 +12,8 @@ export function MediaLibraryPage() {
   const library = useMediaLibraryQuery();
   const [search, setSearch] = useState("");
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadDirty, setUploadDirty] = useState(false);
 
   const assets = useMemo(
     () => library.data?.pages.flatMap((page) => page.data) ?? [],
@@ -48,12 +51,17 @@ export function MediaLibraryPage() {
             Managed editorial images processed by FastAPI and stored in the configured Google Cloud Storage bucket.
           </p>
         </div>
-        <div className="media-policy-badge">
-          <ShieldCheck size={17} />
-          <span>
-            <strong>Sanitized pipeline</strong>
-            <small>WebP · EXIF removed · immutable asset ID</small>
-          </span>
+        <div style={{ display: "grid", gap: 10 }}>
+          <button type="button" onClick={() => { setUploadDirty(false); setUploadOpen(true); }}>
+            <Upload size={17} /> Upload image
+          </button>
+          <div className="media-policy-badge">
+            <ShieldCheck size={17} />
+            <span>
+              <strong>Sanitized pipeline</strong>
+              <small>WebP · EXIF removed · immutable asset ID</small>
+            </span>
+          </div>
         </div>
       </header>
 
@@ -73,7 +81,20 @@ export function MediaLibraryPage() {
         </article>
       </div>
 
-      <MediaUploadPanel />
+      <ResourceEditorDialog
+        open={uploadOpen}
+        title="Upload an image"
+        description="Upload once to the managed library, then reuse the asset in Banners, Programs and Dynamics."
+        dirty={uploadDirty}
+        onClose={() => { setUploadOpen(false); setUploadDirty(false); }}
+      >
+        {uploadOpen ? (
+          <MediaUploadPanel
+            onDirtyChange={setUploadDirty}
+            onUploaded={() => { setUploadDirty(false); setUploadOpen(false); }}
+          />
+        ) : null}
+      </ResourceEditorDialog>
 
       <section className="panel media-library-panel">
         <div className="media-library-heading">
