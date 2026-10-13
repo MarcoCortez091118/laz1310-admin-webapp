@@ -43,7 +43,7 @@ export function PromotionArtworkField({ url, onChange, title }: {
             onChange={(event) => { void onFile(event); }} />
         </Button>
         <Button onClick={() => setShowLibrary(value => !value)}>
-          {showLibrary ? "Hide library" : "Choose existing poster"}
+          {showLibrary ? "Hide library" : "Choose existing artwork"}
         </Button>
       </Stack>
       {uploading && <CircularProgress size={20} />}
@@ -63,7 +63,7 @@ export function PromotionArtworkField({ url, onChange, title }: {
       {url && <Box component="img" alt={title || "Promotion artwork preview"} src={url}
         sx={{ maxWidth: 170, aspectRatio: "1", objectFit: "cover", borderRadius: 2 }} />}
       <Typography variant="caption" color="text.secondary">
-        Files are uploaded via FastAPI to Website-only storage. Uploading does not publish a show.
+        Files are uploaded via FastAPI to Website-only storage. Uploading does not publish a promotion.
       </Typography>
     </Stack>
   );
