@@ -253,7 +253,7 @@ export function WebsiteTicketPromotionsPage() {
                   <Box sx={{ flex: 1 }}>
                     <Typography fontWeight={800}>{show.content.eventName}</Typography>
                     <Typography color="text.secondary" variant="caption">
-                      {show.content.actionType} · {show.objectPath}
+                      {show.content.actionType} · {show.id}
                     </Typography>
                   </Box>
                   <Button disabled={busy} onClick={() => void execute(
