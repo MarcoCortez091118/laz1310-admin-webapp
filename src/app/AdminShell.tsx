@@ -30,7 +30,7 @@ import {
   Menu as MenuIcon,
   Search,
 } from "lucide-react";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import {
   visibleNavigationGroups,
   workspaceDashboard,
@@ -80,6 +80,11 @@ export function AdminShell() {
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
   const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch);
+
+  // Also reset sidebar search on browser Back/Forward and direct link navigation.
+  useEffect(() => {
+    setNavigationSearch("");
+  }, [workspace]);
 
   function changeWorkspace(next: AdminWorkspace) {
     if (next === workspace) return;
