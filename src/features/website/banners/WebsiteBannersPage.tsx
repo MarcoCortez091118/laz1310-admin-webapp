@@ -126,7 +126,7 @@ export function WebsiteBannersPage() {
   }
 
   const importMutation = useMutation({
-    mutationFn: importLegacyBanners,
+    mutationFn: () => importLegacyBanners(legacy.data?.fingerprint ?? ""),
     onSuccess: reload,
   });
   const saveMutation = useMutation({
@@ -201,10 +201,13 @@ export function WebsiteBannersPage() {
             <Alert key={warning} severity="warning">{warning}</Alert>
           ))}
           {legacyRequiresImport && (
-            <Alert severity="warning" action={<Button disabled={busy}
-              onClick={() => importMutation.mutate()}>Import existing</Button>}>
+            <Alert severity="warning" action={<Button disabled={busy || !isAdmin ||
+              !legacy.data?.fingerprint}
+              onClick={() => importMutation.mutate()}>Review &amp; import</Button>}>
               Existing banners were detected in settings/banners. Import them
               before making editorial changes; their original document will not be modified.
+              {legacy.data?.fingerprint ? ` Fingerprint: ${legacy.data.fingerprint.slice(0, 12)}…` : ""}
+              {!isAdmin ? " Only administrators can approve this import." : ""}
             </Alert>
           )}
           {!legacyRequiresImport && !draft.data && (
