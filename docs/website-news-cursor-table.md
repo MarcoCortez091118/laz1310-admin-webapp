@@ -10,11 +10,12 @@ The original News/Blog directory appended each fetched page to a long continuous
 
 - One compact page of editorial articles at a time, using the actual FastAPI `GET /api/v1/admin/website/posts?limit=N&after=<opaque>` contract.
 - `N` is 10, 20 or 50. The default remains 20; changing page size creates a separate TanStack Query cache entry and resets to page 1.
-- **Next:** moves immediately when the next page is cached; otherwise calls the API using `nextCursor`. On failure, stays on the current page and shows Retry.
+- **Next:** moves immediately when the next page is cached; otherwise calls the API using `nextCursor`. On failure, stays on the current page; Retry also advances after successfully fetching the missing page.
 - **Previous:** navigates only previously loaded pages without requesting another page.
 - **Last page:** Next disabled when there is no cursor and no cached next page.
 - Total count remains *unknown*. Page N, loaded article count and currently visible rows are accurate; never fabricate a Firestore-wide total or numbered arbitrary page navigation.
-- Search/title/category/source/slug filtering applies **only to the current loaded page** and resets on navigation and rows-per-page changes. No server-side search contract has been introduced.
+- Search/title/category/source/slug filtering is accent-insensitive and applies **only to the current loaded page** and resets on navigation and rows-per-page changes. No server-side search contract has been introduced.
+- Refresh resets the cached cursor chain and reloads from page 1 instead of refetching every previously opened page. Changing page size is disabled while page navigation is fetching. Page transitions scroll to the table header so operators do not have to locate new rows manually.
 - Multi-select columns for Category, Date, Source and Article ID. Article preview and title are always shown. Legacy IDs are tooltip-truncated by default, preserving values.
 - Read-only preview dialog retains plain-text body; source links are restricted to HTTP(S). No HTML injection or editorial write permissions.
 
