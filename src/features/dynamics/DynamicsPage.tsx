@@ -25,6 +25,8 @@ import { lifecycle, type DynamicLifecycle } from "./model";
 import { ParticipantsPanel } from "./ParticipantsPanel";
 import { useDynamicPublicationStatusQuery, useDynamicsQuery } from "./queries";
 import "./dynamics.css";
+import "../app-ui/native-editorial.css";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
 
 type Selection = string | "new" | null;
 type DetailTab = "editor" | "participants";
@@ -266,7 +268,7 @@ export function DynamicsPage() {
           </Stack>
         </Paper>
 
-        <Box className="dynamics-mui-layout">
+        <Box className="dynamics-mui-layout app-native-page">
           <Paper variant="outlined" className="dynamics-mui-catalog">
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
               <Box>
@@ -294,7 +296,9 @@ export function DynamicsPage() {
                       }}
                     >
                       <Box className="dynamics-mui-campaign-image">
-                        <img alt={dynamic.artworkLabel || dynamic.title || "Campaign"} referrerPolicy="no-referrer" src={dynamic.imageUrl} />
+                        <NativeArtworkPreview src={dynamic.imageUrl}
+                          alt={dynamic.artworkLabel || dynamic.title || "Campaign"}
+                          shape="square" maxHeight={230}/>
                         <Stack direction="row" spacing={0.6} className="dynamics-mui-campaign-badges">
                           <Chip label={current} color={lifecycleColor[current]} size="small" />
                           <Chip
