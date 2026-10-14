@@ -9,6 +9,7 @@ import {
   Skeleton,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -84,6 +85,16 @@ function MetricCard({ icon: Icon, label, value, detail, loading = false }: Metri
 }
 
 export function DashboardPage() {
+  const theme = useTheme();
+  const chartText = theme.palette.text.secondary;
+  const chartBorder = theme.palette.divider;
+  const tooltipStyle = {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${chartBorder}`,
+    borderRadius: 12,
+    boxShadow: "0 14px 32px rgba(0,0,0,.15)",
+  };
   const staff = useStaff();
   const draft = useDraftQuery();
   const publicState = usePublicStateQuery();
@@ -117,7 +128,7 @@ export function DashboardPage() {
   }
 
   const campaignData = Object.entries(campaignState).map(([name, value]) => ({ name, value }));
-  const campaignColors = ["#D30A12", "#F79009", "#98A2B3", "#2F0908"];
+  const campaignColors = ["#2BC4A4", "#6397F8", "#FFBC66", "#F14C52"];
   const draftRevision = draft.data?.data.revision ?? 0;
   const publishedRevision = publicState.data?.data.revision ?? 0;
   const revisionGap = Math.max(0, draftRevision - publishedRevision);
@@ -213,12 +224,12 @@ export function DashboardPage() {
             <Box sx={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={inventoryData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid stroke="#EEF1F5" strokeDasharray="4 4" vertical={false} />
-                  <XAxis axisLine={false} dataKey="name" tick={{ fill: "#667085", fontSize: 12 }} tickLine={false} />
-                  <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "#98A2B3", fontSize: 11 }} tickLine={false} />
+                  <CartesianGrid stroke={chartBorder} strokeDasharray="4 4" vertical={false} />
+                  <XAxis axisLine={false} dataKey="name" tick={{ fill: chartText, fontSize: 12 }} tickLine={false} />
+                  <YAxis allowDecimals={false} axisLine={false} tick={{ fill: chartText, fontSize: 11 }} tickLine={false} />
                   <ChartTooltip
-                    contentStyle={{ border: "1px solid #E6EAF0", borderRadius: 10, boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}
-                    cursor={{ fill: "rgba(211, 10, 18, 0.04)" }}
+                    contentStyle={tooltipStyle}
+                    cursor={{ fill: theme.palette.action.hover }}
                   />
                   <Bar dataKey="value" fill="#D30A12" radius={[7, 7, 0, 0]} maxBarSize={56} />
                 </BarChart>
@@ -255,7 +266,7 @@ export function DashboardPage() {
                         ))}
                       </Pie>
                       <ChartTooltip
-                        contentStyle={{ border: "1px solid #E6EAF0", borderRadius: 10 }}
+                        contentStyle={tooltipStyle}
                       />
                     </PieChart>
                   </ResponsiveContainer>
