@@ -305,7 +305,8 @@ export function WebsiteShowsPage() {
           <Box sx={{
             display: "grid", gap: 2, minWidth: 0,
             gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))",
-              xl: "repeat(3,minmax(0,1fr))" },
+              md: "repeat(3,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))",
+              xl: "repeat(5,minmax(0,1fr))" },
           }}>
           {visibleShows.items.map(draft => (
             <ShowCard key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
