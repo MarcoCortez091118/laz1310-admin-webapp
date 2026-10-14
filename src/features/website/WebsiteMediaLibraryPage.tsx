@@ -2,9 +2,8 @@ import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Card, CardCo
 import { ChevronDown, FolderOpen, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { WebsiteArtworkField } from "../media/WebsiteArtworkField";
-import {
-  WebsiteMediaBrowser, websiteMediaFolders, type WebsiteMediaFolder,
-} from "../media/WebsiteMediaBrowser";
+import { WebsiteMediaBrowser } from "../media/WebsiteMediaBrowser";
+import { websiteMediaFolders, type WebsiteMediaFolder } from "../media/websiteMediaCatalog";
 
 /** Website media collections are backed by separate, existing FastAPI routes. */
 export function WebsiteMediaLibraryPage() {
