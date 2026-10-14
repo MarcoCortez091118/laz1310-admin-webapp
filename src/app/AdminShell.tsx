@@ -40,35 +40,11 @@ import {
   type AdminWorkspace,
 } from "./navigation";
 import { useStaff } from "../features/auth/StaffGate";
-import { useDraftQuery, usePublicStateQuery } from "../features/content/queries";
 import { auth } from "../lib/firebase";
 import { useAppearance } from "./appearance";
 
 const DRAWER_WIDTH = 256;
 
-
-function shortRelease(value: string | null | undefined): string {
-  return value ? value.slice(0, 8) : "Unpublished";
-}
-
-function AppReleaseStatus() {
-  const draft = useDraftQuery();
-  const publicState = usePublicStateQuery();
-  return (
-    <Stack direction="row" spacing={1} alignItems="center" className="topbar-state-chips">
-      <Chip
-        label={`Draft ${draft.data?.data.revision ?? "…"}`}
-        size="small"
-        sx={{ bgcolor: "action.hover", color: "text.primary" }}
-      />
-      <Chip
-        label={`Published ${shortRelease(publicState.data?.data.releaseId)}`}
-        size="small"
-        variant="outlined"
-      />
-    </Stack>
-  );
-}
 
 export function AdminShell() {
   const staff = useStaff();
@@ -250,7 +226,8 @@ export function AdminShell() {
 
           {workspace === "app" ? (
             <>
-              <AppReleaseStatus />
+              <Chip size="small" label="Android / iOS" variant="outlined"
+                sx={{ display: { xs: "none", md: "inline-flex" } }} />
               <Tooltip title="App notifications">
                 <Link to="/notifications" style={{ display: "inline-flex" }}>
                   <IconButton aria-label="App notifications" color="inherit">
