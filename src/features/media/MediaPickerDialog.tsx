@@ -7,6 +7,7 @@ import { MediaAssetGrid } from "./MediaAssetGrid";
 import { MediaUploadPanel } from "./MediaUploadPanel";
 import { useMediaLibraryQuery } from "./queries";
 import "./media.css";
+import "./editorial-gallery.css";
 
 export function MediaPickerDialog({
   open,
