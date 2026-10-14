@@ -7,12 +7,11 @@ import {
   Chip,
   CircularProgress,
   InputAdornment,
+  MenuItem,
   Paper,
   Pagination,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import {
@@ -210,20 +209,20 @@ export function NotificationsPage() {
                 onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment> }}
               />
-              <ToggleButtonGroup
-                className="notifications-status-filter"
-                exclusive
-                size="small"
-                value={status}
-                onChange={(_event, value: StatusFilter | null) => { if (value) { setStatus(value); setPage(1); } }}
+              <TextField select size="small" label="Campaign status" value={status}
+                onChange={event => {
+                  setStatus(event.target.value as StatusFilter);
+                  setPage(1);
+                }}
+                fullWidth
               >
-                <ToggleButton value="all">All</ToggleButton>
-                <ToggleButton value="draft">Draft</ToggleButton>
-                <ToggleButton value="queued">Queued</ToggleButton>
-                <ToggleButton value="sending">Sending</ToggleButton>
-                <ToggleButton value="sent">Sent</ToggleButton>
-                <ToggleButton value="issues">Issues</ToggleButton>
-              </ToggleButtonGroup>
+                <MenuItem value="all">All campaigns</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+                <MenuItem value="queued">Queued</MenuItem>
+                <MenuItem value="sending">Sending</MenuItem>
+                <MenuItem value="sent">Sent</MenuItem>
+                <MenuItem value="issues">Needs attention</MenuItem>
+              </TextField>
             </Stack>
           </Paper>
 
