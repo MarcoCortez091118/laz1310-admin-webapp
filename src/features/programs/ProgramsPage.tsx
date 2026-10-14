@@ -5,7 +5,6 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CardMedia,
   Chip,
   FormControl,
   InputAdornment,
@@ -45,6 +44,8 @@ import {
 import { ProgramsTrashDialog } from "./ProgramsTrashDialog";
 import { useProgramPublicationStatusQuery } from "./queries";
 import "./programs.css";
+import "../app-ui/native-editorial.css";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
 
 type ProgramStatus = "all" | "active" | "inactive";
 type ProgramsView = "catalog" | "schedule";
@@ -447,7 +448,7 @@ export function ProgramsPage() {
             </Box>
           </Paper>
         ) : (
-          <Box className="programs-mui-layout">
+          <Box className="programs-mui-layout app-native-page">
             <Box className="programs-mui-list" aria-label="Programs catalog">
               {programs.length ? programs.map((program) => {
                 const active = program.isActive ?? true;
@@ -459,18 +460,12 @@ export function ProgramsPage() {
                     variant="outlined"
                   >
                     <CardActionArea onClick={() => setSelection(program.id)}>
-                      <Box className="program-mui-art-wrap">
-                        {program.imageUrl ? (
-                          <CardMedia component="img" height="130" image={program.imageUrl} alt="" />
-                        ) : (
-                          <Box className="program-mui-placeholder">LA Z</Box>
-                        )}
-                        <Chip
-                          className="program-mui-status-chip"
+                      <Box className="program-mui-art-wrap" sx={{ position: "relative" }}>
+                        <NativeArtworkPreview src={program.imageUrl}
+                          alt={`Artwork for ${program.name}`} shape="square" maxHeight={230}/>
+                        <Chip className="program-mui-status-chip"
                           color={publicationColor(publication)}
-                          label={publicationLabel(publication)}
-                          size="small"
-                        />
+                          label={publicationLabel(publication)} size="small"/>
                       </Box>
                       <CardContent sx={{ p: 1.75 }}>
                         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
