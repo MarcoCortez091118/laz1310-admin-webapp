@@ -1,4 +1,4 @@
-import { ChevronDown, FolderOpen, Image as ImageIcon, Search, ShieldCheck } from "lucide-react";
+import { ChevronDown, FolderOpen, Search, ShieldCheck } from "lucide-react";
 import { Accordion, AccordionDetails, AccordionSummary } from "@mui/material";
 import { useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
