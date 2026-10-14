@@ -8,6 +8,7 @@ import {
   Globe,
   Image,
   LayoutDashboard,
+  Images,
   Activity,
   Palette,
   Radio,
@@ -21,7 +22,7 @@ export type AdminWorkspace = "website" | "app";
 
 export type NavigationPath =
   | "/" | "/website" | "/website/news" | "/website/banners"
-  | "/website/shows" | "/website/ticket-promotions"
+  | "/website/shows" | "/website/ticket-promotions" | "/website/media"
   | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
   | "/dynamics" | "/notifications" | "/users" | "/weather"
   | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring";
@@ -69,6 +70,7 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
         { label: "Website Banners", to: "/website/banners", icon: Image, adminOnly: false },
         { label: "Website Shows", to: "/website/shows", icon: Radio, adminOnly: false },
         { label: "Ticket Promotions", to: "/website/ticket-promotions", icon: Image, adminOnly: false },
+        { label: "Media Library", to: "/website/media", icon: Images, adminOnly: false },
       ],
     },
   ],
