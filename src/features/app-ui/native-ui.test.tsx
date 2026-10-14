@@ -11,7 +11,7 @@ describe("native Android/iOS editorial visual primitives", () => {
     expect(html).toContain('alt="LA Z Detroit carousel"');
     expect(html).toContain("object-fit:contain");
     expect(html).toContain("overflow:hidden");
-    expect(html).toContain("3 / 1");
+    expect(html).toMatch(/aspect-ratio:\s*3\s*\/\s*1/);
   });
 
   it("keeps tall artwork inside a finite poster box without cropping", () => {
