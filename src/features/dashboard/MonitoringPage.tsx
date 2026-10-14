@@ -13,6 +13,14 @@ function timestamp(value: string | null | undefined) {
 /** Operational release diagnostics. Never presented as business intelligence. */
 export function MonitoringPage() {
   const staff = useStaff();
+  if (!staff.roles.includes("admin")) {
+    return <Box className="modern-page"><Alert severity="warning">
+      Monitoring is restricted to administrators.</Alert></Box>;
+  }
+  return <MonitoringContent />;
+}
+
+function MonitoringContent() {
   const draft = useDraftQuery();
   const published = usePublicStateQuery();
   const data = draft.data?.data;
@@ -21,11 +29,6 @@ export function MonitoringPage() {
   const pending = draft.isPending || published.isPending;
   const versionGap = !hasError && data && release
     ? Math.max(0, data.revision - release.revision) : null;
-
-  if (!staff.roles.includes("admin")) {
-    return <Box className="modern-page"><Alert severity="warning">
-      Monitoring is restricted to administrators.</Alert></Box>;
-  }
 
   return <Box component="section" className="modern-page">
     <Stack spacing={2.25}>
