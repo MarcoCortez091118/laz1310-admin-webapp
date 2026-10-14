@@ -206,3 +206,14 @@
   background: var(--admin-raised,#202126);
   overflow: hidden;
 }
+
+/* Wizard workspaces occupy the complete editor width while each stage is active. */
+.app-native-page .program-editor-mui-workbench { grid-template-columns: minmax(0,1fr); }
+.app-native-page .program-mobile-preview-mui { width: min(100%, 760px); margin-inline: auto; }
+.app-native-page .dynamics-editor-hero { min-width: 0; overflow: hidden; }
+.app-native-page .program-editor-sticky-actions {
+  background: var(--admin-panel, #17181b);
+  border-color: var(--admin-border, #303238);
+  flex-wrap: wrap;
+  gap: 12px;
+}
