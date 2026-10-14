@@ -101,9 +101,9 @@ export function WebsiteDashboardPage() {
   ];
 
   const inventory = [
-    { name: "News", count: news.data?.items.length ?? 0, ready: Boolean(news.data) },
-    { name: "Shows", count: shows.data?.items.length ?? 0, ready: Boolean(shows.data) },
-    { name: "Promotions", count: promotions.data?.items.length ?? 0, ready: Boolean(promotions.data) },
+    { name: "News", count: news.data?.items.length ?? null, ready: Boolean(news.data) },
+    { name: "Shows", count: shows.data?.items.length ?? null, ready: Boolean(shows.data) },
+    { name: "Promotions", count: promotions.data?.items.length ?? null, ready: Boolean(promotions.data) },
   ];
   const hasAnyError = news.isError || shows.isError || promotions.isError || banners.isError;
   const chartText = theme.palette.text.secondary;
@@ -214,8 +214,7 @@ export function WebsiteDashboardPage() {
               </Box>
               {inventory.some(x => !x.ready) && <Typography fontSize={11.5}
                 color="text.secondary" mt={1}>
-                An unavailable module appears as 0 on the chart; use the cards above to
-                distinguish unavailable from an actual empty result.
+                Unavailable modules are omitted from the chart rather than reported as zero.
               </Typography>}
             </CardContent>
           </Card>
