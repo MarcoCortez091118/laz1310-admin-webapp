@@ -1,5 +1,6 @@
 /* Five-card editorial gallery on wide desktops, scaling down without clipped artwork. */
 .media-grid,
+.media-picker-library .media-grid,
 .editorial-five-grid {
   display: grid;
   min-width: 0;
@@ -7,7 +8,7 @@
   gap: 14px;
 }
 @media (min-width: 620px) {
-  .media-grid, .editorial-five-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .media-grid, .media-picker-library .media-grid, .editorial-five-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 940px) {
   .media-grid, .editorial-five-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
