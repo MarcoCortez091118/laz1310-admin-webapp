@@ -5,7 +5,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
-  ArrowUpRight, FileClock, Globe, Image, Newspaper, Radio, RefreshCw, Ticket,
+  ArrowUpRight, FileClock, FolderOpen, Globe, Image, Newspaper, Radio, RefreshCw, Ticket,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer,
@@ -32,6 +32,10 @@ const sections = [
   {
     label: "Ticket Promotions", to: "/website/ticket-promotions" as const, icon: Ticket,
     description: "Review promotions, destinations and participation actions.",
+  },
+  {
+    label: "Website Media Library", to: "/website/media" as const, icon: FolderOpen,
+    description: "Find artwork by Website Banners, Shows and Promotions folders.",
   },
 ];
 

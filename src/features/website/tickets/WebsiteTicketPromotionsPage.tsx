@@ -1,9 +1,9 @@
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography,
+  DialogTitle, Divider, IconButton, InputAdornment, Menu, MenuItem, Pagination, Paper, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Rocket, Trash2, Undo2 } from "lucide-react";
+import { MoreVertical, Plus, RefreshCw, Search, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
@@ -12,6 +12,10 @@ import {
   promotionKeys, promotionPublication, type LegacyPromotion, type PromotionContent, type PromotionDraft,
 } from "./api";
 import { PromotionArtworkField } from "./PromotionArtworkField";
+import { ArtworkPreview } from "../ArtworkPreview";
+import { EditorialFormSteps } from "../EditorialFormSteps";
+import { promotionInfoValid, promotionArtworkValid } from "../editorialValidation";
+import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
 type Editor = { id: string; revision: number; content: PromotionContent };
@@ -34,53 +38,99 @@ function PromotionEditDialog({ editor, close, save, busy }: {
   save: (value: PromotionContent) => void; busy: boolean;
 }) {
   const [content, setContent] = useState<PromotionContent>(NEW_CONTENT);
-  useEffect(() => { if (editor) setContent(editor.content); }, [editor]);
-  const valid = (content.webUrl.startsWith("https://") || content.mobileUrl.startsWith("https://")) &&
-    (content.actionType !== "enlace" || Boolean(content.linkUrl?.startsWith("https://"))) &&
-    Number.isInteger(content.position) && content.position >= 0;
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (editor) { setContent(editor.content); setStep(0); }
+  }, [editor]);
+  const infoValid = promotionInfoValid(content);
+  const artworkValid = promotionArtworkValid(content);
+  const valid = infoValid && artworkValid;
 
-  return (
-    <Dialog open={Boolean(editor)} onClose={busy ? undefined : close} fullWidth maxWidth="sm">
-      <DialogTitle>{editor?.revision === 0 ? "Create Website promotion" : "Edit Website promotion draft"}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Alert severity="info">Saving a draft does not publish it. Registration forms and n8n remain unchanged.</Alert>
-          <TextField label="Event name" value={content.eventName} fullWidth
-            onChange={e => setContent(v => ({ ...v, eventName: e.target.value }))} />
-          <TextField label="Order (0 first)" type="number" value={content.position}
-            onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
-          <TextField select label="Action" value={content.actionType}
-            onChange={e => setContent(v => ({ ...v, actionType: e.target.value as PromotionContent["actionType"] }))}>
-            <MenuItem value="formulario">Participation form</MenuItem>
-            <MenuItem value="enlace">External HTTPS link</MenuItem>
-          </TextField>
-          {content.actionType === "enlace" && <TextField label="HTTPS destination" value={content.linkUrl ?? ""}
-            fullWidth required onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />}
-          <Typography fontWeight={700}>Desktop image</Typography>
-          <PromotionArtworkField title={content.eventName || "Desktop promotion"} url={content.webUrl}
-            onChange={url => setContent(v => ({ ...v, webUrl: url }))} />
-          <TextField label="Desktop image URL" value={content.webUrl} fullWidth
-            onChange={e => setContent(v => ({ ...v, webUrl: e.target.value.trim() }))} />
-          <Typography fontWeight={700}>Mobile image</Typography>
-          <PromotionArtworkField title={content.eventName || "Mobile promotion"} url={content.mobileUrl}
-            onChange={url => setContent(v => ({ ...v, mobileUrl: url }))} />
-          <TextField label="Mobile image URL" value={content.mobileUrl} fullWidth
-            onChange={e => setContent(v => ({ ...v, mobileUrl: e.target.value.trim() }))} />
+  return <Dialog open={Boolean(editor)} onClose={busy ? undefined : close}
+    fullWidth maxWidth="md" aria-labelledby="promotion-editor-title"
+    slotProps={{ paper: { sx: { maxHeight: "calc(100dvh - 24px)", m: 1 } } }}>
+    <DialogTitle id="promotion-editor-title">
+      {editor?.revision === 0 ? "Create Website promotion" : "Edit Website promotion draft"}
+    </DialogTitle>
+    <DialogContent dividers sx={{ minWidth: 0 }}>
+      <EditorialFormSteps active={step} />
+      {step === 0 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Promotion information</Typography>
+        <TextField label="Event name" value={content.eventName} required fullWidth
+          onChange={e => setContent(v => ({ ...v, eventName: e.target.value }))} />
+        <TextField label="Display order (0 first)" type="number" value={content.position}
+          onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
+        <TextField select label="Action when clicked" value={content.actionType}
+          onChange={e => setContent(v => ({ ...v, actionType: e.target.value as PromotionContent["actionType"] }))}>
+          <MenuItem value="formulario">Participation form</MenuItem>
+          <MenuItem value="enlace">External HTTPS link</MenuItem>
+        </TextField>
+        {content.actionType === "enlace" && <TextField label="HTTPS destination"
+          value={content.linkUrl ?? ""} fullWidth required
+          onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />}
+      </Stack>}
+      {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Responsive artwork</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Select images from the isolated Website Ticket Promotions folder.
+          At least one HTTPS image is required.
+        </Typography>
+        <Stack direction={{ xs: "column", md: "row" }} gap={2}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography fontWeight={700} mb={1}>Desktop artwork</Typography>
+            <PromotionArtworkField title={content.eventName || "Desktop promotion"}
+              url={content.webUrl}
+              onChange={url => setContent(v => ({ ...v, webUrl: url }))} />
+            <TextField label="Desktop HTTPS URL" value={content.webUrl} fullWidth
+              sx={{ mt: 1 }} onChange={e => setContent(v => ({ ...v, webUrl: e.target.value.trim() }))} />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography fontWeight={700} mb={1}>Mobile artwork</Typography>
+            <PromotionArtworkField title={content.eventName || "Mobile promotion"}
+              url={content.mobileUrl}
+              onChange={url => setContent(v => ({ ...v, mobileUrl: url }))} />
+            <TextField label="Mobile HTTPS URL" value={content.mobileUrl} fullWidth
+              sx={{ mt: 1 }} onChange={e => setContent(v => ({ ...v, mobileUrl: e.target.value.trim() }))} />
+          </Box>
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={close} disabled={busy}>Cancel</Button>
-        <Button variant="contained" disabled={!valid || busy} onClick={() => save(content)}>
-          Save draft (not published)
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+      </Stack>}
+      {step === 2 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Alert severity="info">
+          Review before saving. Registration forms and n8n remain unchanged.
+          Saving a draft never publishes a promotion.
+        </Alert>
+        <Typography variant="h6">{content.eventName}</Typography>
+        <Typography color="text.secondary" variant="body2">
+          {content.actionType === "enlace" ? `External link: ${content.linkUrl}` :
+            "Existing participation form"} · Order {content.position}
+        </Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary">Desktop</Typography>
+            <ArtworkPreview src={content.webUrl} alt="Desktop artwork" shape="landscape" />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary">Mobile</Typography>
+            <ArtworkPreview src={content.mobileUrl} alt="Mobile artwork" shape="portrait" />
+          </Box>
+        </Stack>
+      </Stack>}
+    </DialogContent>
+    <DialogActions sx={{ flexWrap: "wrap" }}>
+      <Button onClick={close} disabled={busy}>Cancel</Button>
+      {step > 0 && <Button onClick={() => setStep(n => n - 1)} disabled={busy}>Back</Button>}
+      {step < 2 ? <Button variant="contained" disabled={busy ||
+        (step === 0 ? !infoValid : !artworkValid)}
+        onClick={() => setStep(n => n + 1)}>Continue</Button> :
+        <Button variant="contained" disabled={!valid || busy}
+          onClick={() => save(content)}>Save draft (not published)</Button>}
+    </DialogActions>
+  </Dialog>;
 }
 
-function PromotionRow({ draft, isAdmin, busy, edit, action, confirm }: {
+function PromotionCard({ draft, isAdmin, busy, edit, action, confirm }: {
   draft: PromotionDraft; isAdmin: boolean; busy: boolean;
-  edit: (show: PromotionDraft) => void;
+  edit: (promotion: PromotionDraft) => void;
   action: (id: string, action: "publish" | "restore", revision: number) => void;
   confirm: (value: Confirmation) => void;
 }) {
@@ -92,55 +142,79 @@ function PromotionRow({ draft, isAdmin, busy, edit, action, confirm }: {
   const published = publication.data?.status === "published";
   const needsPublish = !published || publication.data?.draftRevision !== draft.revision;
   const inTrash = draft.state === "trashed";
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }}>
-        <Box component="img" src={(draft.content.webUrl || draft.content.mobileUrl)} alt={draft.content.eventName}
-          sx={{ width: 100, aspectRatio: "1", objectFit: "cover", borderRadius: 1 }} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight={800}>{draft.content.eventName}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {draft.content.actionType || "Schedule not set"} · Order {draft.content.position}
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-            <Chip size="small" label={inTrash ? "IN TRASH" :
-              published ? "PUBLISHED" : "UNPUBLISHED"}
-              color={inTrash ? "warning" : published ? "success" : "default"} />
-            <Chip size="small" label={`Draft revision ${draft.revision}`} />
-            {published && needsPublish && <Chip size="small" color="warning" label="UNPUBLISHED CHANGES" />}
-          </Stack>
-        </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-          {inTrash ? (
-            <>
-              <Button startIcon={<Undo2 size={15} />} disabled={busy}
-                onClick={() => action(draft.id, "restore", draft.revision)}>Restore draft</Button>
-              {isAdmin && <Button color="error" disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "purge" })}>
-                Delete permanently
-              </Button>}
-            </>
-          ) : (
-            <>
-              <Button disabled={busy} onClick={() => edit(draft)}>Edit</Button>
-              {isAdmin && <Button startIcon={<Rocket size={15} />} variant="contained"
-                disabled={busy || !needsPublish}
-                onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
-              {isAdmin && published && <Button disabled={busy}
-                onClick={() => confirm({
-                  id: draft.id, revision: publication.data?.revision ?? 0, action: "unpublish",
-                })}>Unpublish</Button>}
-              {isAdmin && <Button startIcon={<Trash2 size={15} />} color="error"
-                disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "trash" })}>
-                Move to trash
-              </Button>}
-            </>
-          )}
-        </Stack>
+  return <Paper variant="outlined" sx={{
+    p: 1.5, borderRadius: 3, minWidth: 0, overflow: "hidden",
+    display: "flex", flexDirection: "column", gap: 1.25,
+    "&:hover": { borderColor: "primary.main" },
+  }}>
+    <ArtworkPreview src={draft.content.webUrl || draft.content.mobileUrl}
+      alt={draft.content.eventName} shape="landscape"/>
+    <Box sx={{ minWidth: 0, flex: 1 }}>
+      <Stack direction="row" alignItems="start" justifyContent="space-between" gap={1}>
+        <Typography fontWeight={800} fontSize={14} title={draft.content.eventName}
+          sx={{ display: "-webkit-box", WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" }}>
+          {draft.content.eventName || "Untitled promotion"}
+        </Typography>
+        <Chip size="small" color={inTrash ? "warning" : published ? "success" : "default"}
+          label={inTrash ? "Trash" : published ? "Live" : "Draft"}/>
       </Stack>
-    </Paper>
-  );
+      <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+        {draft.content.actionType === "enlace" ? "External link" : "Participation form"}
+        {" · "}Order {draft.content.position}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" display="block">
+        Draft {draft.revision}{published && needsPublish ? " · Changes pending" : ""}
+      </Typography>
+    </Box>
+    <Stack direction="row" alignItems="center" gap={.5}>
+      {inTrash ? <Button variant="outlined" size="small" fullWidth
+        startIcon={<Undo2 size={15}/>} disabled={busy}
+        onClick={() => action(draft.id, "restore", draft.revision)}>Restore</Button> :
+        <Button variant="outlined" size="small" fullWidth disabled={busy}
+          onClick={() => edit(draft)}>Edit promotion</Button>}
+      {isAdmin && <PromotionMoreActions draft={draft} busy={busy}
+        published={published} needsPublish={needsPublish}
+        publicationRevision={publication.data?.revision ?? 0} action={action}
+        confirm={confirm}/>}
+    </Stack>
+  </Paper>;
+}
+
+function PromotionMoreActions({
+  draft, busy, published, needsPublish, publicationRevision, action, confirm,
+}: {
+  draft: PromotionDraft; busy: boolean; published: boolean; needsPublish: boolean;
+  publicationRevision: number;
+  action: (id: string, verb: "publish" | "restore", revision: number) => void;
+  confirm: (value: Confirmation) => void;
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const inTrash = draft.state === "trashed";
+  return <>
+    <IconButton aria-label={`More actions for ${draft.content.eventName}`}
+      size="small" disabled={busy} onClick={event => setAnchor(event.currentTarget)}>
+      <MoreVertical size={18}/>
+    </IconButton>
+    <Menu open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}>
+      {!inTrash && needsPublish && <MenuItem onClick={() => {
+        setAnchor(null);
+        action(draft.id, "publish", draft.revision);
+      }}>Publish draft</MenuItem>}
+      {!inTrash && published && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: publicationRevision, action: "unpublish" });
+      }}>Unpublish</MenuItem>}
+      {!inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "trash" });
+      }}>Move to trash</MenuItem>}
+      {inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "purge" });
+      }}>Delete permanently (30-day retention)</MenuItem>}
+    </Menu>
+  </>;
 }
 
 export function WebsiteTicketPromotionsPage() {
@@ -148,6 +222,8 @@ export function WebsiteTicketPromotionsPage() {
   const isAdmin = staff.roles.includes("admin");
   const client = useQueryClient();
   const [view, setView] = useState<View>("active");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [confirming, setConfirming] = useState<Confirmation | null>(null);
   const [busy, setBusy] = useState(false);
@@ -163,6 +239,13 @@ export function WebsiteTicketPromotionsPage() {
     queryKey: promotionKeys.legacy, queryFn: async () => (await legacyPromotions()).data,
     enabled: view === "legacy", retry: false,
   });
+
+  const filtered = (list.data?.items ?? []).filter(item => {
+    const term = search.trim().toLocaleLowerCase();
+    return !term || item.content.eventName.toLocaleLowerCase().includes(term) ||
+      (item.content.linkUrl || "").toLocaleLowerCase().includes(term);
+  }).sort((a, b) => a.content.position - b.content.position || a.id.localeCompare(b.id));
+  const visible = paginateItems(filtered, page, 10);
 
   function reload() {
     void client.invalidateQueries({ queryKey: ["website", "promotions"] });
@@ -202,7 +285,7 @@ export function WebsiteTicketPromotionsPage() {
       promotionAction(id, action, revision),
       action === "trash" ? "Moved to trash and unpublished." :
       action === "purge" ? "Promotion draft deleted permanently; audit and releases retained." :
-      "Show removed from public Website.");
+      "Promotion removed from public Website.");
   }
 
   return (
@@ -211,7 +294,7 @@ export function WebsiteTicketPromotionsPage() {
         <p className="eyebrow">Website / Editorial</p>
         <h1>Website Ticket Promotions</h1>
         <p className="muted">
-          Manage the SHOWS carousel separately from native Mobile Programs.
+          Manage the Website ticket promotion carousel separately from native Mobile Dynamics.
           Each promotion has an independent draft, release history, and recycle bin.
         </p>
       </header>
@@ -223,7 +306,8 @@ export function WebsiteTicketPromotionsPage() {
       {error && <Alert severity="error">{error} <Button onClick={reload}>Reload</Button></Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
-        <Tabs value={view} onChange={(_, value: View) => setView(value)}>
+        <Tabs value={view} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile
+          onChange={(_, value: View) => { setView(value); setPage(1); setSearch(""); }}>
           <Tab value="active" label="Promotions" />
           <Tab value="legacy" label="Recover existing" />
           <Tab value="trashed" label="Trash" />
@@ -235,6 +319,15 @@ export function WebsiteTicketPromotionsPage() {
         </Stack>
       </Stack>
       <Divider />
+      {view !== "legacy" && <TextField size="small"
+        placeholder="Search promotions by event or destination"
+        aria-label="Search Website promotions" value={search}
+        onChange={event => { setSearch(event.target.value); setPage(1); }}
+        sx={{ maxWidth: 440 }}
+        slotProps={{ input: { startAdornment:
+          <InputAdornment position="start"><Search size={17}/></InputAdornment>,
+        } }}
+      />}
       {view === "legacy" ? (
         legacy.isPending ? <CircularProgress /> : legacy.error ? (
           <Alert severity="error">{message(legacy.error)}</Alert>
@@ -269,16 +362,30 @@ export function WebsiteTicketPromotionsPage() {
         <Alert severity="error">{message(list.error)}</Alert>
       ) : (
         <Stack spacing={2}>
-          {list.data?.items.map(draft => (
-            <PromotionRow key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
+          <Box sx={{ display: "grid", minWidth: 0, gap: 2,
+            gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))",
+              md: "repeat(3,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))",
+              xl: "repeat(5,minmax(0,1fr))" } }}>
+          {visible.items.map(draft => (
+            <PromotionCard key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
               edit={show => setEditor({
                 id: show.id, revision: show.revision, content: show.content,
               })}
               action={perform} confirm={setConfirming} />
           ))}
-          {!list.data?.items.length && <Alert severity="info">
-            {view === "trashed" ? "Trash is empty." : "No Website promotions yet. Create or recover a promotion."}
+          </Box>
+          {!filtered.length && <Alert severity="info">
+            {search ? "No promotions match this search." : view === "trashed" ?
+              "Trash is empty." : "No Website promotions yet. Create or recover a promotion."}
           </Alert>}
+          {visible.pages > 1 && <Stack direction="row" justifyContent="space-between"
+            alignItems="center" gap={2} flexWrap="wrap">
+            <Typography variant="caption" color="text.secondary">
+              Showing {visible.items.length} of {visible.total} loaded promotions
+            </Typography>
+            <Pagination count={visible.pages} page={visible.page}
+              onChange={(_, next) => setPage(next)} color="primary" />
+          </Stack>}
         </Stack>
       )}
       <PromotionEditDialog editor={editor} close={() => setEditor(null)} save={save} busy={busy} />
