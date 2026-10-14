@@ -23,8 +23,8 @@
 }
 /* Programs and Dynamics expose the full catalog before its selected editor,
    instead of confining previews to a 365px scrolling sidebar. */
-.app-native-page .programs-mui-layout,
-.app-native-page .dynamics-mui-layout {
+.app-native-page.programs-mui-layout,
+.app-native-page.dynamics-mui-layout {
   display: grid;
   grid-template-columns: minmax(0,1fr);
   gap: 20px;
