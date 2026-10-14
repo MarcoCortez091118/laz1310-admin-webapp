@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Plus, Rocket, Save, Undo2 } from "lucide-react";
 import { ArtworkPreview } from "../ArtworkPreview";
 import { EditorialFormSteps } from "../EditorialFormSteps";
+import { bannerInfoValid, bannerArtworkValid } from "../editorialValidation";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { WebsiteBannerMediaControls } from "./WebsiteBannerMediaControls";
@@ -48,9 +49,8 @@ function BannerEditorDialog({
   useEffect(() => {
     if (editor) { setValue(editor.value); setStep(0); }
   }, [editor]);
-  const infoValid = value.id.length > 0 &&
-    (!value.linkUrl || value.linkUrl.startsWith("https://"));
-  const artworkValid = value.url.startsWith("https://");
+  const infoValid = bannerInfoValid(value);
+  const artworkValid = bannerArtworkValid(value);
   const valid = infoValid && artworkValid;
 
   return <Dialog open={Boolean(editor)} onClose={onClose} fullWidth maxWidth="md"
