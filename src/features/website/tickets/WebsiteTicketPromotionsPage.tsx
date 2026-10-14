@@ -12,6 +12,8 @@ import {
   promotionKeys, promotionPublication, type LegacyPromotion, type PromotionContent, type PromotionDraft,
 } from "./api";
 import { PromotionArtworkField } from "./PromotionArtworkField";
+import { ArtworkPreview } from "../ArtworkPreview";
+import { EditorialFormSteps } from "../EditorialFormSteps";
 
 type View = "active" | "trashed" | "legacy";
 type Editor = { id: string; revision: number; content: PromotionContent };
@@ -34,48 +36,97 @@ function PromotionEditDialog({ editor, close, save, busy }: {
   save: (value: PromotionContent) => void; busy: boolean;
 }) {
   const [content, setContent] = useState<PromotionContent>(NEW_CONTENT);
-  useEffect(() => { if (editor) setContent(editor.content); }, [editor]);
-  const valid = (content.webUrl.startsWith("https://") || content.mobileUrl.startsWith("https://")) &&
-    (content.actionType !== "enlace" || Boolean(content.linkUrl?.startsWith("https://"))) &&
-    Number.isInteger(content.position) && content.position >= 0;
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (editor) { setContent(editor.content); setStep(0); }
+  }, [editor]);
+  const infoValid = content.eventName.trim().length > 0 &&
+    Number.isInteger(content.position) && content.position >= 0 &&
+    (content.actionType !== "enlace" || Boolean(content.linkUrl?.startsWith("https://")));
+  const artworkValid = content.webUrl.startsWith("https://") ||
+    content.mobileUrl.startsWith("https://");
+  const valid = infoValid && artworkValid;
 
-  return (
-    <Dialog open={Boolean(editor)} onClose={busy ? undefined : close} fullWidth maxWidth="sm">
-      <DialogTitle>{editor?.revision === 0 ? "Create Website promotion" : "Edit Website promotion draft"}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Alert severity="info">Saving a draft does not publish it. Registration forms and n8n remain unchanged.</Alert>
-          <TextField label="Event name" value={content.eventName} fullWidth
-            onChange={e => setContent(v => ({ ...v, eventName: e.target.value }))} />
-          <TextField label="Order (0 first)" type="number" value={content.position}
-            onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
-          <TextField select label="Action" value={content.actionType}
-            onChange={e => setContent(v => ({ ...v, actionType: e.target.value as PromotionContent["actionType"] }))}>
-            <MenuItem value="formulario">Participation form</MenuItem>
-            <MenuItem value="enlace">External HTTPS link</MenuItem>
-          </TextField>
-          {content.actionType === "enlace" && <TextField label="HTTPS destination" value={content.linkUrl ?? ""}
-            fullWidth required onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />}
-          <Typography fontWeight={700}>Desktop image</Typography>
-          <PromotionArtworkField title={content.eventName || "Desktop promotion"} url={content.webUrl}
-            onChange={url => setContent(v => ({ ...v, webUrl: url }))} />
-          <TextField label="Desktop image URL" value={content.webUrl} fullWidth
-            onChange={e => setContent(v => ({ ...v, webUrl: e.target.value.trim() }))} />
-          <Typography fontWeight={700}>Mobile image</Typography>
-          <PromotionArtworkField title={content.eventName || "Mobile promotion"} url={content.mobileUrl}
-            onChange={url => setContent(v => ({ ...v, mobileUrl: url }))} />
-          <TextField label="Mobile image URL" value={content.mobileUrl} fullWidth
-            onChange={e => setContent(v => ({ ...v, mobileUrl: e.target.value.trim() }))} />
+  return <Dialog open={Boolean(editor)} onClose={busy ? undefined : close}
+    fullWidth maxWidth="md" aria-labelledby="promotion-editor-title"
+    slotProps={{ paper: { sx: { maxHeight: "calc(100dvh - 24px)", m: 1 } } }}>
+    <DialogTitle id="promotion-editor-title">
+      {editor?.revision === 0 ? "Create Website promotion" : "Edit Website promotion draft"}
+    </DialogTitle>
+    <DialogContent dividers sx={{ minWidth: 0 }}>
+      <EditorialFormSteps active={step} />
+      {step === 0 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Promotion information</Typography>
+        <TextField label="Event name" value={content.eventName} required fullWidth
+          onChange={e => setContent(v => ({ ...v, eventName: e.target.value }))} />
+        <TextField label="Display order (0 first)" type="number" value={content.position}
+          onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
+        <TextField select label="Action when clicked" value={content.actionType}
+          onChange={e => setContent(v => ({ ...v, actionType: e.target.value as PromotionContent["actionType"] }))}>
+          <MenuItem value="formulario">Participation form</MenuItem>
+          <MenuItem value="enlace">External HTTPS link</MenuItem>
+        </TextField>
+        {content.actionType === "enlace" && <TextField label="HTTPS destination"
+          value={content.linkUrl ?? ""} fullWidth required
+          onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />}
+      </Stack>}
+      {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Responsive artwork</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Select images from the isolated Website Ticket Promotions folder.
+          At least one HTTPS image is required.
+        </Typography>
+        <Stack direction={{ xs: "column", md: "row" }} gap={2}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography fontWeight={700} mb={1}>Desktop artwork</Typography>
+            <PromotionArtworkField title={content.eventName || "Desktop promotion"}
+              url={content.webUrl}
+              onChange={url => setContent(v => ({ ...v, webUrl: url }))} />
+            <TextField label="Desktop HTTPS URL" value={content.webUrl} fullWidth
+              sx={{ mt: 1 }} onChange={e => setContent(v => ({ ...v, webUrl: e.target.value.trim() }))} />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography fontWeight={700} mb={1}>Mobile artwork</Typography>
+            <PromotionArtworkField title={content.eventName || "Mobile promotion"}
+              url={content.mobileUrl}
+              onChange={url => setContent(v => ({ ...v, mobileUrl: url }))} />
+            <TextField label="Mobile HTTPS URL" value={content.mobileUrl} fullWidth
+              sx={{ mt: 1 }} onChange={e => setContent(v => ({ ...v, mobileUrl: e.target.value.trim() }))} />
+          </Box>
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={close} disabled={busy}>Cancel</Button>
-        <Button variant="contained" disabled={!valid || busy} onClick={() => save(content)}>
-          Save draft (not published)
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+      </Stack>}
+      {step === 2 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Alert severity="info">
+          Review before saving. Registration forms and n8n remain unchanged.
+          Saving a draft never publishes a promotion.
+        </Alert>
+        <Typography variant="h6">{content.eventName}</Typography>
+        <Typography color="text.secondary" variant="body2">
+          {content.actionType === "enlace" ? `External link: ${content.linkUrl}` :
+            "Existing participation form"} · Order {content.position}
+        </Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary">Desktop</Typography>
+            <ArtworkPreview src={content.webUrl} alt="Desktop artwork" shape="landscape" />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary">Mobile</Typography>
+            <ArtworkPreview src={content.mobileUrl} alt="Mobile artwork" shape="portrait" />
+          </Box>
+        </Stack>
+      </Stack>}
+    </DialogContent>
+    <DialogActions sx={{ flexWrap: "wrap" }}>
+      <Button onClick={close} disabled={busy}>Cancel</Button>
+      {step > 0 && <Button onClick={() => setStep(n => n - 1)} disabled={busy}>Back</Button>}
+      {step < 2 ? <Button variant="contained" disabled={busy ||
+        (step === 0 ? !infoValid : !artworkValid)}
+        onClick={() => setStep(n => n + 1)}>Continue</Button> :
+        <Button variant="contained" disabled={!valid || busy}
+          onClick={() => save(content)}>Save draft (not published)</Button>}
+    </DialogActions>
+  </Dialog>;
 }
 
 function PromotionRow({ draft, isAdmin, busy, edit, action, confirm }: {
