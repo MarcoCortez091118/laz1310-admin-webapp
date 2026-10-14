@@ -43,6 +43,7 @@ import {
   type NotificationCampaign,
 } from "./model";
 import { RecipientSelector } from "./RecipientSelector";
+import { NativeEditorSteps } from "../app-ui/NativeEditorSteps";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -73,6 +74,7 @@ export function CampaignComposer({
   const [form, setForm] = useState<CampaignInput>(() => campaign ? campaignToInput(campaign) : defaultCampaignInput());
   const [clientError, setClientError] = useState<string | null>(null);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [editorStep, setEditorStep] = useState(campaign && campaign.status !== "draft" ? 2 : 0);
   const [recipientEligible, setRecipientEligible] = useState<boolean | null>(null);
   const mutable = !campaign || campaign.status === "draft";
   const dynamicId = form.target.value.startsWith("/dynamics/") ? form.target.value.slice(10) : "";
@@ -154,6 +156,7 @@ export function CampaignComposer({
 
         <Box
           component="form"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             const issue = validateReadyCampaign();
@@ -178,6 +181,9 @@ export function CampaignComposer({
               </Alert>
             ) : null}
 
+            <NativeEditorSteps active={editorStep}
+              labels={["Message & destination", "Audience", "Review & save"]}/>
+            <Box sx={{ display: editorStep === 0 ? "grid" : "none", gap: 2, minWidth: 0 }}>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 220px" }, gap: 2, minWidth: 0 }}>
               <TextField
                 disabled={!mutable || pending}
@@ -247,6 +253,8 @@ export function CampaignComposer({
               </Stack>
             </Paper>
 
+            </Box>
+            <Box sx={{ display: editorStep === 1 ? "block" : "none" }}>
             <Paper variant="outlined" sx={{ borderRadius: 2.5, p: { xs: 1.5, sm: 2 }, minWidth: 0 }}>
               <Stack spacing={1.5} minWidth={0}>
                 <Box>
@@ -271,6 +279,24 @@ export function CampaignComposer({
               </Stack>
             </Paper>
 
+            </Box>
+            {editorStep === 2 && <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Stack spacing={1.5}>
+                <Typography fontWeight={800}>Review the notification</Typography>
+                <Typography variant="subtitle1" fontWeight={850}>{form.title || "Untitled"}</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                  {form.body || "No message"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {form.category} · {form.target.value} · {form.audience.type === "all_opted_in" ?
+                    "Opted-in listeners" : "One eligible listener"}
+                </Typography>
+                <Alert severity="info">
+                  Saving creates or updates a private campaign draft. Queueing delivery
+                  is a separate irreversible administrator action.
+                </Alert>
+              </Stack>
+            </Paper>}
             {campaign ? (
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
                 <Box><Typography variant="caption" color="text.secondary">Created</Typography><Typography variant="body2" fontWeight={700}>{new Date(campaign.createdAt).toLocaleString()}</Typography></Box>
@@ -285,7 +311,13 @@ export function CampaignComposer({
                 {campaign ? `Campaign ${campaign.id}` : "Creating a campaign stores a draft only; it does not contact FCM."}
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexShrink={0}>
-                {campaign?.status === "draft" ? (
+                {editorStep > 0 && <Button type="button" variant="outlined"
+                  disabled={pending} onClick={() => setEditorStep(v => v - 1)}>Back</Button>}
+                {editorStep < 2 && <Button type="button" variant="contained"
+                  disabled={pending || (editorStep === 0 && (!form.title.trim() || !form.body.trim())) ||
+                    (editorStep === 1 && !recipientReady)}
+                  onClick={() => setEditorStep(v => v + 1)}>Continue</Button>}
+                {editorStep === 2 && campaign?.status === "draft" ? (
                   <Button
                     color="error"
                     disabled={!isAdmin || pending || !recipientReady}
@@ -296,7 +328,7 @@ export function CampaignComposer({
                     {isAdmin ? "Queue send" : "Admin required"}
                   </Button>
                 ) : null}
-                {mutable ? <Button disabled={pending || !recipientReady} type="submit" variant="contained">{save.isPending ? "Saving…" : campaign ? "Save draft" : "Create draft"}</Button> : null}
+                {editorStep === 2 && mutable ? <Button disabled={pending || !recipientReady} type="submit" variant="contained">{save.isPending ? "Saving…" : campaign ? "Save draft" : "Create draft"}</Button> : null}
               </Stack>
             </Stack>
           </Stack>
@@ -317,7 +349,7 @@ export function CampaignComposer({
                 ["Failed", campaign.failureCount],
                 ["Skipped", campaign.skippedCount],
                 ["Inbox", campaign.inboxCount],
-              ].map(([label, value]) => <Box key={label} sx={{ bgcolor: "#f8fafc", borderRadius: 2, p: 1.25, minWidth: 0 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" fontWeight={800}>{value}</Typography></Box>)}
+              ].map(([label, value]) => <Box key={label} sx={{ bgcolor: "action.hover", borderRadius: 2, p: 1.25, minWidth: 0 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6" fontWeight={800}>{value}</Typography></Box>)}
             </Box>
             <Typography variant="caption" color="text.secondary">Accepted means FCM accepted the message; it does not prove the user viewed it. Inbox counts users, not devices.</Typography>
           </Stack>

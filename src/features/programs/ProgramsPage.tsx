@@ -5,12 +5,12 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CardMedia,
   Chip,
   FormControl,
   InputAdornment,
   MenuItem,
   Paper,
+  Pagination,
   Select,
   Skeleton,
   Stack,
@@ -45,6 +45,9 @@ import {
 import { ProgramsTrashDialog } from "./ProgramsTrashDialog";
 import { useProgramPublicationStatusQuery } from "./queries";
 import "./programs.css";
+import "../app-ui/native-editorial.css";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
+import { paginateItems } from "../../app/pagination";
 
 type ProgramStatus = "all" | "active" | "inactive";
 type ProgramsView = "catalog" | "schedule";
@@ -113,6 +116,7 @@ export function ProgramsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ProgramStatus>("all");
   const [view, setView] = useState<ProgramsView>("catalog");
+  const [page, setPage] = useState(1);
   const [trashOpen, setTrashOpen] = useState(false);
 
   useEffect(() => {
@@ -158,6 +162,8 @@ export function ProgramsPage() {
       })
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [allPrograms, search, status]);
+
+  const visiblePrograms = paginateItems(programs, page, 10);
 
   const selected = useMemo(
     () =>
@@ -329,6 +335,7 @@ export function ProgramsPage() {
                 onChange={(event) => {
                   setStationId(event.target.value);
                   setSelection(null);
+                  setPage(1);
                 }}
               >
                 {stations.map((item) => (
@@ -350,7 +357,7 @@ export function ProgramsPage() {
               size="small"
               placeholder="Search program, host, or slug"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); setPage(1); }}
               sx={{ minWidth: { xs: "100%", lg: 330 } }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment>,
@@ -361,7 +368,7 @@ export function ProgramsPage() {
                 exclusive
                 size="small"
                 value={status}
-                onChange={(_, next: ProgramStatus | null) => next && setStatus(next)}
+                onChange={(_, next: ProgramStatus | null) => { if (next) { setStatus(next); setPage(1); } }}
               >
                 <ToggleButton value="all">All</ToggleButton>
                 <ToggleButton value="active">Active</ToggleButton>
@@ -447,9 +454,9 @@ export function ProgramsPage() {
             </Box>
           </Paper>
         ) : (
-          <Box className="programs-mui-layout">
+          <Box className="programs-mui-layout app-native-page">
             <Box className="programs-mui-list" aria-label="Programs catalog">
-              {programs.length ? programs.map((program) => {
+              {programs.length ? visiblePrograms.items.map((program) => {
                 const active = program.isActive ?? true;
                 const publication = programPublication(program.id);
                 return (
@@ -459,18 +466,12 @@ export function ProgramsPage() {
                     variant="outlined"
                   >
                     <CardActionArea onClick={() => setSelection(program.id)}>
-                      <Box className="program-mui-art-wrap">
-                        {program.imageUrl ? (
-                          <CardMedia component="img" height="130" image={program.imageUrl} alt="" />
-                        ) : (
-                          <Box className="program-mui-placeholder">LA Z</Box>
-                        )}
-                        <Chip
-                          className="program-mui-status-chip"
+                      <Box className="program-mui-art-wrap" sx={{ position: "relative" }}>
+                        <NativeArtworkPreview src={program.imageUrl}
+                          alt={`Artwork for ${program.name}`} shape="square" maxHeight={230}/>
+                        <Chip className="program-mui-status-chip"
                           color={publicationColor(publication)}
-                          label={publicationLabel(publication)}
-                          size="small"
-                        />
+                          label={publicationLabel(publication)} size="small"/>
                       </Box>
                       <CardContent sx={{ p: 1.75 }}>
                         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -514,6 +515,12 @@ export function ProgramsPage() {
                   </Typography>
                 </Paper>
               )}
+              {visiblePrograms.pages > 1 && <Box sx={{
+                gridColumn: "1 / -1", display: "flex", justifyContent: "center", p: 1,
+              }}>
+                <Pagination count={visiblePrograms.pages} page={visiblePrograms.page}
+                  onChange={(_,next) => setPage(next)} size="small" color="primary" />
+              </Box>}
             </Box>
 
             <Box minWidth={0}>

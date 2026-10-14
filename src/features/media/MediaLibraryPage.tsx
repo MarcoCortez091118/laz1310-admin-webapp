@@ -1,4 +1,5 @@
-import { Database, Image as ImageIcon, Search, ShieldCheck } from "lucide-react";
+import { ChevronDown, FolderOpen, Search, ShieldCheck } from "lucide-react";
+import { Accordion, AccordionDetails, AccordionSummary } from "@mui/material";
 import { useMemo, useState } from "react";
 import { ApiError } from "../../api/errors";
 import type { MediaAsset } from "../../api/types";
@@ -46,7 +47,7 @@ export function MediaLibraryPage() {
           <p className="eyebrow">Content assets</p>
           <h1>Media Library</h1>
           <p className="muted">
-            Managed editorial images processed by FastAPI and stored in the configured Google Cloud Storage bucket.
+            Browse and select managed Android/iOS artwork in a responsive gallery. Website Banners, Shows and Promotions have separate libraries.
           </p>
         </div>
         <div className="media-policy-badge">
@@ -58,23 +59,25 @@ export function MediaLibraryPage() {
         </div>
       </header>
 
-      <div className="media-metrics">
-        <article className="metric-card">
-          <span><ImageIcon size={16} /> Loaded assets</span>
-          <strong>{assets.length}</strong>
-        </article>
-        <article className="metric-card">
-          <span><Database size={16} /> Storage output</span>
-          <strong>WebP</strong>
-        </article>
-        <article className="metric-card wide">
-          <span>Security boundary</span>
-          <strong>Admin API → Storage</strong>
-          <small>No direct browser write access to the bucket.</small>
-        </article>
+      <div className="media-folder-grid">
+        <div className="media-folder-tile" aria-label="Native app media collection">
+          <FolderOpen size={26} aria-hidden color="#D30A12"/>
+          <span style={{ minWidth: 0 }}>
+            <strong>Android / iOS artwork</strong>
+            <small>{assets.length} loaded images · native App Media API only</small>
+          </span>
+        </div>
       </div>
-
-      <MediaUploadPanel />
+      <Accordion disableGutters sx={{ border: "1px solid", borderColor: "divider",
+        borderRadius: "14px !important", overflow: "hidden" }}>
+        <AccordionSummary expandIcon={<ChevronDown size={18}/>}
+          aria-controls="native-media-upload" id="native-media-upload-title">
+          <strong>Upload image to Android/iOS</strong>
+        </AccordionSummary>
+        <AccordionDetails id="native-media-upload">
+          <MediaUploadPanel/>
+        </AccordionDetails>
+      </Accordion>
 
       <section className="panel media-library-panel">
         <div className="media-library-heading">

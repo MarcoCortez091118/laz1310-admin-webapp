@@ -1,3 +1,6 @@
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
+import "../app-ui/native-editorial.css";
 import {
   ArrowDown,
   ArrowUp,
@@ -224,53 +227,69 @@ function StationEditor({
 }
 
 function CardEditor({
-  card,
-  pages,
-  canRemove,
-  onChange,
-  onRemove,
+  card, pages, canRemove, onChange, onRemove,
 }: {
-  card: Card;
-  pages: Page[];
-  canRemove: boolean;
-  onChange: (card: Card) => void;
-  onRemove: () => void;
+  card: Card; pages: Page[]; canRemove: boolean;
+  onChange: (card: Card) => void; onRemove: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [working, setWorking] = useState<Card>(card);
+  function openEditor() {
+    setWorking(card);
+    setEditing(true);
+  }
   return (
-    <div className="card-editor">
-      <div className="card-editor-heading">
-        <strong>{card.title || "Untitled card"}</strong>
-        <button
-          className="icon-button danger-ghost"
-          disabled={!canRemove}
-          onClick={onRemove}
-          title={canRemove ? "Remove card" : "Cards block requires at least one item"}
-          type="button"
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-      <label>
-        Title
-        <input
-          maxLength={160}
-          onChange={(event) => onChange({ ...card, title: event.target.value })}
-          value={card.title}
-        />
-      </label>
-      <ManagedImageField
-        value={card.imageUrl}
-        label="Card image"
-        pickerTitle="Choose card image"
-        description="Upload the card artwork or select it from the Media Library. The managed Storage URL is assigned automatically."
-        onChange={(url) => onChange({ ...card, imageUrl: url })}
-      />
-      <LinkEditor
-        link={card.link}
-        onChange={(link) => onChange({ ...card, link })}
-        pages={pages}
-      />
-    </div>
+    <Box className="native-page-card" sx={{
+      minWidth: 0, overflow: "hidden", border: "1px solid", borderColor: "divider",
+      borderRadius: 3, p: 1.5, bgcolor: "background.paper",
+      display: "flex", flexDirection: "column", gap: 1.25,
+    }}>
+      <NativeArtworkPreview src={card.imageUrl} alt={card.title || "Page card"} shape="square" maxHeight={220}/>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography fontSize={14} fontWeight={800} noWrap title={card.title}>
+          {card.title || "Untitled card"}
+        </Typography>
+        <Typography color="text.secondary" variant="caption">
+          App page card · Private Draft
+        </Typography>
+      </Box>
+      <Stack direction="row" gap={1} justifyContent="space-between" alignItems="center">
+        <Button size="small" variant="outlined" onClick={openEditor}>Edit card</Button>
+        <Button size="small" color="error" disabled={!canRemove} onClick={onRemove}
+          aria-label={`Remove ${card.title || "page card"}`}>
+          <Trash2 size={16}/>
+        </Button>
+      </Stack>
+      <Dialog open={editing} onClose={() => setEditing(false)} fullWidth maxWidth="md"
+        slotProps={{ paper: { sx: { maxHeight: "calc(100dvh - 24px)", m: 1 } } }}>
+        <DialogTitle>Edit App page card</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField label="Card title" fullWidth value={working.title}
+              slotProps={{ htmlInput: { maxLength: 160 } }}
+              onChange={event => setWorking(current => ({ ...current, title: event.target.value }))}/>
+            <ManagedImageField value={working.imageUrl} label="Card artwork"
+              pickerTitle="Choose native App card image"
+              onChange={url => setWorking(current => ({ ...current, imageUrl: url }))}/>
+            <Box sx={{ "& label": { display: "grid", gap: 1 } }}>
+              <LinkEditor link={working.link}
+                onChange={link => setWorking(current => ({ ...current, link }))}
+                pages={pages}/>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Applying changes only updates the local Page Draft. Publish remains separate.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditing(false)}>Cancel</Button>
+          <Button variant="contained" disabled={!working.title.trim()} onClick={() => {
+            onChange(working);
+            setEditing(false);
+          }}>Apply to draft</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
 
@@ -295,7 +314,7 @@ function CardsEditor({
   }
 
   return (
-    <div className="cards-editor field-span">
+    <div className="cards-editor field-span native-five-grid" aria-label="App page cards">
       {items.map((card, index) => (
         <CardEditor
           canRemove={items.length > 1}

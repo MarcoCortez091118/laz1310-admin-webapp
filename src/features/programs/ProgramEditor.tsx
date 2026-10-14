@@ -29,6 +29,7 @@ import { ApiError } from "../../api/errors";
 import type { Station } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
 import { ManagedImageField } from "../media/ManagedImageField";
+import { NativeEditorSteps } from "../app-ui/NativeEditorSteps";
 import {
   programsQueryKeys,
   putStation,
@@ -102,6 +103,7 @@ export function ProgramEditor({
   );
   const [slugTouched, setSlugTouched] = useState(existing);
   const [dirty, setDirty] = useState(false);
+  const [editorStep, setEditorStep] = useState(0);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -237,9 +239,10 @@ export function ProgramEditor({
           />
         ) : null}
 
+        <NativeEditorSteps active={editorStep} labels={["Information & artwork", "Schedule", "Review"]}/>
         <Box className="program-editor-mui-workbench">
           <Stack spacing={2} minWidth={0}>
-            <Paper className="program-editor-section" variant="outlined">
+            <Paper className="program-editor-section" variant="outlined" sx={{ display: editorStep === 0 ? "block" : "none" }}>
               <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
                 <Box className="program-editor-section-icon"><ImageIcon size={17} /></Box>
                 <Box>
@@ -328,7 +331,7 @@ export function ProgramEditor({
               </Box>
             </Paper>
 
-            <Paper className="program-editor-section" variant="outlined">
+            <Paper className="program-editor-section" variant="outlined" sx={{ display: editorStep === 1 ? "block" : "none" }}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 justifyContent="space-between"
@@ -446,7 +449,7 @@ export function ProgramEditor({
             </Paper>
           </Stack>
 
-          <Paper className="program-mobile-preview-mui" variant="outlined">
+          <Paper className="program-mobile-preview-mui" variant="outlined" sx={{ display: editorStep === 2 ? "block" : "none" }}>
             <Box className="program-mobile-preview-art">
               {imageUrl?.startsWith("https://") ? (
                 <img alt="" referrerPolicy="no-referrer" src={imageUrl} />
@@ -491,26 +494,20 @@ export function ProgramEditor({
         </Box>
 
         <Box className="program-editor-sticky-actions">
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Draft write protected by ETag
-            </Typography>
-            <Typography
-              variant="caption"
-              component="code"
-              sx={{ display: "block", color: "text.disabled" }}
-            >
-              {etag}
-            </Typography>
-          </Box>
-          <Button
-            disabled={busy || (existing && !dirty)}
-            variant="contained"
-            startIcon={<Save size={16} />}
-            onClick={() => save.mutate()}
-          >
-            {save.isPending ? "Saving…" : existing ? "Save Draft" : "Create Draft"}
-          </Button>
+          <Typography variant="body2" color="text.secondary">
+            Edits are saved to the protected App Draft. Publishing is a separate action.
+          </Typography>
+          <Stack direction="row" gap={1} flexWrap="wrap">
+            {editorStep > 0 && <Button variant="outlined" disabled={busy}
+              onClick={() => setEditorStep(value => value - 1)}>Back</Button>}
+            {editorStep < 2 ? <Button variant="contained" disabled={busy ||
+              (editorStep === 0 && (!workingProgram.name.trim() || !workingProgram.slug.trim()))}
+              onClick={() => setEditorStep(value => value + 1)}>Continue</Button> :
+              <Button disabled={busy || (existing && !dirty)} variant="contained"
+                startIcon={<Save size={16} />} onClick={() => save.mutate()}>
+                {save.isPending ? "Saving…" : existing ? "Save Draft" : "Create Draft"}
+              </Button>}
+          </Stack>
         </Box>
       </Stack>
     </Paper>
