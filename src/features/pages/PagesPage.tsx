@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
+import "../app-ui/native-editorial.css";
 import { ApiError } from "../../api/errors";
 import type { Page, Station } from "../../api/types";
 import { adminQueryKeys, deletePage, putPage } from "../content/api";
@@ -334,7 +335,7 @@ export function PagesPage() {
     <section className="page-stack">
       <header className="page-heading split-heading">
         <div>
-          <p className="eyebrow">Content / Draft #{draft.data.data.revision ?? "—"}</p>
+          <p className="eyebrow">ANDROID / IOS · PAGES</p>
           <h1>Pages</h1>
           <p className="muted">
             Compose page blocks visually, preview locally, then persist to the Draft.
@@ -346,11 +347,11 @@ export function PagesPage() {
         </button>
       </header>
 
-      <div className="content-layout page-content-layout">
-        <aside className="panel resource-list">
+      <div className="content-layout page-content-layout native-pages-layout">
+        <aside className="panel resource-list native-page-catalog">
           <div className="resource-list-heading">
-            <strong>{pages.length} pages</strong>
-            <code>{etag}</code>
+            <strong>{pages.length} App pages</strong>
+            <span className="muted">Select a page to edit its blocks below</span>
           </div>
           {pages.length ? (
             pages
@@ -363,7 +364,8 @@ export function PagesPage() {
                   onClick={() => setSelection(page.slug)}
                   type="button"
                 >
-                  <span>{page.title}</span>
+                  <FileText size={24} aria-hidden />
+                  <span title={page.title}>{page.title}</span>
                   <small>
                     /{page.slug} · {(page.blocks ?? []).length} blocks
                   </small>
