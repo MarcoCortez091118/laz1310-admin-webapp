@@ -133,3 +133,76 @@
   .app-native-page .program-week-grid { max-width: 100%; overflow-x: auto; }
   .app-native-page .MuiDialog-paper { max-width: calc(100vw - 16px); }
 }
+
+/* Native Pages: full-width selectable cards, editor below the catalog. */
+.native-pages-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: 20px;
+  min-width: 0;
+  container-type: inline-size;
+}
+.native-pages-layout > * { min-width: 0; }
+.native-page-catalog {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: 12px;
+  max-height: none;
+  overflow: visible;
+  background: var(--admin-panel);
+  border-color: var(--admin-border);
+}
+.native-page-catalog .resource-list-heading {
+  grid-column: 1 / -1;
+  border-color: var(--admin-border);
+}
+.native-page-catalog > button {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  justify-items: start;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 118px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  color: var(--admin-text);
+  background: var(--admin-raised);
+}
+.native-page-catalog > button span,
+.native-page-catalog > button small {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.native-page-catalog > button.selected {
+  border-color: var(--admin-accent);
+  background: var(--admin-soft-accent);
+}
+.native-page-catalog > button:focus-visible { outline: 2px solid var(--admin-accent); }
+@container (min-width: 500px) {
+  .native-page-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@container (min-width: 790px) {
+  .native-page-catalog { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@container (min-width: 1020px) {
+  .native-page-catalog { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@container (min-width: 1270px) {
+  .native-page-catalog { grid-template-columns: repeat(5,minmax(0,1fr)); }
+}
+.app-native-page .program-mobile-preview-art img,
+.app-native-page .dynamics-editor-preview img {
+  object-fit: contain !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+.app-native-page .program-mobile-preview-art,
+.app-native-page .dynamics-editor-preview {
+  background: var(--admin-raised,#202126);
+  overflow: hidden;
+}
