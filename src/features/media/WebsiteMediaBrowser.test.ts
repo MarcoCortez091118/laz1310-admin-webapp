@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readWebsiteFolder, websiteMediaFolders } from "./WebsiteMediaBrowser";
+import { readWebsiteFolder, websiteMediaFolders } from "./websiteMediaCatalog";
 import { listWebsiteBannerMedia } from "../website/banners/mediaApi";
 import { listShowMedia } from "../website/shows/api";
 import { listPromotionMedia } from "../website/tickets/api";
