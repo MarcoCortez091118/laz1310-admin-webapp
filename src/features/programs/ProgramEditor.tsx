@@ -494,18 +494,9 @@ export function ProgramEditor({
         </Box>
 
         <Box className="program-editor-sticky-actions">
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Draft write protected by ETag
-            </Typography>
-            <Typography
-              variant="caption"
-              component="code"
-              sx={{ display: "block", color: "text.disabled" }}
-            >
-              {etag}
-            </Typography>
-          </Box>
+          <Typography variant="body2" color="text.secondary">
+            Edits are saved to the protected App Draft. Publishing is a separate action.
+          </Typography>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {editorStep > 0 && <Button variant="outlined" disabled={busy}
               onClick={() => setEditorStep(value => value - 1)}>Back</Button>}
