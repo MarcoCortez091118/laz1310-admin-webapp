@@ -111,10 +111,10 @@ export function DashboardPage() {
   const activeStations = catalog?.stations?.filter((station: Station) => station.isActive ?? true).length ?? 0;
 
   const inventoryData = [
-    { name: "Pages", value: pages },
-    { name: "Stations", value: stations },
-    { name: "Programs", value: programs },
-    { name: "Dynamics", value: dynamics },
+    { name: "Pages", value: failed ? null : pages },
+    { name: "Stations", value: failed ? null : stations },
+    { name: "Programs", value: failed ? null : programs },
+    { name: "Dynamics", value: failed ? null : dynamics },
   ];
 
   const now = Date.now();
@@ -313,8 +313,9 @@ export function DashboardPage() {
               <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
               <Chip label={`Published revision ${publishedRevision || "—"}`} size="small" variant="outlined" />
               <Chip
-                color={revisionGap > 0 ? "warning" : "success"}
-                label={revisionGap > 0 ? `${revisionGap} pending change${revisionGap === 1 ? "" : "s"}` : "Release is current"}
+                color={failed ? "default" : revisionGap > 0 ? "warning" : "success"}
+                label={failed ? "Release status unavailable" : revisionGap > 0
+                  ? `${revisionGap} pending change${revisionGap === 1 ? "" : "s"}` : "Release is current"}
                 size="small"
                 variant="outlined"
               />
