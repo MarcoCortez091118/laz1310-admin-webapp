@@ -33,7 +33,7 @@ export function WebsiteMediaLibraryPage() {
           </button>
         ))}
       </Box>
-      <Accordion variant="outlined" sx={{ borderRadius: "14px !important", overflow: "hidden" }}>
+      <Accordion disableGutters sx={{ borderRadius: "14px !important", overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
         <AccordionSummary expandIcon={<ChevronDown size={19}/>}
           aria-controls="website-folder-upload-panel" id="website-folder-upload-header">
           <Typography fontWeight={750}>Upload image to selected folder</Typography>
