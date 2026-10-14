@@ -3,7 +3,7 @@ import {
   DialogTitle, Divider, IconButton, InputAdornment, Menu, MenuItem, Paper, Pagination, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreVertical, Plus, RefreshCw, Rocket, Search, Undo2 } from "lucide-react";
+import { MoreVertical, Plus, RefreshCw, Search, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
@@ -155,20 +155,18 @@ function ShowCard({ draft, isAdmin, busy, edit, action, confirm }: {
           onClick={() => action(draft.id, "restore", draft.revision)}>Restore</Button> :
           <Button size="small" fullWidth variant="outlined" disabled={busy}
             onClick={() => edit(draft)}>Edit show</Button>}
-        {!inTrash && isAdmin && needsPublish &&
-          <Button size="small" variant="contained" disabled={busy}
-            startIcon={<Rocket size={15}/>}
-            onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
-        {isAdmin && <ShowMoreActions draft={draft} busy={busy}
+        {isAdmin && <ShowMoreActions draft={draft} busy={busy} needsPublish={needsPublish}
           published={published} publicationRevision={publication.data?.revision ?? 0}
-          confirm={confirm} />}
+          action={action} confirm={confirm} />}
       </Stack>
     </Paper>
   );
 }
 
-function ShowMoreActions({ draft, busy, published, publicationRevision, confirm }: {
-  draft: ShowDraft; busy: boolean; published: boolean; publicationRevision: number;
+function ShowMoreActions({ draft, busy, published, needsPublish, publicationRevision, action, confirm }: {
+  draft: ShowDraft; busy: boolean; published: boolean; needsPublish: boolean;
+  publicationRevision: number;
+  action: (id: string, verb: "publish" | "restore", revision: number) => void;
   confirm: (value: Confirmation) => void;
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -179,6 +177,10 @@ function ShowMoreActions({ draft, busy, published, publicationRevision, confirm 
       <MoreVertical size={18} />
     </IconButton>
     <Menu open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}>
+      {!inTrash && needsPublish && <MenuItem onClick={() => {
+        setAnchor(null);
+        action(draft.id, "publish", draft.revision);
+      }}>Publish draft</MenuItem>}
       {!inTrash && published && <MenuItem onClick={() => {
         setAnchor(null);
         confirm({ id: draft.id, revision: publicationRevision, action: "unpublish" });
