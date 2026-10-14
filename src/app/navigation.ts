@@ -8,6 +8,7 @@ import {
   Globe,
   Image,
   LayoutDashboard,
+  Activity,
   Palette,
   Radio,
   ScrollText,
@@ -23,7 +24,7 @@ export type NavigationPath =
   | "/website/shows" | "/website/ticket-promotions"
   | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
   | "/dynamics" | "/notifications" | "/users" | "/weather"
-  | "/releases" | "/audit" | "/branding" | "/configuration";
+  | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring";
 
 export interface NavigationItem {
   readonly label: string;
@@ -100,6 +101,7 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
       label: "Operations",
       items: [
         { label: "Weather", to: "/weather", icon: CloudSun, adminOnly: false },
+        { label: "Monitoring", to: "/monitoring", icon: Activity, adminOnly: true },
         { label: "Releases", to: "/releases", icon: FileClock, adminOnly: true },
         { label: "Audit", to: "/audit", icon: ScrollText, adminOnly: true },
       ],
