@@ -1,5 +1,6 @@
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import { ImagePlus, Images } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ChangeEvent } from "react";
 import { uploadWebsiteBannerMedia } from "../website/banners/mediaApi";
 import { uploadShowMedia } from "../website/shows/api";
@@ -19,6 +20,7 @@ export function WebsiteArtworkField({
   title: string;
   onChange: (url: string) => void;
 }) {
+  const client = useQueryClient();
   const [picker, setPicker] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function WebsiteArtworkField({
           ? await uploadShowMedia(file, title)
           : await uploadPromotionMedia(file, title);
       onChange(result.data.url);
+      void client.invalidateQueries({ queryKey: ["admin", "website", "scoped-media", folder] });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to upload artwork.");
     } finally {
