@@ -101,6 +101,7 @@ export function DashboardPage() {
   const catalog = draft.data?.data.catalog;
   const loading = draft.isPending || publicState.isPending;
   const failed = draft.error ?? publicState.error;
+  const metricValue = (value: number): number | string => failed ? "—" : value;
 
   const pages = catalog?.pages?.length ?? 0;
   const stations = catalog?.stations?.length ?? 0;
@@ -154,7 +155,9 @@ export function DashboardPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip color="success" label="FastAPI connected" size="small" variant="outlined" />
+          <Chip color={failed ? "error" : loading ? "default" : "success"}
+            label={failed ? "FastAPI unavailable" : loading ? "Checking FastAPI" : "FastAPI connected"}
+            size="small" variant="outlined" />
           <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
           <Chip label={`Published ${shortId(publicState.data?.data.releaseId)}`} size="small" variant="outlined" />
         </Stack>
@@ -188,25 +191,25 @@ export function DashboardPage() {
           icon={Activity}
           label="Draft revision"
           loading={loading}
-          value={draftRevision || "—"}
+          value={failed ? "—" : draftRevision || "—"}
         />
         <MetricCard
           detail={`${revisionGap} unpublished revision${revisionGap === 1 ? "" : "s"}`}
           icon={RefreshCw}
           label="Published revision"
           loading={loading}
-          value={publishedRevision || "—"}
+          value={failed ? "—" : publishedRevision || "—"}
         />
-        <MetricCard detail="Draft catalog" icon={FileText} label="Pages" loading={loading} value={pages} />
+        <MetricCard detail="Draft catalog" icon={FileText} label="Pages" loading={loading} value={metricValue(pages)} />
         <MetricCard
           detail={`${activeStations} active station${activeStations === 1 ? "" : "s"}`}
           icon={Radio}
           label="Stations"
           loading={loading}
-          value={stations}
+          value={metricValue(stations)}
         />
-        <MetricCard detail="Shows across all stations" icon={CalendarRange} label="Programs" loading={loading} value={programs} />
-        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Dynamics" loading={loading} value={dynamics} />
+        <MetricCard detail="Shows across all stations" icon={CalendarRange} label="Programs" loading={loading} value={metricValue(programs)} />
+        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Dynamics" loading={loading} value={metricValue(dynamics)} />
       </Box>
 
       <Box className="overview-chart-grid">
@@ -245,7 +248,7 @@ export function DashboardPage() {
               Derived from real campaign windows and editorial status.
             </Typography>
 
-            {dynamics ? (
+            {dynamics && !failed ? (
               <>
                 <Box sx={{ width: "100%", height: 230, mt: 1 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -284,9 +287,9 @@ export function DashboardPage() {
             ) : (
               <Box className="overview-empty-chart">
                 <Sparkles size={28} />
-                <Typography fontWeight={700}>No campaigns in this Draft</Typography>
+                <Typography fontWeight={700}>{failed ? "Campaign data unavailable" : "No campaigns in this Draft"}</Typography>
                 <Typography color="text.secondary" fontSize={12.5}>
-                  Dynamics will appear here as soon as they are added.
+                  {failed ? "Retry when FastAPI is available." : "Dynamics will appear here as soon as they are added."}
                 </Typography>
               </Box>
             )}
