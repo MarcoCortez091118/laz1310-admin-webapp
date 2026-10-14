@@ -67,3 +67,41 @@
 .media-folder-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 @media (min-width: 900px) { .media-folder-grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
 @media (max-width: 480px) { .media-folder-grid { grid-template-columns: minmax(0,1fr); } }
+
+/* Existing media widgets follow the in-app appearance toggle, not operating
+   system prefers-color-scheme, to prevent mixed light/dark dialogs. */
+:root[data-admin-appearance] .media-search,
+:root[data-admin-appearance] .media-upload-panel,
+:root[data-admin-appearance] .media-policy-badge,
+:root[data-admin-appearance] .media-security-pill,
+:root[data-admin-appearance] .media-picker-tabs {
+  color: var(--admin-text);
+  background: var(--admin-panel);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .media-picker-dialog {
+  color: var(--admin-text);
+  background: var(--admin-bg);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .media-picker-header {
+  color: var(--admin-text);
+  background: var(--admin-panel);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .media-dropzone,
+:root[data-admin-appearance] .media-picker-tabs button {
+  color: var(--admin-text);
+  background: var(--admin-raised);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .media-search input,
+:root[data-admin-appearance] .media-alt-field textarea {
+  color: var(--admin-text);
+  background: transparent;
+}
+:root[data-admin-appearance] .media-picker-tabs button.active {
+  color: var(--admin-accent);
+  background: var(--admin-soft-accent);
+  border-color: var(--admin-accent);
+}
