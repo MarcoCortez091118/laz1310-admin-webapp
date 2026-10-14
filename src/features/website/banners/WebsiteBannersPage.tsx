@@ -60,6 +60,7 @@ function BannerEditorDialog({
           </Typography>
           <WebsiteBannerMediaControls
             description={editor?.layout === "desktop" ? "LA Z Website desktop banner" : "LA Z Website mobile banner"}
+            currentUrl={value.url}
             onChoose={(url) => setValue((current) => ({ ...current, url }))}
           />
           <TextField label="Direct HTTPS image URL" value={value.url} fullWidth required
@@ -254,7 +255,7 @@ export function WebsiteBannersPage() {
             </Tabs>
             <Box sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2,minmax(0,1fr))", xl: "repeat(3,minmax(0,1fr))" },
+              gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))", md: "repeat(3,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))", xl: "repeat(5,minmax(0,1fr))" },
               gap: 2,
               mt: 2,
               minWidth: 0,
