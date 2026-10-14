@@ -6,7 +6,8 @@ import { uploadWebsiteBannerMedia } from "../website/banners/mediaApi";
 import { uploadShowMedia } from "../website/shows/api";
 import { uploadPromotionMedia } from "../website/tickets/api";
 import { ArtworkPreview } from "../website/ArtworkPreview";
-import { WebsiteMediaPickerDialog, type WebsiteMediaFolder } from "./WebsiteMediaBrowser";
+import { WebsiteMediaPickerDialog } from "./WebsiteMediaBrowser";
+import type { WebsiteMediaFolder } from "./websiteMediaCatalog";
 
 /**
  * One presentation component; each upload/list action stays in its own existing
