@@ -14,6 +14,7 @@ import {
 import { PromotionArtworkField } from "./PromotionArtworkField";
 import { ArtworkPreview } from "../ArtworkPreview";
 import { EditorialFormSteps } from "../EditorialFormSteps";
+import { promotionInfoValid, promotionArtworkValid } from "../editorialValidation";
 import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
@@ -41,11 +42,8 @@ function PromotionEditDialog({ editor, close, save, busy }: {
   useEffect(() => {
     if (editor) { setContent(editor.content); setStep(0); }
   }, [editor]);
-  const infoValid = content.eventName.trim().length > 0 &&
-    Number.isInteger(content.position) && content.position >= 0 &&
-    (content.actionType !== "enlace" || Boolean(content.linkUrl?.startsWith("https://")));
-  const artworkValid = content.webUrl.startsWith("https://") ||
-    content.mobileUrl.startsWith("https://");
+  const infoValid = promotionInfoValid(content);
+  const artworkValid = promotionArtworkValid(content);
   const valid = infoValid && artworkValid;
 
   return <Dialog open={Boolean(editor)} onClose={busy ? undefined : close}
