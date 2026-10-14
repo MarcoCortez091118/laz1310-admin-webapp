@@ -8,6 +8,7 @@ import {
   Chip,
   InputAdornment,
   Paper,
+  Pagination,
   Skeleton,
   Stack,
   Tab,
@@ -27,6 +28,7 @@ import { useDynamicPublicationStatusQuery, useDynamicsQuery } from "./queries";
 import "./dynamics.css";
 import "../app-ui/native-editorial.css";
 import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
+import { paginateItems } from "../../app/pagination";
 
 type Selection = string | "new" | null;
 type DetailTab = "editor" | "participants";
@@ -103,6 +105,7 @@ export function DynamicsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LifecycleFilter>("all");
   const [trashOpen, setTrashOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const isAdmin = staff.roles?.includes("admin") ?? false;
 
   const dynamics = useMemo(() => query.data?.data ?? [], [query.data]);
@@ -132,6 +135,8 @@ export function DynamicsPage() {
         return new Date(left.startsAt ?? 0).getTime() - new Date(right.startsAt ?? 0).getTime();
       });
   }, [dynamics, filter, now, search]);
+
+  const visibleCampaigns = paginateItems(filtered, page, 10);
 
   const selected = useMemo(
     () =>
@@ -247,7 +252,7 @@ export function DynamicsPage() {
           <TextField
             size="small"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
             placeholder="Search title, slug, or context"
             aria-label="Search campaigns"
             InputProps={{
@@ -262,7 +267,7 @@ export function DynamicsPage() {
                 color={filter === value ? "primary" : "default"}
                 variant={filter === value ? "filled" : "outlined"}
                 label={value[0].toUpperCase() + value.slice(1)}
-                onClick={() => setFilter(value)}
+                onClick={() => { setFilter(value); setPage(1); }}
               />
             ))}
           </Stack>
@@ -279,7 +284,7 @@ export function DynamicsPage() {
             </Stack>
 
             <Box className="dynamics-mui-campaign-list" aria-label="Dynamics campaigns">
-              {filtered.length ? filtered.map((dynamic) => {
+              {filtered.length ? visibleCampaigns.items.map((dynamic) => {
                 const current = lifecycle(dynamic, now);
                 const published = publicationState(dynamic.id);
                 const isSelected = selection === dynamic.id;
@@ -332,6 +337,12 @@ export function DynamicsPage() {
                   <Typography variant="body2" color="text.secondary">Adjust the filters or create a new Dynamic.</Typography>
                 </Box>
               )}
+              {visibleCampaigns.pages > 1 && <Box sx={{
+                gridColumn: "1 / -1", display: "flex", justifyContent: "center", p: 1,
+              }}>
+                <Pagination count={visibleCampaigns.pages} page={visibleCampaigns.page}
+                  onChange={(_,next) => setPage(next)} size="small" color="primary"/>
+              </Box>}
             </Box>
           </Paper>
 
