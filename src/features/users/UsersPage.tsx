@@ -7,6 +7,7 @@ import {
   CircularProgress,
   InputAdornment,
   MenuItem,
+  Pagination,
   Stack,
   TextField,
   Typography,
@@ -15,6 +16,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { BellRing, CheckCircle2, Search, Smartphone, UserRound, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
+import { paginateItems } from "../../app/pagination";
 import {
   findAdminUserByEmail,
   findAdminUserById,
@@ -32,6 +34,7 @@ export function UsersPage() {
   const isAdmin = staff.roles.includes("admin");
   const [email, setEmail] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
     const queryId = new URLSearchParams(window.location.search).get("userId");
     return queryId && /^[a-f0-9-]{36}$/i.test(queryId) ? queryId : null;
@@ -86,6 +89,7 @@ export function UsersPage() {
     (statusFilter === "unverified" && !user.emailVerified) ||
     (statusFilter === "push" && user.notificationStatus?.pushEligible)
   );
+  const pagedUsers = paginateItems(visibleUsers, page, 10);
   const selectedUser = selectedUserId
     ? (allUsers.find((user) => user.id === selectedUserId)
       ?? exactSearch.data?.data.items.find((user) => user.id === selectedUserId)
@@ -129,7 +133,7 @@ export function UsersPage() {
                     <Typography variant="body2" color="text.secondary">{label}</Typography>
                     <Typography variant="h4" fontWeight={850} mt={0.5}>{value as number}</Typography>
                   </Box>
-                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "#FFF1F2", color: "primary.main", display: "grid", placeItems: "center" }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "action.hover", color: "primary.main", display: "grid", placeItems: "center" }}>
                     {icon}
                   </Box>
                 </Stack>
@@ -145,14 +149,14 @@ export function UsersPage() {
                 fullWidth
                 size="small"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => { setEmail(event.target.value); setPage(1); }}
                 label="Search users / exact email"
                 placeholder="listener@example.com"
                 helperText={normalizedEmail.includes("@") ? "Exact email lookup through FastAPI." : "Name search filters loaded users. Load more to expand results."}
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={17} /></InputAdornment> }}
               />
               <TextField select size="small" label="Status" value={statusFilter} sx={{ minWidth: 160 }}
-                onChange={(event) => setStatusFilter(event.target.value)}>
+                onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
                 <MenuItem value="all">All statuses</MenuItem>
                 <MenuItem value="verified">Verified</MenuItem>
                 <MenuItem value="unverified">Unverified</MenuItem>
@@ -174,7 +178,15 @@ export function UsersPage() {
         {exactSearch.error ? <Alert severity="error">{exactSearch.error instanceof Error ? exactSearch.error.message : "Unable to search user."}</Alert> : null}
         {userById.error ? <Alert severity="error">Unable to open linked user profile.</Alert> : null}
 
-        <UsersTable items={visibleUsers} onOpen={(user) => setSelectedUserId(user.id)} />
+        <UsersTable items={pagedUsers.items} onOpen={(user) => setSelectedUserId(user.id)} />
+        {pagedUsers.pages > 1 && <Stack direction="row" gap={2} flexWrap="wrap"
+          justifyContent="space-between" alignItems="center">
+          <Typography variant="caption" color="text.secondary">
+            Showing {pagedUsers.items.length} of {pagedUsers.total} loaded users
+          </Typography>
+          <Pagination size="small" count={pagedUsers.pages} page={pagedUsers.page}
+            onChange={(_,next) => setPage(next)} color="primary"/>
+        </Stack>}
 
         {!users.isLoading && !users.error && !exactSearch.error && visibleUsers.length === 0 ? (
           <Alert severity="info" icon={<Smartphone size={20} />}>
