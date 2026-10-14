@@ -2,6 +2,7 @@ import { Alert, Box, Button, Card, CardContent, Chip, Divider, Stack, Typography
 import { Link } from "@tanstack/react-router";
 import { Activity, FileClock, RefreshCw, ShieldCheck } from "lucide-react";
 import { useDraftQuery, usePublicStateQuery } from "../content/queries";
+import { useStaff } from "../auth/StaffGate";
 
 function timestamp(value: string | null | undefined) {
   if (!value) return "Not recorded";
@@ -11,6 +12,7 @@ function timestamp(value: string | null | undefined) {
 
 /** Operational release diagnostics. Never presented as business intelligence. */
 export function MonitoringPage() {
+  const staff = useStaff();
   const draft = useDraftQuery();
   const published = usePublicStateQuery();
   const data = draft.data?.data;
@@ -19,6 +21,11 @@ export function MonitoringPage() {
   const pending = draft.isPending || published.isPending;
   const versionGap = !hasError && data && release
     ? Math.max(0, data.revision - release.revision) : null;
+
+  if (!staff.roles.includes("admin")) {
+    return <Box className="modern-page"><Alert severity="warning">
+      Monitoring is restricted to administrators.</Alert></Box>;
+  }
 
   return <Box component="section" className="modern-page">
     <Stack spacing={2.25}>
