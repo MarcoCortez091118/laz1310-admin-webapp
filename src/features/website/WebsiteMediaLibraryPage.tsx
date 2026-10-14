@@ -1,6 +1,7 @@
-import { Alert, Box, Card, CardContent, Stack, Typography } from "@mui/material";
-import { FolderOpen, ShieldCheck } from "lucide-react";
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Card, CardContent, Stack, Typography } from "@mui/material";
+import { ChevronDown, FolderOpen, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { WebsiteArtworkField } from "../media/WebsiteArtworkField";
 import {
   WebsiteMediaBrowser, websiteMediaFolders, type WebsiteMediaFolder,
 } from "../media/WebsiteMediaBrowser";
@@ -8,6 +9,7 @@ import {
 /** Website media collections are backed by separate, existing FastAPI routes. */
 export function WebsiteMediaLibraryPage() {
   const [folder, setFolder] = useState<WebsiteMediaFolder>("banners");
+  const [selectedUrl, setSelectedUrl] = useState("");
   return <Box component="section" className="modern-page" sx={{ minWidth: 0 }}>
     <Stack spacing={2.5}>
       <Box>
@@ -23,7 +25,7 @@ export function WebsiteMediaLibraryPage() {
       <Box className="media-folder-grid" aria-label="Website media folders">
         {websiteMediaFolders.map(item => (
           <button key={item.id} type="button" className="media-folder-tile"
-            aria-pressed={folder === item.id} onClick={() => setFolder(item.id)}>
+            aria-pressed={folder === item.id} onClick={() => { setFolder(item.id); setSelectedUrl(""); }}>
             <FolderOpen size={26} aria-hidden color={folder === item.id ? "#D30A12" : "currentColor"}/>
             <span style={{ minWidth: 0 }}>
               <strong>{item.label}</strong><small>{item.description}</small>
@@ -31,6 +33,17 @@ export function WebsiteMediaLibraryPage() {
           </button>
         ))}
       </Box>
+      <Accordion variant="outlined" sx={{ borderRadius: "14px !important", overflow: "hidden" }}>
+        <AccordionSummary expandIcon={<ChevronDown size={19}/>}
+          aria-controls="website-folder-upload-panel" id="website-folder-upload-header">
+          <Typography fontWeight={750}>Upload image to selected folder</Typography>
+        </AccordionSummary>
+        <AccordionDetails id="website-folder-upload-panel">
+          <WebsiteArtworkField key={folder} folder={folder} showBrowse={false}
+            url={selectedUrl} onChange={setSelectedUrl}
+            title={`LA Z Website ${folder} image`}/>
+        </AccordionDetails>
+      </Accordion>
       <Card><CardContent sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
         <WebsiteMediaBrowser folder={folder}/>
       </CardContent></Card>
