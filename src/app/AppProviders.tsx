@@ -1,8 +1,9 @@
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { useState } from "react";
-import { adminTheme } from "./theme";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppearanceContext, readAppearance, saveAppearance } from "./appearance";
+import { createAdminTheme } from "./theme";
 
 export function AppProviders({ children }: PropsWithChildren) {
   const [queryClient] = useState(
@@ -20,11 +21,26 @@ export function AppProviders({ children }: PropsWithChildren) {
         },
       }),
   );
+  const [mode, setMode] = useState(readAppearance);
+  const theme = useMemo(() => createAdminTheme(mode), [mode]);
+  const toggle = useCallback(() => setMode(current => current === "dark" ? "light" : "dark"), []);
+
+  useEffect(() => {
+    saveAppearance(mode);
+    document.documentElement.dataset.adminAppearance = mode;
+    return () => {
+      delete document.documentElement.dataset.adminAppearance;
+    };
+  }, [mode]);
+
+  const appearance = useMemo(() => ({ mode, toggle }), [mode, toggle]);
 
   return (
-    <ThemeProvider theme={adminTheme}>
-      <CssBaseline />
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </ThemeProvider>
+    <AppearanceContext.Provider value={appearance}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </ThemeProvider>
+    </AppearanceContext.Provider>
   );
 }

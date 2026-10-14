@@ -6,6 +6,7 @@ import { router } from "./router";
 import "./styles.css";
 import "./modern-ui.css";
 import "./login-modern.css";
+import "./admin-visual-system.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -9,6 +9,7 @@ import {
   Skeleton,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -84,12 +85,23 @@ function MetricCard({ icon: Icon, label, value, detail, loading = false }: Metri
 }
 
 export function DashboardPage() {
+  const theme = useTheme();
+  const chartText = theme.palette.text.secondary;
+  const chartBorder = theme.palette.divider;
+  const tooltipStyle = {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${chartBorder}`,
+    borderRadius: 12,
+    boxShadow: "0 14px 32px rgba(0,0,0,.15)",
+  };
   const staff = useStaff();
   const draft = useDraftQuery();
   const publicState = usePublicStateQuery();
   const catalog = draft.data?.data.catalog;
   const loading = draft.isPending || publicState.isPending;
   const failed = draft.error ?? publicState.error;
+  const metricValue = (value: number): number | string => failed ? "—" : value;
 
   const pages = catalog?.pages?.length ?? 0;
   const stations = catalog?.stations?.length ?? 0;
@@ -99,10 +111,10 @@ export function DashboardPage() {
   const activeStations = catalog?.stations?.filter((station: Station) => station.isActive ?? true).length ?? 0;
 
   const inventoryData = [
-    { name: "Pages", value: pages },
-    { name: "Stations", value: stations },
-    { name: "Programs", value: programs },
-    { name: "Dynamics", value: dynamics },
+    { name: "Pages", value: failed ? null : pages },
+    { name: "Stations", value: failed ? null : stations },
+    { name: "Programs", value: failed ? null : programs },
+    { name: "Dynamics", value: failed ? null : dynamics },
   ];
 
   const now = Date.now();
@@ -117,7 +129,7 @@ export function DashboardPage() {
   }
 
   const campaignData = Object.entries(campaignState).map(([name, value]) => ({ name, value }));
-  const campaignColors = ["#D30A12", "#F79009", "#98A2B3", "#2F0908"];
+  const campaignColors = ["#2BC4A4", "#6397F8", "#FFBC66", "#F14C52"];
   const draftRevision = draft.data?.data.revision ?? 0;
   const publishedRevision = publicState.data?.data.revision ?? 0;
   const revisionGap = Math.max(0, draftRevision - publishedRevision);
@@ -143,7 +155,9 @@ export function DashboardPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip color="success" label="FastAPI connected" size="small" variant="outlined" />
+          <Chip color={failed ? "error" : loading ? "default" : "success"}
+            label={failed ? "FastAPI unavailable" : loading ? "Checking FastAPI" : "FastAPI connected"}
+            size="small" variant="outlined" />
           <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
           <Chip label={`Published ${shortId(publicState.data?.data.releaseId)}`} size="small" variant="outlined" />
         </Stack>
@@ -177,25 +191,25 @@ export function DashboardPage() {
           icon={Activity}
           label="Draft revision"
           loading={loading}
-          value={draftRevision || "—"}
+          value={failed ? "—" : draftRevision || "—"}
         />
         <MetricCard
           detail={`${revisionGap} unpublished revision${revisionGap === 1 ? "" : "s"}`}
           icon={RefreshCw}
           label="Published revision"
           loading={loading}
-          value={publishedRevision || "—"}
+          value={failed ? "—" : publishedRevision || "—"}
         />
-        <MetricCard detail="Draft catalog" icon={FileText} label="Pages" loading={loading} value={pages} />
+        <MetricCard detail="Draft catalog" icon={FileText} label="Pages" loading={loading} value={metricValue(pages)} />
         <MetricCard
           detail={`${activeStations} active station${activeStations === 1 ? "" : "s"}`}
           icon={Radio}
           label="Stations"
           loading={loading}
-          value={stations}
+          value={metricValue(stations)}
         />
-        <MetricCard detail="Shows across all stations" icon={CalendarRange} label="Programs" loading={loading} value={programs} />
-        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Dynamics" loading={loading} value={dynamics} />
+        <MetricCard detail="Shows across all stations" icon={CalendarRange} label="Programs" loading={loading} value={metricValue(programs)} />
+        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Dynamics" loading={loading} value={metricValue(dynamics)} />
       </Box>
 
       <Box className="overview-chart-grid">
@@ -213,12 +227,12 @@ export function DashboardPage() {
             <Box sx={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={inventoryData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid stroke="#EEF1F5" strokeDasharray="4 4" vertical={false} />
-                  <XAxis axisLine={false} dataKey="name" tick={{ fill: "#667085", fontSize: 12 }} tickLine={false} />
-                  <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "#98A2B3", fontSize: 11 }} tickLine={false} />
+                  <CartesianGrid stroke={chartBorder} strokeDasharray="4 4" vertical={false} />
+                  <XAxis axisLine={false} dataKey="name" tick={{ fill: chartText, fontSize: 12 }} tickLine={false} />
+                  <YAxis allowDecimals={false} axisLine={false} tick={{ fill: chartText, fontSize: 11 }} tickLine={false} />
                   <ChartTooltip
-                    contentStyle={{ border: "1px solid #E6EAF0", borderRadius: 10, boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}
-                    cursor={{ fill: "rgba(211, 10, 18, 0.04)" }}
+                    contentStyle={tooltipStyle}
+                    cursor={{ fill: theme.palette.action.hover }}
                   />
                   <Bar dataKey="value" fill="#D30A12" radius={[7, 7, 0, 0]} maxBarSize={56} />
                 </BarChart>
@@ -234,7 +248,7 @@ export function DashboardPage() {
               Derived from real campaign windows and editorial status.
             </Typography>
 
-            {dynamics ? (
+            {dynamics && !failed ? (
               <>
                 <Box sx={{ width: "100%", height: 230, mt: 1 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -255,7 +269,7 @@ export function DashboardPage() {
                         ))}
                       </Pie>
                       <ChartTooltip
-                        contentStyle={{ border: "1px solid #E6EAF0", borderRadius: 10 }}
+                        contentStyle={tooltipStyle}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -273,9 +287,9 @@ export function DashboardPage() {
             ) : (
               <Box className="overview-empty-chart">
                 <Sparkles size={28} />
-                <Typography fontWeight={700}>No campaigns in this Draft</Typography>
+                <Typography fontWeight={700}>{failed ? "Campaign data unavailable" : "No campaigns in this Draft"}</Typography>
                 <Typography color="text.secondary" fontSize={12.5}>
-                  Dynamics will appear here as soon as they are added.
+                  {failed ? "Retry when FastAPI is available." : "Dynamics will appear here as soon as they are added."}
                 </Typography>
               </Box>
             )}
@@ -299,8 +313,9 @@ export function DashboardPage() {
               <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
               <Chip label={`Published revision ${publishedRevision || "—"}`} size="small" variant="outlined" />
               <Chip
-                color={revisionGap > 0 ? "warning" : "success"}
-                label={revisionGap > 0 ? `${revisionGap} pending change${revisionGap === 1 ? "" : "s"}` : "Release is current"}
+                color={failed ? "default" : revisionGap > 0 ? "warning" : "success"}
+                label={failed ? "Release status unavailable" : revisionGap > 0
+                  ? `${revisionGap} pending change${revisionGap === 1 ? "" : "s"}` : "Release is current"}
                 size="small"
                 variant="outlined"
               />

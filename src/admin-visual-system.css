@@ -1,0 +1,240 @@
+/* LA Z Admin dark-first workspace skin — scoped, with an accessible light option.
+   Behavior, routing, Auth/App Check and data ownership remain unchanged. */
+:root[data-admin-appearance="dark"] {
+  --admin-bg: #0b0c0e;
+  --admin-panel: #17181b;
+  --admin-raised: #1d1f23;
+  --admin-sidebar: #111215;
+  --admin-control: #202125;
+  --admin-hover: #26282c;
+  --admin-border: #2b2d32;
+  --admin-text: #f5f5f7;
+  --admin-muted: #a6a9b2;
+  --admin-accent: #f14c52;
+  --admin-soft-accent: rgba(211,10,18,.13);
+  --admin-shadow: 0 10px 30px rgba(0,0,0,.16);
+}
+:root[data-admin-appearance="light"] {
+  --admin-bg: #f6f8fb;
+  --admin-panel: #fff;
+  --admin-raised: #fff;
+  --admin-sidebar: #fff;
+  --admin-control: #f7f8fa;
+  --admin-hover: #f2f4f8;
+  --admin-border: #e6eaf0;
+  --admin-text: #151823;
+  --admin-muted: #667085;
+  --admin-accent: #b42318;
+  --admin-soft-accent: #fff1f2;
+  --admin-shadow: 0 4px 18px rgba(16,24,40,.05);
+}
+:root[data-admin-appearance] {
+  color: var(--admin-text);
+  background: var(--admin-bg);
+}
+:root[data-admin-appearance] body,
+:root[data-admin-appearance] .modern-admin-shell,
+:root[data-admin-appearance] .modern-workspace {
+  color: var(--admin-text);
+  background: var(--admin-bg);
+}
+:root[data-admin-appearance] .modern-workspace {
+  background-image: radial-gradient(circle at 78% -18%, rgba(211,10,18,.055), transparent 32rem);
+}
+:root[data-admin-appearance] .modern-sidebar {
+  color: var(--admin-text);
+  background: var(--admin-sidebar);
+}
+:root[data-admin-appearance] .modern-brand {
+  border-bottom: 1px solid var(--admin-border);
+}
+:root[data-admin-appearance] .modern-brand-mark {
+  background: linear-gradient(145deg,#d30a12,#740d18);
+  box-shadow: 0 4px 16px rgba(211,10,18,.14);
+}
+:root[data-admin-appearance] .modern-navigation {
+  padding-top: 9px;
+}
+:root[data-admin-appearance] .modern-nav-group + .modern-nav-group {
+  margin-top: 18px;
+}
+:root[data-admin-appearance] .modern-nav-label {
+  color: var(--admin-muted);
+  opacity: .8;
+}
+:root[data-admin-appearance] .mui-nav-link {
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .mui-nav-link:hover .mui-nav-item {
+  background: var(--admin-hover);
+  color: var(--admin-text);
+}
+:root[data-admin-appearance] .mui-nav-link.active .mui-nav-item {
+  background: var(--admin-soft-accent);
+  color: var(--admin-accent);
+  box-shadow: inset 2px 0 #d30a12;
+}
+:root[data-admin-appearance] .mui-nav-item {
+  min-height: 39px;
+}
+:root[data-admin-appearance] .modern-sidebar-user {
+  background: var(--admin-raised);
+  border: 1px solid var(--admin-border);
+}
+:root[data-admin-appearance] .modern-search .MuiOutlinedInput-root {
+  background: var(--admin-control);
+}
+:root[data-admin-appearance] .modern-account-trigger {
+  color: var(--admin-text);
+}
+:root[data-admin-appearance] .modern-account-trigger:hover {
+  background: var(--admin-hover);
+}
+:root[data-admin-appearance] .modern-account-copy span {
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .modern-workspace .panel,
+:root[data-admin-appearance] .modern-workspace .metric-card,
+:root[data-admin-appearance] .modern-workspace .program-metric-card,
+:root[data-admin-appearance] .modern-workspace .program-card,
+:root[data-admin-appearance] .modern-workspace .media-card,
+:root[data-admin-appearance] .modern-workspace .dynamic-card,
+:root[data-admin-appearance] .modern-workspace .dynamic-editor,
+:root[data-admin-appearance] .modern-workspace .preview-hero,
+:root[data-admin-appearance] .modern-workspace .preview-radio,
+:root[data-admin-appearance] .modern-workspace .preview-shows,
+:root[data-admin-appearance] .modern-workspace .preview-text,
+:root[data-admin-appearance] .modern-workspace .preview-cards,
+:root[data-admin-appearance] .modern-workspace .card-editor,
+:root[data-admin-appearance] .modern-workspace .block-editor,
+:root[data-admin-appearance] .modern-workspace .resource-list,
+:root[data-admin-appearance] .modern-workspace .state-card,
+:root[data-admin-appearance] .modern-workspace .status-pill {
+  color: var(--admin-text);
+  border-color: var(--admin-border);
+  background: var(--admin-panel);
+  box-shadow: var(--admin-shadow);
+}
+:root[data-admin-appearance] .modern-workspace .modern-page .MuiCard-root,
+:root[data-admin-appearance] .modern-workspace .modern-page .MuiPaper-root {
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .modern-workspace .muted,
+:root[data-admin-appearance] .modern-workspace .empty-copy,
+:root[data-admin-appearance] .modern-workspace .resource-list > button small,
+:root[data-admin-appearance] .modern-workspace .preview-panel-heading p,
+:root[data-admin-appearance] .modern-workspace .detail-list dt {
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .modern-workspace .page-heading h1 {
+  color: var(--admin-text);
+}
+:root[data-admin-appearance] .modern-workspace input:not(.MuiInputBase-input),
+:root[data-admin-appearance] .modern-workspace select:not(.MuiSelect-nativeInput),
+:root[data-admin-appearance] .modern-workspace textarea,
+:root[data-admin-appearance] .modern-workspace .form-stack input {
+  background: var(--admin-control);
+  color: var(--admin-text);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .modern-workspace input::placeholder,
+:root[data-admin-appearance] .modern-workspace textarea::placeholder {
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .modern-workspace .preview-panel,
+:root[data-admin-appearance] .modern-workspace .resource-list,
+:root[data-admin-appearance] .modern-workspace .block-editor-heading,
+:root[data-admin-appearance] .modern-workspace .preview-mode-bar,
+:root[data-admin-appearance] .modern-workspace .page-preview-canvas,
+:root[data-admin-appearance] .modern-workspace .blocks-summary li {
+  background: var(--admin-raised);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .modern-workspace .resource-list > button {
+  color: var(--admin-text);
+}
+:root[data-admin-appearance] .modern-workspace .resource-list > button:hover,
+:root[data-admin-appearance] .modern-workspace .resource-list > button.selected {
+  background: var(--admin-hover);
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance] .modern-workspace .preview-mode-bar button {
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .modern-workspace .preview-mode-bar button.selected {
+  background: var(--admin-panel);
+  color: var(--admin-text);
+}
+:root[data-admin-appearance] .overview-metric-icon {
+  background: var(--admin-soft-accent);
+  color: var(--admin-accent);
+}
+:root[data-admin-appearance] .overview-legend-item,
+:root[data-admin-appearance] .modern-workspace .preview-inline-empty {
+  background: var(--admin-raised);
+  color: var(--admin-muted);
+}
+:root[data-admin-appearance] .modern-workspace .preview-link {
+  color: var(--admin-accent);
+}
+:root[data-admin-appearance] .modern-workspace .preview-hero .preview-link {
+  color: #ffb5b9;
+}
+:root[data-admin-appearance] .modern-workspace .detail-list div,
+:root[data-admin-appearance] .modern-workspace .blocks-summary,
+:root[data-admin-appearance] .modern-workspace .preview-panel-heading {
+  border-color: var(--admin-border);
+}
+:root[data-admin-appearance="dark"] .modern-login-form-panel,
+:root[data-admin-appearance="dark"] .modern-login-shell,
+:root[data-admin-appearance="dark"] .login-shell,
+:root[data-admin-appearance="dark"] .centered-state {
+  background: #0b0c0e;
+}
+:root[data-admin-appearance="dark"] .modern-login-card,
+:root[data-admin-appearance="dark"] .login-card {
+  background: var(--admin-panel);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+:root[data-admin-appearance="dark"] .modern-login-card {
+  box-shadow: 0 18px 70px rgba(0,0,0,.28) !important;
+}
+:root[data-admin-appearance="dark"] .modern-login-form-icon {
+  background: var(--admin-soft-accent);
+  color: var(--admin-accent);
+}
+:root[data-admin-appearance] .MuiTableContainer-root {
+  overflow-x: auto;
+  max-width: 100%;
+}
+:root[data-admin-appearance] :where(a,button,input,select,textarea,[role="button"]):focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 1099px) {
+  :root[data-admin-appearance] .modern-page,
+  :root[data-admin-appearance] .modern-workspace > .page-stack { padding: 24px 20px; }
+}
+@media (max-width: 600px) {
+  :root[data-admin-appearance] .modern-topbar { gap: 6px; }
+  :root[data-admin-appearance] .modern-search { width: min(180px, 37vw); }
+  :root[data-admin-appearance] .modern-page,
+  :root[data-admin-appearance] .modern-workspace > .page-stack { padding: 16px 12px 26px; }
+  :root[data-admin-appearance] .page-heading h1 { font-size: 26px; }
+}
+@media (max-width: 420px) {
+  /* Navigation search remains available in the sidebar on larger devices;
+     on the narrowest phones prioritize access to the platform and account. */
+  :root[data-admin-appearance] .modern-search { display: none; }
+  :root[data-admin-appearance] .modern-topbar { padding: 0 8px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-admin-appearance] .mui-nav-link,
+  :root[data-admin-appearance] .modern-workspace *,
+  :root[data-admin-appearance] .modern-sidebar * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

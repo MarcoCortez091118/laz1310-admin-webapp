@@ -24,6 +24,8 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import { signOut } from "firebase/auth";
 import {
   Bell,
+  Moon,
+  Sun,
   ChevronDown,
   Globe,
   LogOut,
@@ -40,8 +42,9 @@ import {
 import { useStaff } from "../features/auth/StaffGate";
 import { useDraftQuery, usePublicStateQuery } from "../features/content/queries";
 import { auth } from "../lib/firebase";
+import { useAppearance } from "./appearance";
 
-const DRAWER_WIDTH = 272;
+const DRAWER_WIDTH = 256;
 
 
 function shortRelease(value: string | null | undefined): string {
@@ -56,7 +59,7 @@ function AppReleaseStatus() {
       <Chip
         label={`Draft ${draft.data?.data.revision ?? "…"}`}
         size="small"
-        sx={{ bgcolor: "#FFF1F2", color: "#B42318" }}
+        sx={{ bgcolor: "action.hover", color: "text.primary" }}
       />
       <Chip
         label={`Published ${shortRelease(publicState.data?.data.releaseId)}`}
@@ -73,6 +76,7 @@ export function AdminShell() {
   const pathname = useRouterState({ select: state => state.location.pathname });
   const workspace = workspaceFromPath(pathname);
   const theme = useTheme();
+  const { mode, toggle } = useAppearance();
   const desktop = useMediaQuery(theme.breakpoints.up("lg"));
   const admin = staff.roles.includes("admin");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -129,7 +133,7 @@ export function AdminShell() {
               const next = event.target.value;
               if (next === "website" || next === "app") changeWorkspace(next);
             }}
-            sx={{ borderRadius: 2, fontWeight: 750, bgcolor: "#F8F9FB" }}
+            sx={{ borderRadius: 2, fontWeight: 750, bgcolor: "action.hover" }}
           >
             <MenuItem value="website">Website</MenuItem>
             <MenuItem value="app">App Android / iOS</MenuItem>
@@ -194,16 +198,19 @@ export function AdminShell() {
         elevation={0}
         position="fixed"
         sx={{
-          width: { lg: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { lg: `${DRAWER_WIDTH}px` },
-          borderBottom: "1px solid",
+          width: { xs: "calc(100% - 24px)", lg: `calc(100% - ${DRAWER_WIDTH + 32}px)` },
+          left: { xs: 12, lg: DRAWER_WIDTH + 16 },
+          top: 12,
+          border: "1px solid",
           borderColor: "divider",
-          bgcolor: "rgba(255,255,255,0.94)",
+          bgcolor: "background.paper",
+          borderRadius: 3,
+          boxShadow: "0 10px 35px rgba(0,0,0,.11)",
           backdropFilter: "blur(14px)",
           zIndex: (value) => value.zIndex.drawer - 1,
         }}
       >
-        <Toolbar className="modern-topbar" sx={{ minHeight: "72px !important", gap: 1.5 }}>
+        <Toolbar className="modern-topbar" sx={{ minHeight: "62px !important", gap: 1.5 }}>
           {!desktop ? (
             <IconButton aria-label="Open navigation" onClick={() => setMobileOpen(true)} edge="start">
               <MenuIcon size={21} />
@@ -229,6 +236,18 @@ export function AdminShell() {
 
           <Box sx={{ flex: 1 }} />
 
+          <Tooltip title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+            <IconButton
+              aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={mode === "dark"}
+              onClick={toggle}
+              color="inherit"
+              size="small"
+            >
+              {mode === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+            </IconButton>
+          </Tooltip>
+
           {workspace === "app" ? (
             <>
               <AppReleaseStatus />
@@ -246,6 +265,7 @@ export function AdminShell() {
               label="Website"
               size="small"
               variant="outlined"
+              sx={{ display: { xs: "none", sm: "inline-flex" } }}
             />
           )}
 
@@ -258,7 +278,7 @@ export function AdminShell() {
               onClick={openAccountMenu}
               type="button"
             >
-              <Avatar sx={{ width: 34, height: 34, bgcolor: "#2F0908", fontSize: 13, fontWeight: 800 }}>
+              <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.dark", fontSize: 13, fontWeight: 800 }}>
                 {admin ? "A" : "E"}
               </Avatar>
               <Box className="modern-account-copy">
@@ -323,7 +343,7 @@ export function AdminShell() {
           minHeight: "100vh",
         }}
       >
-        <Toolbar sx={{ minHeight: "72px !important" }} />
+        <Toolbar sx={{ minHeight: "86px !important" }} />
         <Outlet />
       </Box>
     </Box>
