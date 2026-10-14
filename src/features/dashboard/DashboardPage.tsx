@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Divider,
   Skeleton,
   Stack,
   Typography,
@@ -13,7 +12,6 @@ import {
 } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   CalendarRange,
   FileText,
   Radio,
@@ -33,19 +31,8 @@ import {
   YAxis,
 } from "recharts";
 import type { Station } from "../../api/types";
-import { useStaff } from "../auth/StaffGate";
-import { useDraftQuery, usePublicStateQuery } from "../content/queries";
-
-function shortId(value: string | null | undefined): string {
-  if (!value) return "Unpublished";
-  return value.length > 12 ? `${value.slice(0, 8)}…` : value;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "Not recorded";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
-}
+import { Link } from "@tanstack/react-router";
+import { useDraftQuery } from "../content/queries";
 
 interface MetricCardProps {
   icon: LucideIcon;
@@ -95,12 +82,10 @@ export function DashboardPage() {
     borderRadius: 12,
     boxShadow: "0 14px 32px rgba(0,0,0,.15)",
   };
-  const staff = useStaff();
   const draft = useDraftQuery();
-  const publicState = usePublicStateQuery();
   const catalog = draft.data?.data.catalog;
-  const loading = draft.isPending || publicState.isPending;
-  const failed = draft.error ?? publicState.error;
+  const loading = draft.isPending;
+  const failed = draft.error;
   const metricValue = (value: number): number | string => failed ? "—" : value;
 
   const pages = catalog?.pages?.length ?? 0;
@@ -130,9 +115,7 @@ export function DashboardPage() {
 
   const campaignData = Object.entries(campaignState).map(([name, value]) => ({ name, value }));
   const campaignColors = ["#2BC4A4", "#6397F8", "#FFBC66", "#F14C52"];
-  const draftRevision = draft.data?.data.revision ?? 0;
-  const publishedRevision = publicState.data?.data.revision ?? 0;
-  const revisionGap = Math.max(0, draftRevision - publishedRevision);
+
 
   return (
     <Box component="section" className="modern-page overview-page">
@@ -151,15 +134,12 @@ export function DashboardPage() {
             App Dashboard
           </Typography>
           <Typography color="text.secondary" fontSize={14} mt={0.6}>
-            Real editorial state from FastAPI for {staff.roles.join(", ")} access.
+            Editorial content available for Android and iOS, based on the current FastAPI catalog.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          <Chip color={failed ? "error" : loading ? "default" : "success"}
-            label={failed ? "FastAPI unavailable" : loading ? "Checking FastAPI" : "FastAPI connected"}
-            size="small" variant="outlined" />
-          <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
-          <Chip label={`Published ${shortId(publicState.data?.data.releaseId)}`} size="small" variant="outlined" />
+          <Button component={Link} to="/programs" variant="outlined" size="small">Programs</Button>
+          <Button component={Link} to="/dynamics" variant="contained" size="small">Dynamics</Button>
         </Stack>
       </Stack>
 
@@ -170,7 +150,6 @@ export function DashboardPage() {
               color="inherit"
               onClick={() => {
                 void draft.refetch();
-                void publicState.refetch();
               }}
               size="small"
               startIcon={<RefreshCw size={15} />}
@@ -185,21 +164,10 @@ export function DashboardPage() {
         </Alert>
       ) : null}
 
-      <Box className="overview-metric-grid">
-        <MetricCard
-          detail={draft.data?.etag ? `Concurrency ${draft.data.etag}` : "Optimistic concurrency enabled"}
-          icon={Activity}
-          label="Draft revision"
-          loading={loading}
-          value={failed ? "—" : draftRevision || "—"}
-        />
-        <MetricCard
-          detail={`${revisionGap} unpublished revision${revisionGap === 1 ? "" : "s"}`}
-          icon={RefreshCw}
-          label="Published revision"
-          loading={loading}
-          value={failed ? "—" : publishedRevision || "—"}
-        />
+      <Box className="overview-metric-grid" sx={{
+        gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))",
+          xl: "repeat(4,minmax(0,1fr))" },
+      }}>
         <MetricCard detail="Draft catalog" icon={FileText} label="Pages" loading={loading} value={metricValue(pages)} />
         <MetricCard
           detail={`${activeStations} active station${activeStations === 1 ? "" : "s"}`}
@@ -222,7 +190,7 @@ export function DashboardPage() {
                   Current Draft resources grouped by module.
                 </Typography>
               </Box>
-              <Chip label={`Draft #${draftRevision || "—"}`} size="small" variant="outlined" />
+              <Chip label="Current catalog" size="small" variant="outlined" />
             </Stack>
             <Box sx={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -297,56 +265,32 @@ export function DashboardPage() {
         </Card>
       </Box>
 
-      <Box className="overview-detail-grid">
+      <Box sx={{ mt: 2 }}>
         <Card>
           <CardContent>
-            <Typography color="primary.main" fontSize={11} fontWeight={800} letterSpacing="0.1em" textTransform="uppercase">
-              Editorial workflow
-            </Typography>
-            <Typography variant="h6" mt={0.7}>
-              Draft → Preview → Publish → Immutable Release
-            </Typography>
-            <Typography color="text.secondary" fontSize={13.5} mt={1.1} maxWidth={700}>
-              Administrative edits update only the Draft. Public clients remain pinned to the current immutable release until an administrator publishes.
-            </Typography>
-            <Stack direction="row" spacing={1} mt={2.4} flexWrap="wrap" useFlexGap>
-              <Chip label={`Draft ${draftRevision || "—"}`} size="small" />
-              <Chip label={`Published revision ${publishedRevision || "—"}`} size="small" variant="outlined" />
-              <Chip
-                color={failed ? "default" : revisionGap > 0 ? "warning" : "success"}
-                label={failed ? "Release status unavailable" : revisionGap > 0
-                  ? `${revisionGap} pending change${revisionGap === 1 ? "" : "s"}` : "Release is current"}
-                size="small"
-                variant="outlined"
-              />
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6">Current Draft</Typography>
-            <Stack divider={<Divider flexItem />} mt={1.5}>
-              <Box className="overview-detail-row">
-                <Typography color="text.secondary" fontSize={12.5}>Revision</Typography>
-                <Typography fontSize={13} fontWeight={800}>{draftRevision || "—"}</Typography>
-              </Box>
-              <Box className="overview-detail-row">
-                <Typography color="text.secondary" fontSize={12.5}>Updated by</Typography>
-                <Typography fontSize={12.5} fontWeight={700} sx={{ wordBreak: "break-all", textAlign: "right" }}>
-                  {draft.data?.data.updatedBy ?? "Not recorded"}
+            <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }}
+              justifyContent="space-between" spacing={2}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h6">Editorial overview</Typography>
+                <Typography color="text.secondary" fontSize={13} mt={.5}>
+                  These are real counts of content in the App catalog, not audience,
+                  listening time or conversion statistics. Release diagnostics
+                  are available separately under Monitoring.
                 </Typography>
               </Box>
-              <Box className="overview-detail-row">
-                <Typography color="text.secondary" fontSize={12.5}>Updated at</Typography>
-                <Typography fontSize={12.5} fontWeight={700} textAlign="right">
-                  {formatDate(draft.data?.data.updatedAt)}
-                </Typography>
-              </Box>
+              <Stack direction="row" spacing={1}>
+                <Button variant="outlined" component={Link} to="/notifications">
+                  Notifications
+                </Button>
+                <Button variant="outlined" component={Link} to="/programs">
+                  Open programs
+                </Button>
+              </Stack>
             </Stack>
           </CardContent>
         </Card>
       </Box>
+
     </Box>
   );
 }
