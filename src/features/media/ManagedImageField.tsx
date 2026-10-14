@@ -6,7 +6,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { Image as ImageIcon, Images, Trash2 } from "lucide-react";
+import { Images, Trash2 } from "lucide-react";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
 import { useState } from "react";
 import { MediaPickerDialog } from "./MediaPickerDialog";
 
@@ -53,32 +54,9 @@ export function ManagedImageField({
           </Stack>
         </Stack>
 
-        <Box
-          sx={{
-            borderRadius: 2,
-            overflow: "hidden",
-            minHeight: 150,
-            bgcolor: "#f8fafc",
-            border: "1px dashed",
-            borderColor: "divider",
-            display: "grid",
-            placeItems: "center",
-          }}
-        >
-          {selected ? (
-            <Box
-              component="img"
-              src={value!}
-              alt="Selected managed asset preview"
-              referrerPolicy="no-referrer"
-              sx={{ width: "100%", maxHeight: 280, objectFit: "cover", display: "block" }}
-            />
-          ) : (
-            <Stack alignItems="center" spacing={0.75} sx={{ py: 4, color: "text.secondary" }}>
-              <ImageIcon size={28} />
-              <Typography variant="body2">No managed image selected</Typography>
-            </Stack>
-          )}
+        <Box sx={{ maxWidth: 360, width: "100%", minWidth: 0 }}>
+          <NativeArtworkPreview src={value} alt={label}
+            shape="square" maxHeight={280}/>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
