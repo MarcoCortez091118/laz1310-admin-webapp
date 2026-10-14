@@ -13,6 +13,7 @@ import {
 } from "./api";
 import { ShowPosterField } from "./ShowPosterField";
 import { ArtworkPreview } from "../ArtworkPreview";
+import { EditorialFormSteps } from "../EditorialFormSteps";
 import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
@@ -35,39 +36,80 @@ function ShowEditDialog({ editor, close, save, busy }: {
   save: (value: ShowContent) => void; busy: boolean;
 }) {
   const [content, setContent] = useState<ShowContent>(NEW_CONTENT);
-  useEffect(() => { if (editor) setContent(editor.content); }, [editor]);
-  const valid = content.title.trim().length > 0 && content.imageUrl.startsWith("https://") &&
-    (!content.linkUrl || content.linkUrl.startsWith("https://")) &&
-    Number.isInteger(content.position) && content.position >= 0;
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (editor) { setContent(editor.content); setStep(0); }
+  }, [editor]);
+  const infoValid = content.title.trim().length > 0 &&
+    Number.isInteger(content.position) && content.position >= 0 &&
+    (!content.linkUrl || content.linkUrl.startsWith("https://"));
+  const artworkValid = content.imageUrl.startsWith("https://");
+  const valid = infoValid && artworkValid;
 
-  return (
-    <Dialog open={Boolean(editor)} onClose={busy ? undefined : close} fullWidth maxWidth="sm">
-      <DialogTitle>{editor?.revision === 0 ? "Create Website show" : "Edit Website show draft"}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Alert severity="info">Saving changes does not publish them. Every show is published separately.</Alert>
-          <TextField label="Show / presenter name" value={content.title} required fullWidth
-            onChange={e => setContent(v => ({ ...v, title: e.target.value }))} />
-          <TextField label="Schedule / subtitle" value={content.schedule} fullWidth
-            onChange={e => setContent(v => ({ ...v, schedule: e.target.value }))} />
-          <TextField label="Display order (0 first)" type="number" value={content.position}
-            onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
-          <ShowPosterField title={content.title} url={content.imageUrl}
-            onChange={url => setContent(v => ({ ...v, imageUrl: url }))} />
-          <TextField label="HTTPS poster URL" value={content.imageUrl} fullWidth required
-            onChange={e => setContent(v => ({ ...v, imageUrl: e.target.value.trim() }))} />
-          <TextField label="Optional HTTPS destination" value={content.linkUrl ?? ""} fullWidth
-            onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />
+  return <Dialog open={Boolean(editor)} onClose={busy ? undefined : close}
+    fullWidth maxWidth="md" aria-labelledby="show-editor-title"
+    slotProps={{ paper: { sx: { maxHeight: "calc(100dvh - 24px)", m: 1 } } }}>
+    <DialogTitle id="show-editor-title">
+      {editor?.revision === 0 ? "Create Website show" : "Edit Website show draft"}
+    </DialogTitle>
+    <DialogContent dividers sx={{ minWidth: 0 }}>
+      <EditorialFormSteps active={step} />
+      {step === 0 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Show information</Typography>
+        <TextField label="Show / presenter name" value={content.title} required fullWidth
+          onChange={e => setContent(v => ({ ...v, title: e.target.value }))} />
+        <TextField label="Schedule / subtitle" value={content.schedule} fullWidth
+          onChange={e => setContent(v => ({ ...v, schedule: e.target.value }))} />
+        <TextField label="Display order (0 first)" type="number" value={content.position}
+          onChange={e => setContent(v => ({ ...v, position: Number(e.target.value) }))} />
+        <TextField label="Optional HTTPS destination" value={content.linkUrl ?? ""} fullWidth
+          onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />
+      </Stack>}
+      {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Poster artwork</Typography>
+        <Typography color="text.secondary" variant="body2">
+          Browse the Website Shows folder, or upload a new poster. The poster fits
+          its preview without escaping the card.
+        </Typography>
+        <ShowPosterField title={content.title} url={content.imageUrl}
+          onChange={url => setContent(v => ({ ...v, imageUrl: url }))} />
+        <TextField label="HTTPS poster URL" value={content.imageUrl} fullWidth required
+          onChange={e => setContent(v => ({ ...v, imageUrl: e.target.value.trim() }))} />
+      </Stack>}
+      {step === 2 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Alert severity="info">
+          Saving creates or updates a private draft. Publish separately from the show card.
+        </Alert>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+          <Box sx={{ width: { xs: "100%", sm: 210 }, flexShrink: 0 }}>
+            <ArtworkPreview src={content.imageUrl} alt={content.title} shape="portrait" />
+          </Box>
+          <Stack spacing={1} sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="h6" sx={{ overflowWrap: "anywhere" }}>
+              {content.title}
+            </Typography>
+            <Typography color="text.secondary">{content.schedule || "No schedule"}</Typography>
+            <Typography variant="body2">Position: {content.position}</Typography>
+            <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+              Destination: {content.linkUrl || "No link"}
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              Draft revision: {editor?.revision ?? "—"}
+            </Typography>
+          </Stack>
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={close} disabled={busy}>Cancel</Button>
-        <Button variant="contained" disabled={!valid || busy} onClick={() => save(content)}>
-          Save draft (not published)
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+      </Stack>}
+    </DialogContent>
+    <DialogActions sx={{ flexWrap: "wrap" }}>
+      <Button onClick={close} disabled={busy}>Cancel</Button>
+      {step > 0 && <Button onClick={() => setStep(n => n - 1)} disabled={busy}>Back</Button>}
+      {step < 2 ? <Button variant="contained" disabled={busy ||
+        (step === 0 ? !infoValid : !artworkValid)}
+        onClick={() => setStep(n => n + 1)}>Continue</Button> :
+        <Button variant="contained" disabled={!valid || busy}
+          onClick={() => save(content)}>Save draft (not published)</Button>}
+    </DialogActions>
+  </Dialog>;
 }
 
 function ShowCard({ draft, isAdmin, busy, edit, action, confirm }: {
