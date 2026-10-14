@@ -265,6 +265,7 @@ export function AdminShell() {
               label="Website"
               size="small"
               variant="outlined"
+              sx={{ display: { xs: "none", sm: "inline-flex" } }}
             />
           )}
 
