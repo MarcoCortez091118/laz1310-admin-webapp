@@ -304,7 +304,8 @@ export function DynamicsPage() {
                         <NativeArtworkPreview src={dynamic.imageUrl}
                           alt={dynamic.artworkLabel || dynamic.title || "Campaign"}
                           shape="square" maxHeight={230}/>
-                        <Stack direction="row" spacing={0.6} className="dynamics-mui-campaign-badges">
+                      </Box>
+                      <Stack direction="row" spacing={0.6} className="dynamics-mui-campaign-badges">
                           <Chip label={current} color={lifecycleColor[current]} size="small" />
                           <Chip
                             label={publicationLabel(published)}
@@ -313,8 +314,7 @@ export function DynamicsPage() {
                             variant={published === "live" ? "filled" : "outlined"}
                           />
                           {dynamic.featured ? <Chip label="Featured" color="primary" size="small" /> : null}
-                        </Stack>
-                      </Box>
+                      </Stack>
                       <CardContent sx={{ p: 1.75 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>{dynamic.title}</Typography>
                         <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.4 }}>
