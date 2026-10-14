@@ -1,9 +1,9 @@
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, Paper, Stack, Tab, Tabs, TextField, Typography,
+  DialogTitle, Divider, IconButton, InputAdornment, Menu, MenuItem, Paper, Pagination, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Rocket, Trash2, Undo2 } from "lucide-react";
+import { MoreVertical, Plus, RefreshCw, Rocket, Search, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
@@ -12,6 +12,8 @@ import {
   showKeys, showPublication, type LegacyShow, type ShowContent, type ShowDraft,
 } from "./api";
 import { ShowPosterField } from "./ShowPosterField";
+import { ArtworkPreview } from "../ArtworkPreview";
+import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
 type Editor = { id: string; revision: number; content: ShowContent };
@@ -68,7 +70,7 @@ function ShowEditDialog({ editor, close, save, busy }: {
   );
 }
 
-function ShowRow({ draft, isAdmin, busy, edit, action, confirm }: {
+function ShowCard({ draft, isAdmin, busy, edit, action, confirm }: {
   draft: ShowDraft; isAdmin: boolean; busy: boolean;
   edit: (show: ShowDraft) => void;
   action: (id: string, action: "publish" | "restore", revision: number) => void;
@@ -83,54 +85,73 @@ function ShowRow({ draft, isAdmin, busy, edit, action, confirm }: {
   const needsPublish = !published || publication.data?.draftRevision !== draft.revision;
   const inTrash = draft.state === "trashed";
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }}>
-        <Box component="img" src={draft.content.imageUrl} alt={draft.content.title}
-          sx={{ width: 100, aspectRatio: "1", objectFit: "cover", borderRadius: 1 }} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight={800}>{draft.content.title}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {draft.content.schedule || "Schedule not set"} · Order {draft.content.position}
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-            <Chip size="small" label={inTrash ? "IN TRASH" :
-              published ? "PUBLISHED" : "UNPUBLISHED"}
-              color={inTrash ? "warning" : published ? "success" : "default"} />
-            <Chip size="small" label={`Draft revision ${draft.revision}`} />
-            {published && needsPublish && <Chip size="small" color="warning" label="UNPUBLISHED CHANGES" />}
-          </Stack>
-        </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-          {inTrash ? (
-            <>
-              <Button startIcon={<Undo2 size={15} />} disabled={busy}
-                onClick={() => action(draft.id, "restore", draft.revision)}>Restore draft</Button>
-              {isAdmin && <Button color="error" disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "purge" })}>
-                Delete permanently
-              </Button>}
-            </>
-          ) : (
-            <>
-              <Button disabled={busy} onClick={() => edit(draft)}>Edit</Button>
-              {isAdmin && <Button startIcon={<Rocket size={15} />} variant="contained"
-                disabled={busy || !needsPublish}
-                onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
-              {isAdmin && published && <Button disabled={busy}
-                onClick={() => confirm({
-                  id: draft.id, revision: publication.data?.revision ?? 0, action: "unpublish",
-                })}>Unpublish</Button>}
-              {isAdmin && <Button startIcon={<Trash2 size={15} />} color="error"
-                disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "trash" })}>
-                Move to trash
-              </Button>}
-            </>
-          )}
+    <Paper variant="outlined" sx={{
+      p: 1.5, borderRadius: 3, minWidth: 0, overflow: "hidden",
+      display: "flex", flexDirection: "column", gap: 1.25,
+      "&:hover": { borderColor: "primary.main" },
+    }}>
+      <ArtworkPreview src={draft.content.imageUrl} alt={draft.content.title} shape="portrait" />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Stack direction="row" alignItems="start" justifyContent="space-between" gap={1}>
+          <Typography fontWeight={800} fontSize={15} sx={{
+            display: "-webkit-box", WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere",
+          }} title={draft.content.title}>{draft.content.title}</Typography>
+          <Chip size="small" label={inTrash ? "Trash" : published ? "Live" : "Draft"}
+            color={inTrash ? "warning" : published ? "success" : "default"} />
         </Stack>
+        <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: .75 }}>
+          {draft.content.schedule || "Schedule not set"}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: .5 }}>
+          Order {draft.content.position} · Draft {draft.revision}
+          {published && needsPublish ? " · Changes pending" : ""}
+        </Typography>
+      </Box>
+      <Stack direction="row" alignItems="center" spacing={.75}>
+        {inTrash ? <Button size="small" fullWidth variant="outlined"
+          startIcon={<Undo2 size={15}/>} disabled={busy}
+          onClick={() => action(draft.id, "restore", draft.revision)}>Restore</Button> :
+          <Button size="small" fullWidth variant="outlined" disabled={busy}
+            onClick={() => edit(draft)}>Edit show</Button>}
+        {!inTrash && isAdmin && needsPublish &&
+          <Button size="small" variant="contained" disabled={busy}
+            startIcon={<Rocket size={15}/>}
+            onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
+        {isAdmin && <ShowMoreActions draft={draft} busy={busy}
+          published={published} publicationRevision={publication.data?.revision ?? 0}
+          confirm={confirm} />}
       </Stack>
     </Paper>
   );
+}
+
+function ShowMoreActions({ draft, busy, published, publicationRevision, confirm }: {
+  draft: ShowDraft; busy: boolean; published: boolean; publicationRevision: number;
+  confirm: (value: Confirmation) => void;
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const inTrash = draft.state === "trashed";
+  return <>
+    <IconButton size="small" aria-label={`More actions for ${draft.content.title}`}
+      disabled={busy} onClick={event => setAnchor(event.currentTarget)}>
+      <MoreVertical size={18} />
+    </IconButton>
+    <Menu open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}>
+      {!inTrash && published && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: publicationRevision, action: "unpublish" });
+      }}>Unpublish</MenuItem>}
+      {!inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "trash" });
+      }}>Move to trash</MenuItem>}
+      {inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "purge" });
+      }}>Delete permanently (30-day retention)</MenuItem>}
+    </Menu>
+  </>;
 }
 
 export function WebsiteShowsPage() {
