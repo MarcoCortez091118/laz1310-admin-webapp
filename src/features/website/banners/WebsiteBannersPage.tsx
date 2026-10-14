@@ -6,6 +6,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Plus, Rocket, Save, Undo2 } from "lucide-react";
 import { ArtworkPreview } from "../ArtworkPreview";
+import { EditorialFormSteps } from "../EditorialFormSteps";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { WebsiteBannerMediaControls } from "./WebsiteBannerMediaControls";
@@ -43,51 +44,74 @@ function BannerEditorDialog({
   onCommit: (value: WebsiteBanner) => void;
 }) {
   const [value, setValue] = useState<WebsiteBanner>(editor?.value ?? bannerEditorInitial());
+  const [step, setStep] = useState(0);
   useEffect(() => {
-    if (editor) setValue(editor.value);
+    if (editor) { setValue(editor.value); setStep(0); }
   }, [editor]);
-  const valid = value.url.startsWith("https://") &&
-    (!value.linkUrl || value.linkUrl.startsWith("https://")) && value.id.length > 0;
+  const infoValid = value.id.length > 0 &&
+    (!value.linkUrl || value.linkUrl.startsWith("https://"));
+  const artworkValid = value.url.startsWith("https://");
+  const valid = infoValid && artworkValid;
 
-  return (
-    <Dialog open={Boolean(editor)} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{editor?.index === -1 ? "Add Website banner" : "Edit Website banner"}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            {editor?.layout === "desktop" ? "Desktop website" : "Mobile website layout"} ·
-            artwork is uploaded to an isolated Website media namespace.
-          </Typography>
-          <WebsiteBannerMediaControls
-            description={editor?.layout === "desktop" ? "LA Z Website desktop banner" : "LA Z Website mobile banner"}
-            currentUrl={value.url}
-            onChoose={(url) => setValue((current) => ({ ...current, url }))}
-          />
-          <TextField label="Direct HTTPS image URL" value={value.url} fullWidth required
-            onChange={(event) => setValue((current) => ({ ...current, url: event.target.value.trim() }))}
-            helperText="Use an existing public image or managed Website asset URL." />
-          <TextField label="Destination URL (optional)" value={value.linkUrl ?? ""} fullWidth
-            onChange={(event) => setValue((current) => ({
-              ...current, linkUrl: event.target.value.trim() || null,
-            }))}
-            helperText="HTTPS only. Leave empty for an image without a clickable link." />
-          <FormControlLabel label="Active in this Website layout"
-            control={<Switch checked={value.active}
-              onChange={(event) => setValue((current) => ({ ...current, active: event.target.checked }))} />} />
-          {value.url.startsWith("https://") && (
-            <ArtworkPreview src={value.url} alt="Draft artwork preview"
-              shape={editor?.layout === "mobile" ? "portrait" : "landscape"} />
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+  return <Dialog open={Boolean(editor)} onClose={onClose} fullWidth maxWidth="md"
+    aria-labelledby="banner-editor-title"
+    slotProps={{ paper: { sx: { maxHeight: "calc(100dvh - 24px)", m: 1 } } }}>
+    <DialogTitle id="banner-editor-title">
+      {editor?.index === -1 ? "Add Website banner" : "Edit Website banner"}
+    </DialogTitle>
+    <DialogContent dividers sx={{ minWidth: 0 }}>
+      <EditorialFormSteps active={step}/>
+      {step === 0 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>Banner settings</Typography>
+        <Alert severity="info">
+          Artwork is managed independently for Website desktop and mobile layouts.
+        </Alert>
+        <TextField label="Optional HTTPS destination" value={value.linkUrl ?? ""} fullWidth
+          onChange={event => setValue(current => ({
+            ...current, linkUrl: event.target.value.trim() || null,
+          }))} helperText="Leave blank when the banner is not clickable."/>
+        <FormControlLabel label="Active on this Website layout"
+          control={<Switch checked={value.active}
+            onChange={event => setValue(current => ({ ...current, active: event.target.checked }))}/>} />
+      </Stack>}
+      {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Typography fontWeight={800}>
+          {editor?.layout === "desktop" ? "Desktop artwork" : "Mobile artwork"}
+        </Typography>
+        <WebsiteBannerMediaControls
+          description={editor?.layout === "desktop"
+            ? "LA Z Website desktop banner" : "LA Z Website mobile banner"}
+          currentUrl={value.url}
+          onChoose={url => setValue(current => ({ ...current, url }))}/>
+        <TextField label="HTTPS image URL" value={value.url} fullWidth required
+          onChange={event => setValue(current => ({ ...current, url: event.target.value.trim() }))}
+          helperText="Upload new artwork or choose an existing image in Website Banners."/>
+      </Stack>}
+      {step === 2 && <Stack spacing={2} sx={{ mt: 2 }}>
+        <Alert severity="info">
+          Applying only updates the unsaved editor state. Use Save draft on the
+          Banners page before publishing separately.
+        </Alert>
+        <ArtworkPreview src={value.url} alt="Banner preview"
+          shape={editor?.layout === "mobile" ? "portrait" : "landscape"}/>
+        <Typography variant="body2">Layout: {editor?.layout || "Website"}</Typography>
+        <Typography variant="body2">Visibility: {value.active ? "Active" : "Hidden"}</Typography>
+        <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+          Destination: {value.linkUrl || "No destination"}
+        </Typography>
+      </Stack>}
+    </DialogContent>
+    <DialogActions sx={{ flexWrap: "wrap" }}>
+      <Button onClick={onClose}>Cancel</Button>
+      {step > 0 && <Button onClick={() => setStep(n => n - 1)}>Back</Button>}
+      {step < 2 ? <Button variant="contained"
+        disabled={step === 0 ? !infoValid : !artworkValid}
+        onClick={() => setStep(n => n + 1)}>Continue</Button> :
         <Button variant="contained" disabled={!valid} onClick={() => onCommit(value)}>
           Apply to draft
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+        </Button>}
+    </DialogActions>
+  </Dialog>;
 }
 
 export function WebsiteBannersPage() {
