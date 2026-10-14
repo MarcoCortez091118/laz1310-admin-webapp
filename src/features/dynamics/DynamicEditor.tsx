@@ -23,6 +23,8 @@ import { ApiError } from "../../api/errors";
 import type { Dynamic } from "../../api/types";
 import { adminQueryKeys } from "../content/api";
 import { ManagedImageField } from "../media/ManagedImageField";
+import { NativeEditorSteps } from "../app-ui/NativeEditorSteps";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
 import {
   dynamicsQueryKeys,
   putDynamic,
@@ -100,6 +102,7 @@ export function DynamicEditor({
   );
   const [clientError, setClientError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [editorStep, setEditorStep] = useState(0);
   const originalId = dynamic?.id;
 
   const saveMutation = useMutation({
@@ -186,6 +189,7 @@ export function DynamicEditor({
 
       <Box
         component="form"
+        noValidate
         className="dynamics-editor-form"
         onSubmit={(event) => {
           event.preventDefault();
@@ -194,7 +198,10 @@ export function DynamicEditor({
           if (!validation) void saveMutation.mutateAsync();
         }}
       >
+        <NativeEditorSteps active={editorStep}
+          labels={["Campaign & artwork", "Schedule", "Participation & policy", "Review"]}/>
         <fieldset disabled={busy} className="dynamics-editor-fieldset">
+          <Box sx={{ display: editorStep === 0 ? "block" : "none" }}>
           <FormSection title="Campaign identity" description="Public-facing metadata and promotional artwork.">
             <Box className="dynamics-editor-grid two">
               <TextField
@@ -254,7 +261,9 @@ export function DynamicEditor({
               onChange={(url) => update("imageUrl", url ?? "")}
             />
           </FormSection>
+          </Box>
 
+          <Box sx={{ display: editorStep === 1 ? "block" : "none" }}>
           <FormSection title="Schedule & availability" description="Dates are interpreted in the selected IANA timezone and persisted as UTC.">
             <Box className="dynamics-editor-grid three">
               <TextField
@@ -302,7 +311,9 @@ export function DynamicEditor({
               />
             </Box>
           </FormSection>
+          </Box>
 
+          <Box sx={{ display: editorStep === 2 ? "block" : "none" }}>
           <FormSection title="Participation" description="Choose an in-app form or send listeners to an external HTTPS registration page.">
             <ToggleButtonGroup
               exclusive
@@ -459,7 +470,9 @@ export function DynamicEditor({
               </Stack>
             )}
           </FormSection>
+          </Box>
 
+          <Box sx={{ display: editorStep === 2 ? "block" : "none" }}>
           <FormSection title="Consent & policy" description="Increment consentVersion whenever applicable legal terms change.">
             <Box className="dynamics-editor-grid two">
               <TextField
@@ -485,7 +498,33 @@ export function DynamicEditor({
               />
             </Box>
           </FormSection>
+          </Box>
         </fieldset>
+        {editorStep === 3 && <Paper variant="outlined" sx={{
+          borderRadius: 3, p: 2, display: "grid", gap: 2, minWidth: 0,
+        }}>
+          <Typography fontWeight={800}>Review campaign draft</Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+            <Box sx={{ width: { xs: "100%", sm: 230 }, flexShrink: 0 }}>
+              <NativeArtworkPreview src={form.imageUrl}
+                alt={form.artworkLabel || form.title || "Campaign artwork"} shape="square"/>
+            </Box>
+            <Stack spacing={1} sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ overflowWrap: "anywhere" }}>
+                {form.title || "Untitled campaign"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {form.context}
+              </Typography>
+              <Typography variant="body2">Slug: {form.slug}</Typography>
+              <Typography variant="body2">Participation: {form.participationType}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Saving updates only the Android/iOS Draft. Publishing is a separate
+                administrator action protected by the existing API.
+              </Typography>
+            </Stack>
+          </Stack>
+        </Paper>}
 
         <Box className="dynamics-editor-actions-mui" sx={{ gap: 1.5, alignItems: { xs: "stretch", md: "flex-end" } }}>
           {dynamic ? (
@@ -499,15 +538,19 @@ export function DynamicEditor({
               onDeleted={onDeleted}
             />
           ) : <span />}
-          <Button
-            type="submit"
-            variant="contained"
-            startIcon={<Save size={16} />}
-            disabled={busy || (Boolean(dynamic) && !dirty)}
-            sx={{ flexShrink: 0 }}
-          >
-            {saveMutation.isPending ? "Saving…" : "Save to Draft"}
-          </Button>
+          <Stack direction="row" gap={1} flexWrap="wrap">
+            {editorStep > 0 && <Button variant="outlined" disabled={busy}
+              onClick={() => setEditorStep(v => v - 1)}>Back</Button>}
+            {editorStep < 3 ? <Button type="button" variant="contained"
+              disabled={busy || (editorStep === 0 &&
+                (!form.title.trim() || !form.slug.trim() || !form.imageUrl.trim()))}
+              onClick={() => setEditorStep(v => v + 1)}>Continue</Button> :
+              <Button type="submit" variant="contained" startIcon={<Save size={16}/>}
+                disabled={busy || (Boolean(dynamic) && !dirty)}
+                sx={{ flexShrink: 0 }}>
+                {saveMutation.isPending ? "Saving…" : "Save to Draft"}
+              </Button>}
+          </Stack>
         </Box>
       </Box>
     </Paper>
