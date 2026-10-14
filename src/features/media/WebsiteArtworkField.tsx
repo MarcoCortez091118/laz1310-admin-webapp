@@ -13,12 +13,13 @@ import { WebsiteMediaPickerDialog, type WebsiteMediaFolder } from "./WebsiteMedi
  * FastAPI-bound Website media namespace. A file upload only selects a URL.
  */
 export function WebsiteArtworkField({
-  folder, url, title, onChange,
+  folder, url, title, onChange, showBrowse = true,
 }: {
   folder: WebsiteMediaFolder;
   url: string;
   title: string;
   onChange: (url: string) => void;
+  showBrowse?: boolean;
 }) {
   const client = useQueryClient();
   const [picker, setPicker] = useState(false);
@@ -52,10 +53,10 @@ export function WebsiteArtworkField({
         <input type="file" hidden accept="image/jpeg,image/png,image/webp"
           disabled={uploading} onChange={e => { void upload(e); }}/>
       </Button>
-      <Button variant="outlined" startIcon={<Images size={17}/>}
+      {showBrowse && <Button variant="outlined" startIcon={<Images size={17}/>}
         disabled={uploading} onClick={() => setPicker(true)}>
         Browse {folder === "banners" ? "banners" : folder === "shows" ? "show posters" : "promotions"}
-      </Button>
+      </Button>}
     </Stack>
     {url && <Stack sx={{ maxWidth: 280, minWidth: 0 }}>
       <ArtworkPreview src={url} alt={title || "Selected artwork"} shape={folder === "shows" ? "portrait" : "landscape"}/>
