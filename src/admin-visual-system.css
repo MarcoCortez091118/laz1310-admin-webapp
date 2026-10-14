@@ -223,8 +223,10 @@
   :root[data-admin-appearance] .modern-workspace > .page-stack { padding: 16px 12px 26px; }
   :root[data-admin-appearance] .page-heading h1 { font-size: 26px; }
 }
-@media (max-width: 380px) {
-  :root[data-admin-appearance] .modern-search { width: min(130px, 32vw); }
+@media (max-width: 420px) {
+  /* Navigation search remains available in the sidebar on larger devices;
+     on the narrowest phones prioritize access to the platform and account. */
+  :root[data-admin-appearance] .modern-search { display: none; }
   :root[data-admin-appearance] .modern-topbar { padding: 0 8px !important; }
 }
 @media (prefers-reduced-motion: reduce) {
