@@ -159,6 +159,8 @@ export function WebsiteShowsPage() {
   const isAdmin = staff.roles.includes("admin");
   const client = useQueryClient();
   const [view, setView] = useState<View>("active");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [confirming, setConfirming] = useState<Confirmation | null>(null);
   const [busy, setBusy] = useState(false);
@@ -174,6 +176,15 @@ export function WebsiteShowsPage() {
     queryKey: showKeys.legacy, queryFn: async () => (await legacyShows()).data,
     enabled: view === "legacy", retry: false,
   });
+
+  const filteredShows = (list.data?.items ?? [])
+    .filter(item => {
+      const term = search.trim().toLocaleLowerCase();
+      return !term || item.content.title.toLocaleLowerCase().includes(term) ||
+        item.content.schedule.toLocaleLowerCase().includes(term);
+    })
+    .sort((a, b) => a.content.position - b.content.position || a.id.localeCompare(b.id));
+  const visibleShows = paginateItems(filteredShows, page, 9);
 
   function reload() {
     void client.invalidateQueries({ queryKey: ["website", "shows"] });
@@ -234,7 +245,8 @@ export function WebsiteShowsPage() {
       {error && <Alert severity="error">{error} <Button onClick={reload}>Reload</Button></Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
-        <Tabs value={view} onChange={(_, value: View) => setView(value)}>
+        <Tabs value={view} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile
+          onChange={(_, value: View) => { setView(value); setPage(1); setSearch(""); }}>
           <Tab value="active" label="Shows" />
           <Tab value="legacy" label="Recover existing" />
           <Tab value="trashed" label="Trash" />
@@ -246,6 +258,16 @@ export function WebsiteShowsPage() {
         </Stack>
       </Stack>
       <Divider />
+      {view !== "legacy" && <TextField
+        placeholder="Search shows by title or schedule"
+        aria-label="Search Website shows"
+        value={search}
+        onChange={event => { setSearch(event.target.value); setPage(1); }}
+        sx={{ maxWidth: 440 }}
+        slotProps={{ input: { startAdornment:
+          <InputAdornment position="start"><Search size={17}/></InputAdornment>,
+        } }}
+      />}
       {view === "legacy" ? (
         legacy.isPending ? <CircularProgress /> : legacy.error ? (
           <Alert severity="error">{message(legacy.error)}</Alert>
@@ -280,16 +302,31 @@ export function WebsiteShowsPage() {
         <Alert severity="error">{message(list.error)}</Alert>
       ) : (
         <Stack spacing={2}>
-          {list.data?.items.map(draft => (
-            <ShowRow key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
+          <Box sx={{
+            display: "grid", gap: 2, minWidth: 0,
+            gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))",
+              xl: "repeat(3,minmax(0,1fr))" },
+          }}>
+          {visibleShows.items.map(draft => (
+            <ShowCard key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
               edit={show => setEditor({
                 id: show.id, revision: show.revision, content: show.content,
               })}
               action={perform} confirm={setConfirming} />
           ))}
-          {!list.data?.items.length && <Alert severity="info">
-            {view === "trashed" ? "Trash is empty." : "No Website shows yet. Create or recover a show."}
+          </Box>
+          {!filteredShows.length && <Alert severity="info">
+            {search ? "No shows match your search." : view === "trashed" ?
+              "Trash is empty." : "No Website shows yet. Create or recover a show."}
           </Alert>}
+          {visibleShows.pages > 1 && <Stack direction="row" justifyContent="space-between"
+            alignItems="center" gap={2} flexWrap="wrap">
+            <Typography variant="caption" color="text.secondary">
+              Showing {visibleShows.items.length} of {visibleShows.total} loaded shows
+            </Typography>
+            <Pagination count={visibleShows.pages} page={visibleShows.page}
+              onChange={(_, next) => setPage(next)} color="primary" />
+          </Stack>}
         </Stack>
       )}
       <ShowEditDialog editor={editor} close={() => setEditor(null)} save={save} busy={busy} />
