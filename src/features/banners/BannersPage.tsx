@@ -18,6 +18,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
+import "../app-ui/native-editorial.css";
 
 import type { Card, CardsBlock, Page, PageBlock } from "../../api/types";
 import { ApiError } from "../../api/errors";
@@ -73,37 +75,38 @@ function BannerCardEditor({
 }) {
   const [editing, setEditing] = useState(false);
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
-      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} spacing={2}>
-        <Box sx={{ width: { xs: "100%", sm: 210 }, borderRadius: 2, overflow: "hidden", bgcolor: "#f8fafc", flexShrink: 0, aspectRatio: "3/1", display: "grid", placeItems: "center" }}>
-          {banner.imageUrl ? (
-            <Box component="img" src={banner.imageUrl} alt={banner.title} referrerPolicy="no-referrer"
-              sx={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : <ImageIcon size={27} />}
-        </Box>
+    <Paper variant="outlined" sx={{
+      borderRadius: 3, p: 1.5, minWidth: 0, overflow: "hidden",
+      display: "flex", flexDirection: "column", gap: 1.25,
+    }}>
+      <NativeArtworkPreview src={banner.imageUrl} alt={banner.title || "App banner"} shape="banner"/>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip label={index + 1} size="small" color="primary" />
-            <Typography fontWeight={800} noWrap>{banner.title || `Banner ${index + 1}`}</Typography>
-          </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }} noWrap>
-            {externalLinkValue(banner) || "No destination link"} · position {index + 1}
+          <Typography fontSize={13.5} fontWeight={800} noWrap title={banner.title}>
+            {banner.title || `Banner ${index + 1}`}
+          </Typography>
+          <Typography variant="caption" color="text.secondary"
+            noWrap display="block" title={externalLinkValue(banner) || "No destination link"}>
+            {externalLinkValue(banner) || "No destination link"}
           </Typography>
         </Box>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <Button size="small" aria-label="Move banner up" disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp size={16}/></Button>
-          <Button size="small" aria-label="Move banner down" disabled={index === count - 1} onClick={() => onMove(1)}><ArrowDown size={16}/></Button>
+        <Chip label={index + 1} size="small" color="primary" variant="outlined"/>
+      </Stack>
+      <Stack direction="row" gap={0.5} justifyContent="space-between" alignItems="center">
+        <Stack direction="row" gap={0}>
+          <Button size="small" aria-label={`Move banner ${index + 1} up`}
+            disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp size={15}/></Button>
+          <Button size="small" aria-label={`Move banner ${index + 1} down`}
+            disabled={index === count - 1} onClick={() => onMove(1)}><ArrowDown size={15}/></Button>
+        </Stack>
+        <Stack direction="row" gap={0.5}>
           <Button variant="outlined" size="small" onClick={() => setEditing(true)}>Edit</Button>
-          <Button color="error" size="small" aria-label={`Remove ${banner.title}`} onClick={onRemove}><Trash2 size={16}/></Button>
+          <Button color="error" size="small" aria-label={`Remove ${banner.title}`}
+            onClick={onRemove}><Trash2 size={15}/></Button>
         </Stack>
       </Stack>
-      <BannerFormDialog
-        open={editing}
-        initial={banner}
-        mode="edit"
-        onClose={() => setEditing(false)}
-        onConfirm={onChange}
-      />
+      <BannerFormDialog open={editing} initial={banner} mode="edit"
+        onClose={() => setEditing(false)} onConfirm={onChange}/>
     </Paper>
   );
 }
@@ -254,10 +257,7 @@ function BannersEditor({
               size="small"
             />
             <Typography color="text.secondary" variant="body2">
-              Draft #{revision}
-              {statusQuery.data?.data.releaseId
-                ? ` · Release ${statusQuery.data.data.releaseId.slice(0, 8)}`
-                : ""}
+              App carousel · Draft ${revision}
             </Typography>
           </Stack>
           <Typography color="text.secondary" variant="body2">
@@ -305,7 +305,7 @@ function BannersEditor({
       />
 
       {items.length ? (
-        <Stack spacing={1.5}>
+        <Box className="native-five-grid" aria-label="Android and iOS banner cards">
           {items.map((banner, index) => (
             <BannerCardEditor
               banner={banner}
@@ -321,7 +321,7 @@ function BannersEditor({
               }
             />
           ))}
-        </Stack>
+        </Box>
       ) : (
         <Paper
           variant="outlined"
@@ -351,7 +351,7 @@ function BannersEditor({
           bottom: 16,
           borderRadius: 3,
           p: 1.5,
-          bgcolor: "rgba(255,255,255,0.97)",
+          bgcolor: "background.paper",
           backdropFilter: "blur(12px)",
           zIndex: 4,
         }}
