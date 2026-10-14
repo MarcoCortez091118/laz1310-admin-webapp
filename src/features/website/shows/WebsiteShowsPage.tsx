@@ -14,6 +14,7 @@ import {
 import { ShowPosterField } from "./ShowPosterField";
 import { ArtworkPreview } from "../ArtworkPreview";
 import { EditorialFormSteps } from "../EditorialFormSteps";
+import { showInfoValid, showArtworkValid } from "../editorialValidation";
 import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
@@ -40,10 +41,8 @@ function ShowEditDialog({ editor, close, save, busy }: {
   useEffect(() => {
     if (editor) { setContent(editor.content); setStep(0); }
   }, [editor]);
-  const infoValid = content.title.trim().length > 0 &&
-    Number.isInteger(content.position) && content.position >= 0 &&
-    (!content.linkUrl || content.linkUrl.startsWith("https://"));
-  const artworkValid = content.imageUrl.startsWith("https://");
+  const infoValid = showInfoValid(content);
+  const artworkValid = showArtworkValid(content);
   const valid = infoValid && artworkValid;
 
   return <Dialog open={Boolean(editor)} onClose={busy ? undefined : close}
