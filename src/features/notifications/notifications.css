@@ -45,7 +45,7 @@
   flex: 1 1 92px;
   min-width: 76px;
   margin: 0 !important;
-  border: 1px solid #dfe3e8 !important;
+  border: 1px solid var(--admin-border, #dfe3e8) !important;
   border-radius: 9px !important;
 }
 
@@ -67,16 +67,17 @@
   gap: 8px;
 }
 
-@media (min-width: 1900px) {
+@media (min-width: 1280px) {
   .notifications-workbench {
-    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
   }
 
   .notifications-campaign-pane {
     position: sticky;
-    top: 90px;
-    max-height: calc(100vh - 112px);
+    top: 94px;
+    max-height: calc(100vh - 116px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-right: 2px;
   }
 }
@@ -110,4 +111,15 @@
   .notifications-page .MuiPaper-root > .MuiBox-root {
     min-width: 0;
   }
+}
+
+/* Detail/editor stays readable beside the compact list. */
+.notifications-detail-pane { overflow: hidden; }
+.notifications-campaign-pane > .MuiPaper-root,
+.notifications-campaign-pane > .MuiCard-root { width: 100%; overflow: hidden; }
+.notifications-campaign-pane .MuiCard-root .MuiChip-root { max-width: 100%; }
+.notifications-campaign-pane .MuiCard-root .MuiChip-label { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1279px) {
+  .notifications-workbench { grid-template-columns: minmax(0,1fr); }
+  .notifications-campaign-pane { max-height: none; }
 }

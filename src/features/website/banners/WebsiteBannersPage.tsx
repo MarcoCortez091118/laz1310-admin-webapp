@@ -4,7 +4,8 @@ import {
   Switch, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Image as ImageIcon, Plus, Rocket, Save, Undo2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Rocket, Save, Undo2 } from "lucide-react";
+import { ArtworkPreview } from "../ArtworkPreview";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { WebsiteBannerMediaControls } from "./WebsiteBannerMediaControls";
@@ -73,8 +74,8 @@ function BannerEditorDialog({
             control={<Switch checked={value.active}
               onChange={(event) => setValue((current) => ({ ...current, active: event.target.checked }))} />} />
           {value.url.startsWith("https://") && (
-            <Box component="img" alt="Draft artwork preview" src={value.url}
-              sx={{ maxHeight: 160, width: "100%", objectFit: "contain", bgcolor: "action.hover" }} />
+            <ArtworkPreview src={value.url} alt="Draft artwork preview"
+              shape={editor?.layout === "mobile" ? "portrait" : "landscape"} />
           )}
         </Stack>
       </DialogContent>
@@ -246,37 +247,57 @@ export function WebsiteBannersPage() {
                 <Button onClick={reload}>Reload</Button>
               </Alert>
             )}
-            <Tabs value={layout} onChange={(_, next: Layout) => setLayout(next)}>
+            <Tabs value={layout} variant="scrollable" allowScrollButtonsMobile scrollButtons="auto"
+              onChange={(_, next: Layout) => setLayout(next)}>
               <Tab label={`Desktop website (${working.desktop.length})`} value="desktop" />
               <Tab label={`Mobile website (${working.mobile.length})`} value="mobile" />
             </Tabs>
-            <Stack spacing={1.5} sx={{ mt: 2 }}>
+            <Box sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2,minmax(0,1fr))", xl: "repeat(3,minmax(0,1fr))" },
+              gap: 2,
+              mt: 2,
+              minWidth: 0,
+            }}>
               {cards.map((card, index) => (
-                <Paper variant="outlined" key={card.id} sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}
-                    alignItems={{ md: "center" }}>
-                    <Box sx={{ width: { xs: "100%", md: 200 }, height: 96, bgcolor: "action.hover",
-                      display: "grid", placeItems: "center" }}>
-                      {card.url.startsWith("https://") ? (
-                        <Box component="img" src={card.url} alt={card.id}
-                          sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-                      ) : <ImageIcon size={24} />}
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography fontWeight={800}>{`#${index + 1}`} · {card.id.slice(0, 30)}</Typography>
-                      <Typography variant="body2" color="text.secondary" noWrap>{card.linkUrl || "No link"}</Typography>
+                <Paper variant="outlined" key={card.id} sx={{
+                  p: 1.5, borderRadius: 3, minWidth: 0, overflow: "hidden",
+                  display: "flex", flexDirection: "column", gap: 1.5,
+                }}>
+                  <ArtworkPreview
+                    src={card.url}
+                    alt={`Website ${layout} banner ${index + 1}`}
+                    shape={layout === "mobile" ? "portrait" : "landscape"}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+                      <Typography fontWeight={800} noWrap sx={{ minWidth: 0 }}>
+                        Banner {index + 1}
+                      </Typography>
                       <Chip size="small" label={card.active ? "Active" : "Hidden"}
                         color={card.active ? "success" : "default"} />
-                    </Box>
-                    <Stack direction="row" spacing={0.5}>
-                      <Button aria-label="Move banner up" disabled={disabled || index === 0}
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" sx={{
+                      display: "block", mt: .75, overflow: "hidden",
+                      textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%",
+                    }} title={card.linkUrl || "No destination link"}>
+                      {card.linkUrl || "No destination link"}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" alignItems="center" gap={.75}
+                    flexWrap="wrap" justifyContent="space-between">
+                    <Stack direction="row" spacing={0}>
+                      <Button size="small" aria-label={`Move banner ${index + 1} up`}
+                        disabled={disabled || index === 0}
                         onClick={() => move(index, -1)}><ArrowUp size={17} /></Button>
-                      <Button aria-label="Move banner down" disabled={disabled || index === cards.length - 1}
+                      <Button size="small" aria-label={`Move banner ${index + 1} down`}
+                        disabled={disabled || index === cards.length - 1}
                         onClick={() => move(index, 1)}><ArrowDown size={17} /></Button>
-                      <Button disabled={disabled} onClick={() => setEditor({
-                        layout, index, value: card,
-                      })}>Edit</Button>
-                      <Button color="error" disabled={disabled}
+                    </Stack>
+                    <Stack direction="row" spacing={.5}>
+                      <Button size="small" variant="outlined" disabled={disabled}
+                        onClick={() => setEditor({ layout, index, value: card })}>Edit</Button>
+                      <Button size="small" color="error" disabled={disabled}
                         onClick={() => setWorking((current) => ({
                           ...current, [layout]: current[layout].filter((_, i) => i !== index),
                         }))}>Remove</Button>
@@ -284,6 +305,8 @@ export function WebsiteBannersPage() {
                   </Stack>
                 </Paper>
               ))}
+            </Box>
+            <Stack spacing={1.25} sx={{ mt: 2 }}>
               {cards.length === 0 && (
                 <Typography variant="body2" color="text.secondary">
                   No {layout} banners in this draft.

@@ -1,9 +1,9 @@
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, Paper, Stack, Tab, Tabs, TextField, Typography,
+  DialogTitle, Divider, IconButton, InputAdornment, Menu, MenuItem, Paper, Pagination, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Rocket, Trash2, Undo2 } from "lucide-react";
+import { MoreVertical, Plus, RefreshCw, Rocket, Search, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { useStaff } from "../../auth/StaffGate";
@@ -12,6 +12,8 @@ import {
   showKeys, showPublication, type LegacyShow, type ShowContent, type ShowDraft,
 } from "./api";
 import { ShowPosterField } from "./ShowPosterField";
+import { ArtworkPreview } from "../ArtworkPreview";
+import { paginateItems } from "../../../app/pagination";
 
 type View = "active" | "trashed" | "legacy";
 type Editor = { id: string; revision: number; content: ShowContent };
@@ -68,7 +70,7 @@ function ShowEditDialog({ editor, close, save, busy }: {
   );
 }
 
-function ShowRow({ draft, isAdmin, busy, edit, action, confirm }: {
+function ShowCard({ draft, isAdmin, busy, edit, action, confirm }: {
   draft: ShowDraft; isAdmin: boolean; busy: boolean;
   edit: (show: ShowDraft) => void;
   action: (id: string, action: "publish" | "restore", revision: number) => void;
@@ -83,54 +85,73 @@ function ShowRow({ draft, isAdmin, busy, edit, action, confirm }: {
   const needsPublish = !published || publication.data?.draftRevision !== draft.revision;
   const inTrash = draft.state === "trashed";
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={2} alignItems={{ sm: "center" }}>
-        <Box component="img" src={draft.content.imageUrl} alt={draft.content.title}
-          sx={{ width: 100, aspectRatio: "1", objectFit: "cover", borderRadius: 1 }} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight={800}>{draft.content.title}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {draft.content.schedule || "Schedule not set"} · Order {draft.content.position}
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
-            <Chip size="small" label={inTrash ? "IN TRASH" :
-              published ? "PUBLISHED" : "UNPUBLISHED"}
-              color={inTrash ? "warning" : published ? "success" : "default"} />
-            <Chip size="small" label={`Draft revision ${draft.revision}`} />
-            {published && needsPublish && <Chip size="small" color="warning" label="UNPUBLISHED CHANGES" />}
-          </Stack>
-        </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-          {inTrash ? (
-            <>
-              <Button startIcon={<Undo2 size={15} />} disabled={busy}
-                onClick={() => action(draft.id, "restore", draft.revision)}>Restore draft</Button>
-              {isAdmin && <Button color="error" disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "purge" })}>
-                Delete permanently
-              </Button>}
-            </>
-          ) : (
-            <>
-              <Button disabled={busy} onClick={() => edit(draft)}>Edit</Button>
-              {isAdmin && <Button startIcon={<Rocket size={15} />} variant="contained"
-                disabled={busy || !needsPublish}
-                onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
-              {isAdmin && published && <Button disabled={busy}
-                onClick={() => confirm({
-                  id: draft.id, revision: publication.data?.revision ?? 0, action: "unpublish",
-                })}>Unpublish</Button>}
-              {isAdmin && <Button startIcon={<Trash2 size={15} />} color="error"
-                disabled={busy}
-                onClick={() => confirm({ id: draft.id, revision: draft.revision, action: "trash" })}>
-                Move to trash
-              </Button>}
-            </>
-          )}
+    <Paper variant="outlined" sx={{
+      p: 1.5, borderRadius: 3, minWidth: 0, overflow: "hidden",
+      display: "flex", flexDirection: "column", gap: 1.25,
+      "&:hover": { borderColor: "primary.main" },
+    }}>
+      <ArtworkPreview src={draft.content.imageUrl} alt={draft.content.title} shape="portrait" />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Stack direction="row" alignItems="start" justifyContent="space-between" gap={1}>
+          <Typography fontWeight={800} fontSize={15} sx={{
+            display: "-webkit-box", WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere",
+          }} title={draft.content.title}>{draft.content.title}</Typography>
+          <Chip size="small" label={inTrash ? "Trash" : published ? "Live" : "Draft"}
+            color={inTrash ? "warning" : published ? "success" : "default"} />
         </Stack>
+        <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: .75 }}>
+          {draft.content.schedule || "Schedule not set"}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: .5 }}>
+          Order {draft.content.position} · Draft {draft.revision}
+          {published && needsPublish ? " · Changes pending" : ""}
+        </Typography>
+      </Box>
+      <Stack direction="row" alignItems="center" spacing={.75}>
+        {inTrash ? <Button size="small" fullWidth variant="outlined"
+          startIcon={<Undo2 size={15}/>} disabled={busy}
+          onClick={() => action(draft.id, "restore", draft.revision)}>Restore</Button> :
+          <Button size="small" fullWidth variant="outlined" disabled={busy}
+            onClick={() => edit(draft)}>Edit show</Button>}
+        {!inTrash && isAdmin && needsPublish &&
+          <Button size="small" variant="contained" disabled={busy}
+            startIcon={<Rocket size={15}/>}
+            onClick={() => action(draft.id, "publish", draft.revision)}>Publish</Button>}
+        {isAdmin && <ShowMoreActions draft={draft} busy={busy}
+          published={published} publicationRevision={publication.data?.revision ?? 0}
+          confirm={confirm} />}
       </Stack>
     </Paper>
   );
+}
+
+function ShowMoreActions({ draft, busy, published, publicationRevision, confirm }: {
+  draft: ShowDraft; busy: boolean; published: boolean; publicationRevision: number;
+  confirm: (value: Confirmation) => void;
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const inTrash = draft.state === "trashed";
+  return <>
+    <IconButton size="small" aria-label={`More actions for ${draft.content.title}`}
+      disabled={busy} onClick={event => setAnchor(event.currentTarget)}>
+      <MoreVertical size={18} />
+    </IconButton>
+    <Menu open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}>
+      {!inTrash && published && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: publicationRevision, action: "unpublish" });
+      }}>Unpublish</MenuItem>}
+      {!inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "trash" });
+      }}>Move to trash</MenuItem>}
+      {inTrash && <MenuItem onClick={() => {
+        setAnchor(null);
+        confirm({ id: draft.id, revision: draft.revision, action: "purge" });
+      }}>Delete permanently (30-day retention)</MenuItem>}
+    </Menu>
+  </>;
 }
 
 export function WebsiteShowsPage() {
@@ -138,6 +159,8 @@ export function WebsiteShowsPage() {
   const isAdmin = staff.roles.includes("admin");
   const client = useQueryClient();
   const [view, setView] = useState<View>("active");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [confirming, setConfirming] = useState<Confirmation | null>(null);
   const [busy, setBusy] = useState(false);
@@ -153,6 +176,15 @@ export function WebsiteShowsPage() {
     queryKey: showKeys.legacy, queryFn: async () => (await legacyShows()).data,
     enabled: view === "legacy", retry: false,
   });
+
+  const filteredShows = (list.data?.items ?? [])
+    .filter(item => {
+      const term = search.trim().toLocaleLowerCase();
+      return !term || item.content.title.toLocaleLowerCase().includes(term) ||
+        item.content.schedule.toLocaleLowerCase().includes(term);
+    })
+    .sort((a, b) => a.content.position - b.content.position || a.id.localeCompare(b.id));
+  const visibleShows = paginateItems(filteredShows, page, 9);
 
   function reload() {
     void client.invalidateQueries({ queryKey: ["website", "shows"] });
@@ -213,7 +245,8 @@ export function WebsiteShowsPage() {
       {error && <Alert severity="error">{error} <Button onClick={reload}>Reload</Button></Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
-        <Tabs value={view} onChange={(_, value: View) => setView(value)}>
+        <Tabs value={view} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile
+          onChange={(_, value: View) => { setView(value); setPage(1); setSearch(""); }}>
           <Tab value="active" label="Shows" />
           <Tab value="legacy" label="Recover existing" />
           <Tab value="trashed" label="Trash" />
@@ -225,6 +258,16 @@ export function WebsiteShowsPage() {
         </Stack>
       </Stack>
       <Divider />
+      {view !== "legacy" && <TextField
+        placeholder="Search shows by title or schedule"
+        aria-label="Search Website shows"
+        value={search}
+        onChange={event => { setSearch(event.target.value); setPage(1); }}
+        sx={{ maxWidth: 440 }}
+        slotProps={{ input: { startAdornment:
+          <InputAdornment position="start"><Search size={17}/></InputAdornment>,
+        } }}
+      />}
       {view === "legacy" ? (
         legacy.isPending ? <CircularProgress /> : legacy.error ? (
           <Alert severity="error">{message(legacy.error)}</Alert>
@@ -259,16 +302,31 @@ export function WebsiteShowsPage() {
         <Alert severity="error">{message(list.error)}</Alert>
       ) : (
         <Stack spacing={2}>
-          {list.data?.items.map(draft => (
-            <ShowRow key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
+          <Box sx={{
+            display: "grid", gap: 2, minWidth: 0,
+            gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))",
+              xl: "repeat(3,minmax(0,1fr))" },
+          }}>
+          {visibleShows.items.map(draft => (
+            <ShowCard key={draft.id} draft={draft} isAdmin={isAdmin} busy={busy}
               edit={show => setEditor({
                 id: show.id, revision: show.revision, content: show.content,
               })}
               action={perform} confirm={setConfirming} />
           ))}
-          {!list.data?.items.length && <Alert severity="info">
-            {view === "trashed" ? "Trash is empty." : "No Website shows yet. Create or recover a show."}
+          </Box>
+          {!filteredShows.length && <Alert severity="info">
+            {search ? "No shows match your search." : view === "trashed" ?
+              "Trash is empty." : "No Website shows yet. Create or recover a show."}
           </Alert>}
+          {visibleShows.pages > 1 && <Stack direction="row" justifyContent="space-between"
+            alignItems="center" gap={2} flexWrap="wrap">
+            <Typography variant="caption" color="text.secondary">
+              Showing {visibleShows.items.length} of {visibleShows.total} loaded shows
+            </Typography>
+            <Pagination count={visibleShows.pages} page={visibleShows.page}
+              onChange={(_, next) => setPage(next)} color="primary" />
+          </Stack>}
         </Stack>
       )}
       <ShowEditDialog editor={editor} close={() => setEditor(null)} save={save} busy={busy} />

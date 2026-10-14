@@ -7,11 +7,11 @@ import {
   Chip,
   CircularProgress,
   InputAdornment,
+  MenuItem,
   Paper,
+  Pagination,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import {
@@ -24,7 +24,6 @@ import {
   Search,
   ShieldCheck,
   TriangleAlert,
-  UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStaff } from "../auth/StaffGate";
@@ -32,6 +31,7 @@ import { CampaignComposer } from "./CampaignComposer";
 import { statusLabel, type CampaignStatus, type NotificationCampaign } from "./model";
 import { useNotificationCampaignQuery, useNotificationCampaignsQuery } from "./queries";
 import "./notifications.css";
+import { paginateItems } from "../../app/pagination";
 
 type Selection = "new" | string | null;
 type StatusFilter = "all" | CampaignStatus | "issues";
@@ -86,15 +86,15 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
         "&:hover": { borderColor: "primary.light" },
       }}
     >
-      <CardContent sx={{ p: 2, width: "100%", minWidth: 0, "&:last-child": { pb: 2 } }}>
-        <Stack spacing={1.15} minWidth={0}>
+      <CardContent sx={{ p: 1.5, width: "100%", minWidth: 0, "&:last-child": { pb: 1.5 } }}>
+        <Stack spacing={.6} minWidth={0}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} minWidth={0}>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography fontWeight={800} noWrap>{campaign.title}</Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mt: .25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" }}
+                sx={{ mt: .25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", overflowWrap: "anywhere" }}
               >
                 {campaign.body}
               </Typography>
@@ -102,24 +102,19 @@ function CampaignCard({ campaign, selected, onClick }: { campaign: NotificationC
             <Chip label={statusLabel(campaign.status)} size="small" sx={{ bgcolor: tone.bg, color: tone.fg, fontWeight: 700, flexShrink: 0 }} />
           </Stack>
 
-          <Stack direction="row" spacing={.75} flexWrap="wrap" useFlexGap>
-            <Chip icon={<BellRing size={13} />} label={campaign.category} size="small" variant="outlined" />
-            <Chip label={campaign.target.value} size="small" variant="outlined" sx={{ maxWidth: "100%" }} />
-            <Chip
-              icon={<UsersRound size={13} />}
-              label={campaign.audience.type === "all_opted_in" ? "Opted-in audience" : "1 user"}
-              size="small"
-              variant="outlined"
-            />
+          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {campaign.category} · {campaign.audience.type === "all_opted_in" ? "Opted-in" : "1 user"}
+            </Typography>
+            {campaign.inboxCount > 0 && <Chip size="small" variant="outlined"
+              icon={<Inbox size={12}/>} label={campaign.inboxCount} />}
           </Stack>
 
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={.5}>
             <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
-              Rev {campaign.revision} · {formatDate(campaign.createdAt)}
+              {formatDate(campaign.createdAt)}
             </Typography>
-            {campaign.inboxCount > 0 ? (
-              <Typography variant="caption" color="text.secondary"><Inbox size={12} style={{ verticalAlign: "-2px" }} /> {campaign.inboxCount}</Typography>
-            ) : null}
+
           </Stack>
         </Stack>
       </CardContent>
@@ -134,6 +129,7 @@ export function NotificationsPage() {
   const [selection, setSelection] = useState<Selection>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [page, setPage] = useState(1);
   const selectedId = selection && selection !== "new" ? selection : null;
   const detail = useNotificationCampaignQuery(selectedId);
 
@@ -153,6 +149,8 @@ export function NotificationsPage() {
       return matchesStatus && matchesSearch;
     });
   }, [campaigns, search, status]);
+
+  const campaignPage = paginateItems(filtered, page, 8);
 
   const draftCount = campaigns.filter((campaign) => campaign.status === "draft").length;
   const inflightCount = campaigns.filter((campaign) => campaign.status === "queued" || campaign.status === "sending").length;
@@ -208,27 +206,27 @@ export function NotificationsPage() {
                 size="small"
                 placeholder="Search title, message, or campaign ID"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment> }}
               />
-              <ToggleButtonGroup
-                className="notifications-status-filter"
-                exclusive
-                size="small"
-                value={status}
-                onChange={(_event, value: StatusFilter | null) => value && setStatus(value)}
+              <TextField select size="small" label="Campaign status" value={status}
+                onChange={event => {
+                  setStatus(event.target.value as StatusFilter);
+                  setPage(1);
+                }}
+                fullWidth
               >
-                <ToggleButton value="all">All</ToggleButton>
-                <ToggleButton value="draft">Draft</ToggleButton>
-                <ToggleButton value="queued">Queued</ToggleButton>
-                <ToggleButton value="sending">Sending</ToggleButton>
-                <ToggleButton value="sent">Sent</ToggleButton>
-                <ToggleButton value="issues">Issues</ToggleButton>
-              </ToggleButtonGroup>
+                <MenuItem value="all">All campaigns</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+                <MenuItem value="queued">Queued</MenuItem>
+                <MenuItem value="sending">Sending</MenuItem>
+                <MenuItem value="sent">Sent</MenuItem>
+                <MenuItem value="issues">Needs attention</MenuItem>
+              </TextField>
             </Stack>
           </Paper>
 
-          {filtered.map((campaign) => (
+          {campaignPage.items.map((campaign) => (
             <CampaignCard
               campaign={campaign}
               key={campaign.id}
@@ -237,6 +235,13 @@ export function NotificationsPage() {
             />
           ))}
 
+          {campaignPage.pages > 1 && <Stack alignItems="center" gap={.75}>
+            <Typography variant="caption" color="text.secondary">
+              Showing {campaignPage.items.length} of {campaignPage.total} loaded campaigns
+            </Typography>
+            <Pagination count={campaignPage.pages} page={campaignPage.page}
+              onChange={(_, next) => setPage(next)} size="small" color="primary" />
+          </Stack>}
           {!filtered.length ? (
             <Paper variant="outlined" sx={{ borderRadius: 3, p: 4, textAlign: "center" }}>
               <Megaphone size={28} />

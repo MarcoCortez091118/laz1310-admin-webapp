@@ -11,6 +11,7 @@ import { BrandingPage } from "./features/branding/BrandingPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { StaffGate } from "./features/auth/StaffGate";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { MonitoringPage } from "./features/dashboard/MonitoringPage";
 import { PlaceholderPage } from "./features/dashboard/PlaceholderPage";
 import { DynamicsPage } from "./features/dynamics/DynamicsPage";
 import { MediaLibraryPage } from "./features/media/MediaLibraryPage";
@@ -128,6 +129,12 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
+const monitoringRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/monitoring",
+  component: MonitoringPage,
+});
+
 const releasesRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/releases",
@@ -193,6 +200,7 @@ const routeTree = rootRoute.addChildren([
     websiteTicketPromotionsRoute,
     usersRoute,
     releasesRoute,
+    monitoringRoute,
     weatherRoute,
     notificationsRoute,
     auditRoute,
