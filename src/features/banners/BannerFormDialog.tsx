@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
 import { Images } from "lucide-react";
 import { NativeArtworkPreview } from "../app-ui/NativeArtworkPreview";
 import { NativeEditorSteps } from "../app-ui/NativeEditorSteps";
