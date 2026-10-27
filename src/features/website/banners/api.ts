@@ -5,6 +5,9 @@ export interface WebsiteBanner {
   url: string;
   linkUrl: string | null;
   active: boolean;
+  placements?: ("home" | "programacion" | "actividades")[];
+  startsAt?: string | null;
+  endsAt?: string | null;
 }
 
 export interface WebsiteBannerContent {

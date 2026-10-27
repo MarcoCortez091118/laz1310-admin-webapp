@@ -11,6 +11,7 @@ import { bannerInfoValid, bannerArtworkValid } from "../editorialValidation";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../../api/errors";
 import { WebsiteBannerMediaControls } from "./WebsiteBannerMediaControls";
+import { PlacementEditorFields, websiteScheduleValid } from "../campaigns/PlacementEditorFields";
 import { useStaff } from "../../auth/StaffGate";
 import {
   importLegacyBanners, publishBannerDraft, readBannerDraft, readBannerPublication,
@@ -49,7 +50,7 @@ function BannerEditorDialog({
   useEffect(() => {
     if (editor) { setValue(editor.value); setStep(0); }
   }, [editor]);
-  const infoValid = bannerInfoValid(value);
+  const infoValid = bannerInfoValid(value) && websiteScheduleValid(value);
   const artworkValid = bannerArtworkValid(value);
   const valid = infoValid && artworkValid;
 
@@ -73,6 +74,8 @@ function BannerEditorDialog({
         <FormControlLabel label="Active on this Website layout"
           control={<Switch checked={value.active}
             onChange={event => setValue(current => ({ ...current, active: event.target.checked }))}/>} />
+        <PlacementEditorFields value={value}
+          onChange={patch => setValue(current => ({ ...current, ...patch }))} />
       </Stack>}
       {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
         <Typography fontWeight={800}>
@@ -96,6 +99,8 @@ function BannerEditorDialog({
           shape={editor?.layout === "mobile" ? "portrait" : "landscape"}/>
         <Typography variant="body2">Layout: {editor?.layout || "Website"}</Typography>
         <Typography variant="body2">Visibility: {value.active ? "Active" : "Hidden"}</Typography>
+        <Typography variant="body2">Sections: {(value.placements ?? ["home"]).join(", ")}</Typography>
+        <Typography variant="body2">Dates: {value.startsAt ?? "Always"} — {value.endsAt ?? "Always"}</Typography>
         <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
           Destination: {value.linkUrl || "No destination"}
         </Typography>

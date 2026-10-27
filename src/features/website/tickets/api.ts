@@ -7,6 +7,9 @@ export interface PromotionContent {
   linkUrl: string | null;
   eventName: string;
   position: number;
+  placements?: ("home" | "programacion" | "actividades")[];
+  startsAt?: string | null;
+  endsAt?: string | null;
 }
 export interface PromotionDraft {
   id: string;
