@@ -49,12 +49,13 @@ function RegistrationsPage() {
   );
 
   async function download(campaign: Dynamic) {
-    if (!admin || !protection.data?.configured || downloading) return;
+    const campaignId = campaign.id;
+    if (!campaignId || !admin || !protection.data?.configured || downloading) return;
     setMessage(null);
-    setDownloading(campaign.id);
+    setDownloading(campaignId);
     try {
       const rows = await collectCampaignRegistrations(
-        campaign.id,
+        campaignId,
         async (id, limit, after) =>
           (await getDynamicParticipations(id, limit, after)).data,
       );
@@ -65,7 +66,7 @@ function RegistrationsPage() {
       try {
         const anchor = document.createElement("a");
         anchor.href = url;
-        anchor.download = campaignCsvFilename(campaign.slug || campaign.id);
+        anchor.download = campaignCsvFilename(campaign.slug || campaignId);
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
