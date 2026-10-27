@@ -196,7 +196,7 @@ export function WebsiteCampaignsPage() {
                 <WebsiteTicketPromotionsPage />
               </Stack>
             )}
-            {tab === "popup" && <WebsitePopupPage />}}
+            {tab === "popup" && <WebsitePopupPage />}
             {tab === "ubicaciones" && (
               <Stack spacing={1.5}>
                 <Alert severity="info">
