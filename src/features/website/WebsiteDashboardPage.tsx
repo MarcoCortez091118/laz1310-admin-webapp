@@ -18,11 +18,15 @@ import { listWebsiteDrafts, websiteDraftKeys } from "./news/draftsApi";
 
 const sections = [
   {
-    label: "News / Blog", to: "/website/news" as const, icon: Newspaper,
+    label: "Premios y campañas", to: "/website/campaigns" as const, icon: Ticket,
+    description: "Gestión de banners, boletos, premios y registros.",
+  },
+  {
+    label: "Actividades", to: "/website/news" as const, icon: Newspaper,
     description: "Review article drafts and publication.",
   },
   {
-    label: "Website Banners", to: "/website/banners" as const, icon: Image,
+    label: "Website Banners", to: "/website/campaigns" as const, icon: Image,
     description: "Manage desktop/mobile artwork and release.",
   },
   {
@@ -30,7 +34,7 @@ const sections = [
     description: "Publish each program and manage the recycle bin.",
   },
   {
-    label: "Ticket Promotions", to: "/website/ticket-promotions" as const, icon: Ticket,
+    label: "Ticket Promotions", to: "/website/campaigns" as const, icon: Ticket,
     description: "Review promotions, destinations and participation actions.",
   },
   {

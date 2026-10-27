@@ -22,7 +22,7 @@ export type AdminWorkspace = "website" | "app";
 
 export type NavigationPath =
   | "/" | "/website" | "/website/news" | "/website/banners"
-  | "/website/shows" | "/website/ticket-promotions" | "/website/media"
+  | "/website/shows" | "/website/ticket-promotions" | "/website/media" | "/website/campaigns"
   | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
   | "/dynamics" | "/notifications" | "/users" | "/weather"
   | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring";
@@ -66,10 +66,9 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
     {
       label: "Website",
       items: [
-        { label: "News / Blog", to: "/website/news", icon: Globe, adminOnly: false },
-        { label: "Website Banners", to: "/website/banners", icon: Image, adminOnly: false },
+        { label: "Actividades", to: "/website/news", icon: Globe, adminOnly: false },
+        { label: "Premios y campañas", to: "/website/campaigns", icon: Sparkles, adminOnly: false },
         { label: "Website Shows", to: "/website/shows", icon: Radio, adminOnly: false },
-        { label: "Ticket Promotions", to: "/website/ticket-promotions", icon: Image, adminOnly: false },
         { label: "Media Library", to: "/website/media", icon: Images, adminOnly: false },
       ],
     },
@@ -94,7 +93,7 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
     {
       label: "Engagement",
       items: [
-        { label: "Dynamics", to: "/dynamics", icon: Sparkles, adminOnly: false },
+        { label: "Premios", to: "/dynamics", icon: Sparkles, adminOnly: false },
         { label: "Notifications", to: "/notifications", icon: Bell, adminOnly: false },
         { label: "Users", to: "/users", icon: UsersRound, adminOnly: true },
       ],

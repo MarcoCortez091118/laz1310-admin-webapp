@@ -199,7 +199,7 @@ export function DynamicsPage() {
             <Typography variant="overline" color="primary.main" sx={{ fontWeight: 800, letterSpacing: ".12em" }}>
               Engagement · Draft
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Dynamics</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-.035em" }}>Premios</Typography>
             <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 780 }}>
               Save campaigns to Draft and publish each campaign independently. Published status is
               verified against the current immutable Mobile release.
@@ -226,7 +226,7 @@ export function DynamicsPage() {
 
         {!isAdmin ? (
           <Alert severity="info">
-            Editors can create, edit, restore and move Dynamics to trash. A verified administrator publishes an individual campaign from its editor.
+            Editors can create, edit, restore and move Premios to trash. A verified administrator publishes an individual campaign from its editor.
           </Alert>
         ) : null}
 

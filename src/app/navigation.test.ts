@@ -19,6 +19,7 @@ describe("platform workspace navigation", () => {
     expect(workspaceFromPath("/website")).toBe("website");
     expect(workspaceFromPath("/website/")).toBe("website");
     expect(workspaceFromPath("/website/news")).toBe("website");
+    expect(workspaceFromPath("/website/campaigns")).toBe("website");
     expect(workspaceFromPath("/website/ticket-promotions")).toBe("website");
     expect(workspaceFromPath("/website/media")).toBe("website");
     expect(workspaceFromPath("/website-extra")).toBe("app");
@@ -35,8 +36,8 @@ describe("platform workspace navigation", () => {
     const website = allPaths("website");
     const app = allPaths("app");
     expect(website).toEqual([
-      "/website", "/website/news", "/website/banners",
-      "/website/shows", "/website/ticket-promotions", "/website/media",
+      "/website", "/website/news", "/website/campaigns",
+      "/website/shows", "/website/media",
     ]);
     expect(website.every(path => workspaceFromPath(path) === "website")).toBe(true);
     expect(app.every(path => workspaceFromPath(path) === "app")).toBe(true);
