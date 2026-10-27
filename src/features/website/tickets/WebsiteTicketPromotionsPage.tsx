@@ -16,6 +16,7 @@ import { ArtworkPreview } from "../ArtworkPreview";
 import { EditorialFormSteps } from "../EditorialFormSteps";
 import { promotionInfoValid, promotionArtworkValid } from "../editorialValidation";
 import { paginateItems } from "../../../app/pagination";
+import { PlacementEditorFields, websiteScheduleValid } from "../campaigns/PlacementEditorFields";
 
 type View = "active" | "trashed" | "legacy";
 type Editor = { id: string; revision: number; content: PromotionContent };
@@ -42,7 +43,7 @@ function PromotionEditDialog({ editor, close, save, busy }: {
   useEffect(() => {
     if (editor) { setContent(editor.content); setStep(0); }
   }, [editor]);
-  const infoValid = promotionInfoValid(content);
+  const infoValid = promotionInfoValid(content) && websiteScheduleValid(content);
   const artworkValid = promotionArtworkValid(content);
   const valid = infoValid && artworkValid;
 
@@ -68,6 +69,8 @@ function PromotionEditDialog({ editor, close, save, busy }: {
         {content.actionType === "enlace" && <TextField label="HTTPS destination"
           value={content.linkUrl ?? ""} fullWidth required
           onChange={e => setContent(v => ({ ...v, linkUrl: e.target.value.trim() || null }))} />}
+        <PlacementEditorFields value={content}
+          onChange={patch => setContent(current => ({ ...current, ...patch }))} />
       </Stack>}
       {step === 1 && <Stack spacing={2} sx={{ mt: 2 }}>
         <Typography fontWeight={800}>Responsive artwork</Typography>
@@ -103,6 +106,7 @@ function PromotionEditDialog({ editor, close, save, busy }: {
         <Typography color="text.secondary" variant="body2">
           {content.actionType === "enlace" ? `External link: ${content.linkUrl}` :
             "Existing participation form"} · Order {content.position}
+          · Locations {(content.placements ?? ["home"]).join(", ")}
         </Typography>
         <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
