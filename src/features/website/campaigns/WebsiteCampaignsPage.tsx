@@ -12,6 +12,7 @@ import { DynamicsPage } from "../../dynamics/DynamicsPage";
 import { getDynamicParticipations, getDynamics, getParticipationServiceStatus } from "../../dynamics/api";
 import { WebsiteBannersPage } from "../banners/WebsiteBannersPage";
 import { WebsiteTicketPromotionsPage } from "../tickets/WebsiteTicketPromotionsPage";
+import { WebsitePopupPage } from "./WebsitePopupPage";
 import {
   campaignCsvFilename, campaignRegistrationsCsv, collectCampaignRegistrations,
 } from "./registrations";
@@ -195,14 +196,7 @@ export function WebsiteCampaignsPage() {
                 <WebsiteTicketPromotionsPage />
               </Stack>
             )}
-            {tab === "popup" && (
-              <Alert severity="warning">
-                Pop Up todavía utiliza el módulo heredado del sitio público;
-                no existe un contrato administrativo FastAPI para operarlo desde
-                este panel. La migración será por módulos y sin escrituras directas
-                a Firebase desde WebAdmin.
-              </Alert>
-            )}
+            {tab === "popup" && <WebsitePopupPage />}}
             {tab === "ubicaciones" && (
               <Stack spacing={1.5}>
                 <Alert severity="info">
