@@ -13,6 +13,7 @@ import { getDynamicParticipations, getDynamics, getParticipationServiceStatus } 
 import { WebsiteBannersPage } from "../banners/WebsiteBannersPage";
 import { WebsiteTicketPromotionsPage } from "../tickets/WebsiteTicketPromotionsPage";
 import { WebsitePopupPage } from "./WebsitePopupPage";
+import { WebsitePlacementInventory } from "./WebsitePlacementInventory";
 import {
   campaignCsvFilename, campaignRegistrationsCsv, collectCampaignRegistrations,
 } from "./registrations";
@@ -197,33 +198,16 @@ export function WebsiteCampaignsPage() {
               </Stack>
             )}
             {tab === "popup" && <WebsitePopupPage />}
-            {tab === "ubicaciones" && (
-              <Stack spacing={1.5}>
-                <Alert severity="info">
-                  Publicar por destino (Web/App) y posición (Home, Programación,
-                  Actividades) requiere primero el contrato de ubicaciones y
-                  releases independientes en FastAPI. No se ofrecen controles sin persistencia real.
-                </Alert>
-                {(["Home", "Programación", "Actividades"] as const).map(slot => (
-                  <Card key={slot} variant="outlined">
-                    <CardContent>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography fontWeight={750}>{slot}</Typography>
-                        <Chip label="Pendiente de API multicanal" size="small" variant="outlined" />
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Stack>
-            )}
+            {tab === "ubicaciones" && <WebsitePlacementInventory onEdit={setTab} />}
             {tab === "registros" && <RegistrationsPage />}
           </Box>
         </Paper>
         <Alert severity="info">
-          Pendiente de FastAPI Campaigns V1: posiciones programables, Pop Up,
-          caducidad e historial visual Website, formularios Web/App y métricas
-          agregadas por campaña. No se mezclan registros entre canales ni se
-          inventan métricas.
+          Banners, Boletos y Pop Up Website permiten seleccionar ubicaciones
+          y fechas en sus propios editores. Después de guardar un borrador,
+          un administrador debe publicarlo. La activación del lector Website
+          será controlada por canary. Las ubicaciones App y los formularios
+          y métricas multicanal se implementarán mediante releases independientes.
           <Button component={Link} to="/website" variant="text" size="small" sx={{ ml: 1 }}>
             Volver al dashboard
           </Button>
