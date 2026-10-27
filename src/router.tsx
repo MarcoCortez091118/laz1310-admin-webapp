@@ -21,6 +21,7 @@ import { ProgramsWorkspace } from "./features/programs/ProgramsWorkspace";
 import { UsersPage } from "./features/users/UsersPage";
 import { WeatherPage } from "./features/weather/WeatherPage";
 import { WebsiteDashboardPage } from "./features/website/WebsiteDashboardPage";
+import { WebsiteCampaignsPage } from "./features/website/campaigns/WebsiteCampaignsPage";
 import { WebsiteMediaLibraryPage } from "./features/website/WebsiteMediaLibraryPage";
 import { WebsiteNewsPage } from "./features/website/news/WebsiteNewsPage";
 import { WebsiteBannersPage } from "./features/website/banners/WebsiteBannersPage";
@@ -92,6 +93,12 @@ const websiteDashboardRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/website",
   component: WebsiteDashboardPage,
+});
+
+const websiteCampaignsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/website/campaigns",
+  component: WebsiteCampaignsPage,
 });
 
 const websiteMediaRoute = createRoute({
@@ -201,6 +208,7 @@ const routeTree = rootRoute.addChildren([
     dynamicsRoute,
     mediaRoute,
     websiteDashboardRoute,
+    websiteCampaignsRoute,
     websiteMediaRoute,
     websiteNewsRoute,
     websiteBannersRoute,

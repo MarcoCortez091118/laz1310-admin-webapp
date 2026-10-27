@@ -99,7 +99,7 @@ export function DashboardPage() {
     { name: "Pages", value: failed ? null : pages },
     { name: "Stations", value: failed ? null : stations },
     { name: "Programs", value: failed ? null : programs },
-    { name: "Dynamics", value: failed ? null : dynamics },
+    { name: "Premios", value: failed ? null : dynamics },
   ];
 
   const now = Date.now();
@@ -139,7 +139,7 @@ export function DashboardPage() {
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button component={Link} to="/programs" variant="outlined" size="small">Programs</Button>
-          <Button component={Link} to="/dynamics" variant="contained" size="small">Dynamics</Button>
+          <Button component={Link} to="/dynamics" variant="contained" size="small">Premios</Button>
         </Stack>
       </Stack>
 
@@ -177,7 +177,7 @@ export function DashboardPage() {
           value={metricValue(stations)}
         />
         <MetricCard detail="Shows across all stations" icon={CalendarRange} label="Programs" loading={loading} value={metricValue(programs)} />
-        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Dynamics" loading={loading} value={metricValue(dynamics)} />
+        <MetricCard detail="Draft campaigns" icon={Sparkles} label="Premios" loading={loading} value={metricValue(dynamics)} />
       </Box>
 
       <Box className="overview-chart-grid">
@@ -211,7 +211,7 @@ export function DashboardPage() {
 
         <Card>
           <CardContent>
-            <Typography variant="h6">Dynamics lifecycle</Typography>
+            <Typography variant="h6">Premios lifecycle</Typography>
             <Typography color="text.secondary" fontSize={13} mt={0.4}>
               Derived from real campaign windows and editorial status.
             </Typography>
@@ -257,7 +257,7 @@ export function DashboardPage() {
                 <Sparkles size={28} />
                 <Typography fontWeight={700}>{failed ? "Campaign data unavailable" : "No campaigns in this Draft"}</Typography>
                 <Typography color="text.secondary" fontSize={12.5}>
-                  {failed ? "Retry when FastAPI is available." : "Dynamics will appear here as soon as they are added."}
+                  {failed ? "Retry when FastAPI is available." : "Premios will appear here as soon as they are added."}
                 </Typography>
               </Box>
             )}
