@@ -35,7 +35,7 @@ export async function collectCampaignRegistrations(
 
 export function csvSafe(value: unknown): string {
   const text = String(value ?? "");
-  const escaped = /^[\u0000-\u0020]*[=+\-@]/.test(text) ? "'" + text : text;
+  const escaped = /^[=+\-@]/.test(text.trimStart()) ? "'" + text : text;
   return '"' + escaped.replaceAll('"', '""') + '"';
 }
 
