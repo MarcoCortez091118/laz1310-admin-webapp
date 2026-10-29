@@ -276,8 +276,7 @@ export function ProgramsPage() {
               Programs
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: 800 }}>
-              Save changes to Draft, then publish each Program independently. Active/Inactive is an
-              operational flag; Draft/Live/Changes pending describes what Mobile actually receives.
+              Activa o desactiva cada programa y guarda los cambios. Solo «Publicar programa» los hace visibles en la app.
             </Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -541,8 +540,7 @@ export function ProgramsPage() {
                   <ListMusic size={28} />
                   <Typography variant="h6" fontWeight={800}>Select a program to edit</Typography>
                   <Typography color="text.secondary" textAlign="center" maxWidth={520}>
-                    Save to Draft, then publish that Program independently. Mobile only reads the
-                    immutable published release.
+                    Activa el programa, guarda el borrador y pulsa «Publicar programa». La app lee solo releases publicados.
                   </Typography>
                 </Paper>
               )}
