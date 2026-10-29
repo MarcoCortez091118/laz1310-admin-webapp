@@ -318,11 +318,10 @@ export function ProgramEditor({
                         onChange={(event) => updateProgram({ isActive: event.target.checked })}
                       />
                     }
-                    label="Active program"
+                    label="Programa activo"
                   />
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 6 }}>
-                    Active controls whether this program is emitted by public Radio endpoints after
-                    publication. It does not mean the Draft is already live.
+                    Activa o desactiva el programa en el borrador. Guarda y publica para que el cambio aparezca en la app.
                   </Typography>
                 </Box>
               </Box>
@@ -502,7 +501,7 @@ export function ProgramEditor({
               onClick={() => setEditorStep(value => value + 1)}>Continue</Button> :
               <Button disabled={busy || (existing && !dirty)} variant="contained"
                 startIcon={<Save size={16} />} onClick={() => save.mutate()}>
-                {save.isPending ? "Saving…" : existing ? "Save Draft" : "Create Draft"}
+                {save.isPending ? "Guardando…" : existing ? "Guardar borrador" : "Crear borrador"}
               </Button>}
           </Stack>
           {existing ? (
