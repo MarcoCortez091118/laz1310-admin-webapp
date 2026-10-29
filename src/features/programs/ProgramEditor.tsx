@@ -227,16 +227,13 @@ export function ProgramEditor({
         ) : null}
 
         {existing ? (
-          <ProgramLifecycleActions
-            stationId={station.id ?? ""}
-            programId={workingProgram.id}
-            title={workingProgram.name || "Program"}
-            etag={etag}
-            isAdmin={isAdmin}
-            dirty={dirty}
-            busy={busy}
-            onDeleted={onDeleted}
-          />
+          <Alert severity={dirty ? "warning" : publicationStatus === "live" ? "success" : "info"}>
+            {dirty
+              ? "Hay cambios sin guardar: completa el editor y pulsa Guardar borrador."
+              : publicationStatus === "live"
+                ? "La versión guardada de este programa ya está publicada en la app."
+                : "Los cambios aún no están publicados. Guarda el borrador y utiliza Publicar programa."}
+          </Alert>
         ) : null}
 
         <NativeEditorSteps active={editorStep} labels={["Information & artwork", "Schedule", "Review"]}/>
@@ -495,7 +492,7 @@ export function ProgramEditor({
 
         <Box className="program-editor-sticky-actions">
           <Typography variant="body2" color="text.secondary">
-            Edits are saved to the protected App Draft. Publishing is a separate action.
+            Paso 1: Activa el programa. Paso 2: Guarda el borrador. Paso 3: Pulsa Publicar programa para que se refleje en la app.
           </Typography>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {editorStep > 0 && <Button variant="outlined" disabled={busy}
@@ -508,6 +505,22 @@ export function ProgramEditor({
                 {save.isPending ? "Saving…" : existing ? "Save Draft" : "Create Draft"}
               </Button>}
           </Stack>
+          {existing ? (
+            <ProgramLifecycleActions
+              stationId={station.id ?? ""}
+              programId={workingProgram.id}
+              title={workingProgram.name || "Program"}
+              etag={etag}
+              isAdmin={isAdmin}
+              dirty={dirty}
+              busy={busy}
+              onDeleted={onDeleted}
+            />
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Tras crear el borrador aparecerá la opción Publicar programa.
+            </Typography>
+          )}
         </Box>
       </Stack>
     </Paper>
