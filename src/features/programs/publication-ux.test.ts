@@ -29,7 +29,7 @@ describe("Programs publication workflow visibility", () => {
     const page = read("./ProgramsPage.tsx");
     const editor = read("./ProgramEditor.tsx");
     expect(page).toContain("publicationStatus = useProgramPublicationStatusQuery()");
-    expect(editor).toContain("publicación");
+    expect(editor).toContain("Guarda y publica");
     expect(editor).toContain("isActive: event.target.checked");
   });
 });
