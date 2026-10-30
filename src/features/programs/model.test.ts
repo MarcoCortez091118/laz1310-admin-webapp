@@ -5,6 +5,7 @@ import {
   createScheduleEntry,
   findScheduleConflicts,
   removeProgram,
+  schedulesForProgram,
   type Program,
   upsertProgram,
   validateProgram,
@@ -145,7 +146,7 @@ describe("program model", () => {
     };
     expect(validateSchedule(next)).toEqual([]);
     expect(findScheduleConflicts(next)).toEqual([]);
-    expect(upsertProgram(next, afternoon, next.schedule!.filter(item => item.showId === afternoon.id))).toBeTruthy();
+    expect(upsertProgram(next, afternoon, schedulesForProgram(next, afternoon.id))).toBeTruthy();
   });
 
   it("identifies the exact conflicting names, day and time, including previously active slots", () => {
