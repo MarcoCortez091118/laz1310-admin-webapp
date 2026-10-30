@@ -46,17 +46,66 @@ function minutes(value: string): number {
   return hour * 60 + minute;
 }
 
-function interval(entry: ScheduleEntry): [number, number][] {
-  const week = 7 * 24 * 60;
-  const start = entry.weekday * 1440 + minutes(entry.startsAt);
-  let end = entry.weekday * 1440 + minutes(entry.endsAt);
-  if (end <= start) end += 1440;
+type ActiveSegment = {
+  entry: ScheduleEntry;
+  showName: string;
+  start: number;
+  end: number;
+};
 
-  if (end <= week) return [[start, end]];
-  return [
-    [start, week],
-    [0, end - week],
-  ];
+export type ScheduleConflict = {
+  first: ScheduleEntry;
+  second: ScheduleEntry;
+  message: string;
+};
+
+function activeSegments(station: Station): ActiveSegment[] {
+  const week = 7 * 24 * 60;
+  const shows = new Map(programsForStation(station).map((show) => [show.id, show]));
+  const segments: ActiveSegment[] = [];
+  for (const entry of schedule(station)) {
+    const show = shows.get(entry.showId);
+    if (!show || !(show.isActive ?? true) || !(entry.isActive ?? true)) continue;
+    const start = entry.weekday * 1440 + minutes(entry.startsAt);
+    let end = entry.weekday * 1440 + minutes(entry.endsAt);
+    if (end <= start) end += 1440;
+    const segment = { entry, showName: show.name };
+    if (end <= week) {
+      segments.push({ ...segment, start, end });
+    } else {
+      // Sunday night also occupies early Monday of the following week.
+      segments.push({ ...segment, start, end: week });
+      segments.push({ ...segment, start: 0, end: end - week });
+    }
+  }
+  return segments.sort((left, right) => left.start - right.start || left.end - right.end);
+}
+
+function slotLabel(entry: ScheduleEntry, showName: string): string {
+  return `«${showName}» (${WEEKDAYS[entry.weekday]} ${displayTime(entry.startsAt)}–${displayTime(entry.endsAt)})`;
+}
+
+/** Diagnostics use the same half-open weekly intervals as FastAPI's Station validator. */
+export function findScheduleConflicts(station: Station): ScheduleConflict[] {
+  const intervals = activeSegments(station);
+  const conflicts: ScheduleConflict[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < intervals.length; i += 1) {
+    const first = intervals[i];
+    for (let j = i + 1; j < intervals.length && intervals[j].start < first.end; j += 1) {
+      const second = intervals[j];
+      if (first.entry.id === second.entry.id) continue;
+      const key = [first.entry.id, second.entry.id].sort().join(":");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      conflicts.push({
+        first: first.entry,
+        second: second.entry,
+        message: `Conflicto entre ${slotLabel(first.entry, first.showName)} y ${slotLabel(second.entry, second.showName)}.`,
+      });
+    }
+  }
+  return conflicts;
 }
 
 export function validateProgram(program: Program): string[] {
@@ -77,26 +126,13 @@ export function validateSchedule(station: Station): string[] {
       .filter((show) => show.isActive ?? true)
       .map((show) => show.id),
   );
-
   const activeEntries = schedule(station).filter(
     (entry) => (entry.isActive ?? true) && activeShowIds.has(entry.showId),
   );
   if (activeEntries.some((entry) => entry.startsAt === entry.endsAt)) {
-    return ["Schedule start and end times must differ."];
+    return ["La hora de inicio y fin de una franja activa deben ser diferentes."];
   }
-
-  const intervals = activeEntries
-    .flatMap((entry) => interval(entry).map(([start, end]) => ({ start, end })))
-    .sort((left, right) => left.start - right.start);
-
-  for (let index = 1; index < intervals.length; index += 1) {
-    const previous = intervals[index - 1];
-    const current = intervals[index];
-    if (current.start < previous.end) {
-      return ["Active program schedules cannot overlap."];
-    }
-  }
-  return [];
+  return findScheduleConflicts(station).map((conflict) => conflict.message);
 }
 
 export function schedulesForProgram(station: Station, programId: string): ScheduleEntry[] {
@@ -110,7 +146,7 @@ export function schedulesForProgram(station: Station, programId: string): Schedu
     );
 }
 
-export function upsertProgram(
+export function withProgramSchedule(
   station: Station,
   program: Program,
   programSchedule: ScheduleEntry[],
@@ -130,6 +166,15 @@ export function upsertProgram(
     ],
   };
 
+  return next;
+}
+
+export function upsertProgram(
+  station: Station,
+  program: Program,
+  programSchedule: ScheduleEntry[],
+): Station {
+  const next = withProgramSchedule(station, program, programSchedule);
   const issues = [...validateProgram(program), ...validateSchedule(next)];
   if (issues.length) throw new Error(issues[0]);
   return next;

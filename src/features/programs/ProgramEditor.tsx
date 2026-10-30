@@ -45,6 +45,8 @@ import {
   type ScheduleEntry,
   schedulesForProgram,
   upsertProgram,
+  validateSchedule,
+  withProgramSchedule,
   WEEKDAYS,
 } from "./model";
 
@@ -104,6 +106,10 @@ export function ProgramEditor({
   const [slugTouched, setSlugTouched] = useState(existing);
   const [dirty, setDirty] = useState(false);
   const [editorStep, setEditorStep] = useState(0);
+  const scheduleIssues = useMemo(
+    () => validateSchedule(withProgramSchedule(station, workingProgram, workingSchedule)),
+    [station, workingProgram, workingSchedule],
+  );
 
   const save = useMutation({
     mutationFn: async () => {
@@ -226,6 +232,21 @@ export function ProgramEditor({
           </Alert>
         ) : null}
 
+        {scheduleIssues.length ? (
+          <Alert
+            severity="error"
+            action={<Button size="small" color="inherit" onClick={() => setEditorStep(1)}>Ver horarios</Button>}
+          >
+            <Typography fontWeight={700}>Hay {scheduleIssues.length} conflicto(s) entre horarios activos de esta estación.</Typography>
+            {scheduleIssues.slice(0, 5).map((issue, index) => (
+              <Typography key={index} variant="body2">{issue}</Typography>
+            ))}
+            {scheduleIssues.length > 5 ? <Typography variant="body2">Revisa también los demás horarios activos.</Typography> : null}
+            <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+              Revisa día y horas de ambos programas. Los turnos consecutivos (06:00–15:00 y 15:00–18:00) sí son válidos.
+            </Typography>
+          </Alert>
+        ) : null}
         {existing ? (
           <Alert severity={dirty ? "warning" : publicationStatus === "live" ? "success" : "info"}>
             {dirty
@@ -352,7 +373,7 @@ export function ProgramEditor({
                     setDirty(true);
                     setWorkingSchedule((current) => [
                       ...current,
-                      createScheduleEntry(workingProgram.id),
+                      { ...createScheduleEntry(workingProgram.id), isActive: false },
                     ]);
                   }}
                 >
@@ -361,8 +382,10 @@ export function ProgramEditor({
               </Stack>
 
               <Alert severity="info" icon={<Clock3 size={18} />} sx={{ mb: 1.5 }}>
-                Monday = 0 and Sunday = 6 in the API. Overnight slots are supported; active slots
-                across the station cannot overlap, including Sunday → Monday.
+                Los horarios de la estación usan {station.timezone ?? "America/Detroit"}.
+                Dos turnos pueden tocarse exactamente al cambiar de hora; solo los cruces reales están prohibidos.
+                Los horarios nuevos comienzan inactivos: configura día y horas antes de activarlos.
+                También revisamos horarios nocturnos (domingo a lunes).
               </Alert>
 
               {workingSchedule.length ? (
@@ -500,7 +523,13 @@ export function ProgramEditor({
               (editorStep === 0 && (!workingProgram.name.trim() || !workingProgram.slug.trim()))}
               onClick={() => setEditorStep(value => value + 1)}>Continue</Button> :
               <Button disabled={busy || (existing && !dirty)} variant="contained"
-                startIcon={<Save size={16} />} onClick={() => save.mutate()}>
+                startIcon={<Save size={16} />} onClick={() => {
+                  if (scheduleIssues.length) {
+                    setEditorStep(1);
+                    return;
+                  }
+                  save.mutate();
+                }}>
                 {save.isPending ? "Guardando…" : existing ? "Guardar borrador" : "Crear borrador"}
               </Button>}
           </Stack>
