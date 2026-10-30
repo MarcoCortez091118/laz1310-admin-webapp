@@ -67,6 +67,7 @@ export function ProgramLifecycleActions({
 }) {
   const queryClient = useQueryClient();
   const [publishOpen, setPublishOpen] = useState(false);
+  const [published, setPublished] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [publishNote, setPublishNote] = useState(`Publish ${title}`.slice(0, 300));
   const [removalNote, setRemovalNote] = useState(`Remove ${title}`.slice(0, 300));
@@ -93,6 +94,7 @@ export function ProgramLifecycleActions({
     onSuccess: async () => {
       await invalidateAll();
       setPublishOpen(false);
+      setPublished(true);
     },
   });
 
@@ -126,9 +128,10 @@ export function ProgramLifecycleActions({
     <>
       <Stack spacing={1} sx={{ width: "100%" }}>
         {mutationError ? <Alert severity="error">{errorMessage(mutationError)}</Alert> : null}
+        {published ? <Alert severity="success">El programa fue publicado correctamente. Verifica su estado en la app.</Alert> : null}
         {dirty ? (
           <Typography variant="caption" color="warning.main">
-            Save the current form to Draft before publishing or moving it to trash.
+            Primero guarda los cambios en el borrador. Después podrás publicar el programa.
           </Typography>
         ) : null}
         <Stack
@@ -149,9 +152,9 @@ export function ProgramLifecycleActions({
             variant="outlined"
             startIcon={<Rocket size={16} />}
             disabled={!isAdmin || pending || dirty}
-            onClick={() => setPublishOpen(true)}
+            onClick={() => { setPublished(false); setPublishOpen(true); }}
           >
-            {isAdmin ? "Publish program" : "Admin required to publish"}
+            {isAdmin ? "Publicar programa" : "Se requiere un administrador"}
           </Button>
         </Stack>
       </Stack>
@@ -162,16 +165,16 @@ export function ProgramLifecycleActions({
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Publish only “{title}”?</DialogTitle>
+        <DialogTitle>¿Publicar “{title}” en la app?</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Only this program and its weekly schedule are rebased from Draft onto the current
-            public catalog. Other pending Draft changes remain unpublished.
+            Se publicarán únicamente este programa y sus horarios desde el borrador. Otros
+            cambios pendientes continuarán sin publicar. La API creará un release inmutable.
           </Alert>
           <TextField
             autoFocus
             fullWidth
-            label="Publication note"
+            label="Motivo de publicación"
             value={publishNote}
             inputProps={{ maxLength: 300 }}
             onChange={(event) => setPublishNote(event.target.value)}
@@ -188,7 +191,7 @@ export function ProgramLifecycleActions({
             startIcon={<Rocket size={16} />}
             onClick={() => publishMutation.mutate()}
           >
-            {publishMutation.isPending ? "Publishing…" : "Publish program"}
+            {publishMutation.isPending ? "Publicando…" : "Confirmar publicación"}
           </Button>
         </DialogActions>
       </Dialog>
