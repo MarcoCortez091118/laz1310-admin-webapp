@@ -3,6 +3,7 @@ import type { Station } from "../../api/types";
 import {
   createProgram,
   createScheduleEntry,
+  findScheduleConflicts,
   removeProgram,
   type Program,
   upsertProgram,
@@ -106,7 +107,10 @@ describe("program model", () => {
       schedule: [...(current.schedule ?? []), overlap],
     };
 
-    expect(validateSchedule(next)).toEqual(["Active program schedules cannot overlap."]);
+    expect(validateSchedule(next)).toHaveLength(1);
+    expect(validateSchedule(next)[0]).toContain("Existing Show");
+    expect(validateSchedule(next)[0]).toContain("Morning Show");
+    expect(validateSchedule(next)[0]).toContain("11:00–13:00");
   });
 
   it("allows non-overlapping overnight schedules", () => {
@@ -123,6 +127,82 @@ describe("program model", () => {
     };
 
     expect(validateSchedule(current)).toEqual([]);
+  });
+
+  it("allows consecutive programs 06:00–15:00, 15:00–18:00 and 18:00–22:00", () => {
+    const base = station();
+    const first = { ...base.shows![0], name: "Mañanas" };
+    const afternoon = program();
+    const evening = { ...program("66666666-6666-4666-8666-666666666666"), slug: "evening", name: "Noches" };
+    const next: Station = {
+      ...base,
+      shows: [first, afternoon, evening],
+      schedule: [
+        { id: "1", showId: first.id!, weekday: 0, startsAt: "06:00:00", endsAt: "15:00:00", isActive: true },
+        { id: "2", showId: afternoon.id, weekday: 0, startsAt: "15:00:00", endsAt: "18:00:00", isActive: true },
+        { id: "3", showId: evening.id, weekday: 0, startsAt: "18:00:00", endsAt: "22:00:00", isActive: true },
+      ],
+    };
+    expect(validateSchedule(next)).toEqual([]);
+    expect(findScheduleConflicts(next)).toEqual([]);
+    expect(upsertProgram(next, afternoon, next.schedule!.filter(item => item.showId === afternoon.id))).toBeTruthy();
+  });
+
+  it("identifies the exact conflicting names, day and time, including previously active slots", () => {
+    const base = station();
+    const conflicting = { ...createScheduleEntry(program().id), id: "9", weekday: 0, startsAt: "11:30:00", endsAt: "13:00:00" };
+    const next = {
+      ...base,
+      shows: [...base.shows!, program()],
+      schedule: [...base.schedule!, conflicting],
+    };
+    const issues = validateSchedule(next);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain("Existing Show");
+    expect(issues[0]).toContain("Morning Show");
+    expect(issues[0]).toContain("Monday 10:00–12:00");
+    expect(issues[0]).toContain("Monday 11:30–13:00");
+    expect(() => upsertProgram(next, program(), [conflicting])).toThrow(/Conflicto entre/);
+  });
+
+  it("allows identical times on different days and ignores inactive slots/programs", () => {
+    const base = station();
+    const original = { ...base.schedule![0] };
+    const other = program();
+    const byDay = { ...createScheduleEntry(other.id), id: "9", weekday: 1, startsAt: "10:00:00", endsAt: "12:00:00" };
+    const next: Station = { ...base, shows: [...base.shows!, other], schedule: [original, byDay] };
+    expect(validateSchedule(next)).toEqual([]);
+    const sameDay = { ...byDay, weekday: 0 };
+    expect(validateSchedule({ ...next, schedule: [original, { ...sameDay, isActive: false }] })).toEqual([]);
+    expect(validateSchedule({
+      ...next,
+      shows: [...base.shows!, { ...other, isActive: false }],
+      schedule: [original, sameDay],
+    })).toEqual([]);
+  });
+
+  it("detects overnight Sunday to Monday conflicts once, and allows adjacent Monday windows", () => {
+    const first = program("77777777-7777-4777-8777-777777777777");
+    const second = { ...program("88888888-8888-4888-8888-888888888888"), name: "Night backup", slug: "night-backup" };
+    const overnight = {
+      id: "sun", showId: first.id, weekday: 6, startsAt: "23:00:00", endsAt: "02:00:00", isActive: true,
+    };
+    const monday = {
+      id: "mon", showId: second.id, weekday: 0, startsAt: "01:00:00", endsAt: "03:00:00", isActive: true,
+    };
+    const base = station();
+    const next: Station = { ...base, shows: [first, second], schedule: [overnight, monday] };
+    const conflicts = findScheduleConflicts(next);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].message).toContain("Sunday 23:00–02:00");
+    expect(conflicts[0].message).toContain("Monday 01:00–03:00");
+    expect(validateSchedule({ ...next, schedule: [overnight, { ...monday, startsAt: "02:00:00" }] })).toEqual([]);
+  });
+
+  it("reports duplicate active slots rather than treating them as adjacent", () => {
+    const base = station();
+    const dupe = { ...base.schedule![0], id: "another-id" };
+    expect(findScheduleConflicts({ ...base, schedule: [...base.schedule!, dupe] })).toHaveLength(1);
   });
 
   it("requires HTTPS artwork", () => {
