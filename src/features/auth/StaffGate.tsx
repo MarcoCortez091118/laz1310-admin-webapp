@@ -9,6 +9,7 @@ import {
   AppCheckTokenUnavailableError,
 } from "../../api/client";
 import { ApiError } from "../../api/errors";
+import { resolveAppCheckMode } from "../../lib/app-check-mode";
 import type { StaffResponse } from "../../api/types";
 
 const StaffContext = createContext<StaffResponse | null>(null);
@@ -50,7 +51,9 @@ export function StaffGate({ children }: PropsWithChildren) {
           : "Unable to verify staff access.";
 
     const description = appCheckFailure
-      ? "On the approved test deployment, register the App Check debug token shown in the browser console under Firebase Console → App Check → Manage debug tokens, then reload. Production domains use reCAPTCHA Enterprise automatically."
+      ? resolveAppCheckMode(window.location.hostname) === "debug"
+        ? "Local development only: register the browser App Check debug token in Firebase Console, then reload."
+        : "Automatic reCAPTCHA Enterprise verification failed. Verify the registered Website score key, hostname and Firebase project configuration, then retry. Hosted deployments do not require debug tokens."
       : forbidden
         ? "FastAPI requires a verified Firebase account with the editor or admin role."
         : unauthenticated
