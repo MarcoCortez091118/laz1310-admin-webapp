@@ -67,6 +67,15 @@ export function AdminShell() {
 
   const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch, grants, owner);
 
+  // Redirect staff with no access to the default App workspace to a granted module.
+  useEffect(() => {
+    if (allowed) return;
+    const next = ["/website", "/website/news", "/website/campaigns", "/website/shows",
+      "/website/media", "/", "/pages", "/programs", "/dynamics", "/notifications",
+      "/media", "/banners", "/staff"].find(path => canOpenPath(path, grants, owner));
+    if (next && next !== pathname) void navigate({ to: next as "/" });
+  }, [allowed, grants, navigate, owner, pathname]);
+
   // Also reset sidebar search on browser Back/Forward and direct link navigation.
   useEffect(() => {
     setNavigationSearch("");
