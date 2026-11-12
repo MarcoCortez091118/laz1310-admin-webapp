@@ -18,8 +18,6 @@ const firebaseApp = initializeApp({
   appId: env.VITE_FIREBASE_APP_ID,
 });
 
-export const auth: Auth = getAuth(firebaseApp);
-
 let appCheckInstance: AppCheck | undefined;
 
 export function appCheck(): AppCheck {
@@ -32,7 +30,7 @@ export function appCheck(): AppCheck {
 
     if (mode === "debug") {
       console.info(
-        "Firebase App Check debug attestation is active for this approved test host. Register the browser debug token in Firebase Console before using the Admin API.",
+        "Firebase App Check debug attestation is active on localhost only. Use a registered debug token for local development.",
       );
     }
 
@@ -44,3 +42,7 @@ export function appCheck(): AppCheck {
 
   return appCheckInstance;
 }
+
+// Auth App Check enforcement requires the provider to be configured first.
+appCheck();
+export const auth: Auth = getAuth(firebaseApp);

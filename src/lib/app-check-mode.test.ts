@@ -7,9 +7,9 @@ import {
 } from "./app-check-mode";
 
 describe("App Check deployment mode", () => {
-  it("uses debug attestation for the dedicated AI Studio test deployment", () => {
-    expect(isApprovedAppCheckDebugHost("laz1310-adminwebapp.ai.studio")).toBe(true);
-    expect(resolveAppCheckMode("laz1310-adminwebapp.ai.studio")).toBe("debug");
+  it("requires Enterprise attestation on hosted AI Studio deployments", () => {
+    expect(isApprovedAppCheckDebugHost("laz1310-adminwebapp.ai.studio")).toBe(false);
+    expect(resolveAppCheckMode("laz1310-adminwebapp.ai.studio")).toBe("enterprise");
   });
 
   it("uses debug attestation for localhost development", () => {
@@ -22,11 +22,11 @@ describe("App Check deployment mode", () => {
     expect(resolveAppCheckMode("example.ai.studio")).toBe("enterprise");
   });
 
-  it("enables Firebase debug token generation on approved test hosts", () => {
+  it("enables Firebase debug token generation on localhost only", () => {
     const target: AppCheckDebugTarget = {};
 
     expect(
-      configureAppCheckForHost("laz1310-adminwebapp.ai.studio", target),
+      configureAppCheckForHost("localhost", target),
     ).toBe("debug");
     expect(target.FIREBASE_APPCHECK_DEBUG_TOKEN).toBe(true);
   });
@@ -37,6 +37,7 @@ describe("App Check deployment mode", () => {
     expect(configureAppCheckForHost("admin.laz1310.com", target)).toBe(
       "enterprise",
     );
+    expect(configureAppCheckForHost("laz1310-adminwebapp.ai.studio", target)).toBe("enterprise");
     expect(target.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
   });
 });

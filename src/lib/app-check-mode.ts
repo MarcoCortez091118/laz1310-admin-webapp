@@ -7,7 +7,6 @@ export interface AppCheckDebugTarget {
 const APPROVED_DEBUG_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
-  "laz1310-adminwebapp.ai.studio",
 ]);
 
 export function isApprovedAppCheckDebugHost(hostname: string): boolean {
@@ -25,7 +24,7 @@ export function configureAppCheckForHost(
   const mode = resolveAppCheckMode(hostname);
 
   if (mode === "debug") {
-    // Firebase generates and persists a browser-local debug token. The token
+    // Firebase generates and persists a browser-local debug token for development. The token
     // must be registered manually in Firebase App Check. It is intentionally
     // never embedded in Vite environment variables or committed to Git.
     target.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
