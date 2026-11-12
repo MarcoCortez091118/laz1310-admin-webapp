@@ -35,6 +35,7 @@ import {
 import { useEffect, useState, type MouseEvent } from "react";
 import {
   visibleNavigationGroups,
+  canViewRoute,
   workspaceDashboard,
   workspaceFromPath,
   type AdminWorkspace,
@@ -55,11 +56,15 @@ export function AdminShell() {
   const { mode, toggle } = useAppearance();
   const desktop = useMediaQuery(theme.breakpoints.up("lg"));
   const admin = staff.roles.includes("admin");
+  const owner = staff.isOwner === true;
+  const grants = new Set(staff.capabilities ?? []);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigationSearch, setNavigationSearch] = useState("");
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
-  const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch);
+  const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch, grants, owner);
+  const canUseWebsite = visibleNavigationGroups("website", admin, "", grants, owner).length > 0;
+  const canUseApp = visibleNavigationGroups("app", admin, "", grants, owner).length > 0;
 
   // Also reset sidebar search on browser Back/Forward and direct link navigation.
   useEffect(() => {
@@ -67,7 +72,7 @@ export function AdminShell() {
   }, [workspace]);
 
   function changeWorkspace(next: AdminWorkspace) {
-    if (next === workspace) return;
+    if (next === workspace || (next === "website" && !canUseWebsite) || (next === "app" && !canUseApp)) return;
     setNavigationSearch("");
     closeMobileNavigation();
     void navigate({ to: workspaceDashboard(next) });
@@ -111,8 +116,8 @@ export function AdminShell() {
             }}
             sx={{ borderRadius: 2, fontWeight: 750, bgcolor: "action.hover" }}
           >
-            <MenuItem value="website">Website</MenuItem>
-            <MenuItem value="app">App Android / iOS</MenuItem>
+            {canUseWebsite && <MenuItem value="website">Website</MenuItem>}
+            {canUseApp && <MenuItem value="app">App Android / iOS</MenuItem>}
           </Select>
         </FormControl>
         <Typography fontSize={11} color="text.secondary" mt={1} px={0.5}>
@@ -228,13 +233,13 @@ export function AdminShell() {
             <>
               <Chip size="small" label="Android / iOS" variant="outlined"
                 sx={{ display: { xs: "none", md: "inline-flex" } }} />
-              <Tooltip title="App notifications">
+              {canViewRoute("/notifications", grants, owner) && <Tooltip title="App notifications">
                 <Link to="/notifications" style={{ display: "inline-flex" }}>
                   <IconButton aria-label="App notifications" color="inherit">
                     <Bell size={19} />
                   </IconButton>
                 </Link>
-              </Tooltip>
+              </Tooltip>}
             </>
           ) : (
             <Chip
@@ -321,8 +326,34 @@ export function AdminShell() {
         }}
       >
         <Toolbar sx={{ minHeight: "86px !important" }} />
-        <Outlet />
+        <RouteAccessGuard />
       </Box>
     </Box>
   );
+}
+
+/** Sidebar hiding is UX only; FastAPI enforces the exact capabilities. */
+function RouteAccessGuard() {
+  const staff = useStaff();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: state => state.location.pathname });
+  const grants = new Set(staff.capabilities ?? []);
+  const owner = staff.isOwner === true;
+  const allowed = canViewRoute(pathname, grants, owner);
+  const fallback = [...visibleNavigationGroups("website", staff.roles.includes("admin"), "", grants, owner),
+    ...visibleNavigationGroups("app", staff.roles.includes("admin"), "", grants, owner)]
+    .flatMap(group => group.items)[0]?.to;
+
+  useEffect(() => {
+    if (pathname === "/" && !allowed && fallback) void navigate({ to: fallback, replace: true });
+  }, [pathname, allowed, fallback, navigate]);
+
+  if (!allowed) {
+    return <Box className="modern-page">
+      <Typography variant="h5" fontWeight={800}>No tienes acceso a este módulo</Typography>
+      <Typography color="text.secondary" mt={1}>Tu administrador principal controla los módulos disponibles. No puedes abrir módulos restringidos usando un enlace directo.</Typography>
+      {fallback && <Box mt={2}><Link to={fallback}>Ir a un módulo autorizado</Link></Box>}
+    </Box>;
+  }
+  return <Outlet />;
 }
