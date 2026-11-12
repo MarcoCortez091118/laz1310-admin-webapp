@@ -19,6 +19,8 @@ export function StaffGate({ children }: PropsWithChildren) {
     queryKey: ["admin", "staff"],
     queryFn: async () => (await apiRequest<StaffResponse>("/api/v1/admin/me")).data,
     retry: false,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (staff.isPending) {
