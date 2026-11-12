@@ -15,6 +15,7 @@ import {
   ScrollText,
   Settings,
   Sparkles,
+  UserCog,
   UsersRound,
 } from "lucide-react";
 
@@ -25,7 +26,7 @@ export type NavigationPath =
   | "/website/shows" | "/website/ticket-promotions" | "/website/media" | "/website/campaigns"
   | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
   | "/dynamics" | "/notifications" | "/users" | "/weather"
-  | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring";
+  | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring" | "/staff";
 
 export interface NavigationItem {
   readonly label: string;
@@ -112,15 +113,45 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
       items: [
         { label: "Branding", to: "/branding", icon: Palette, adminOnly: true },
         { label: "App Configuration", to: "/configuration", icon: Settings, adminOnly: true },
+        { label: "Administradores y permisos", to: "/staff", icon: UserCog, adminOnly: true },
       ],
     },
   ],
 };
 
+/** Route guards and sidebar visibility share one server-issued capability mapping. */
+export function navigationCapability(path: string): string | null {
+  const exact: Record<string, string> = {
+    "/": "app.dashboard", "/website": "website.dashboard",
+    "/pages": "app.pages", "/banners": "app.banners",
+    "/radio": "app.radio", "/programs": "app.programs",
+    "/dynamics": "app.dynamics", "/notifications": "app.notifications",
+    "/users": "app.users", "/weather": "app.weather",
+    "/media": "app.media", "/monitoring": "app.monitoring",
+    "/releases": "app.releases", "/audit": "app.audit",
+    "/branding": "app.branding", "/configuration": "app.configuration",
+    "/website/news": "website.news",
+    "/website/campaigns": "website.campaigns",
+    "/website/banners": "website.banners",
+    "/website/shows": "website.shows",
+    "/website/ticket-promotions": "website.tickets",
+    "/website/media": "website.media",
+  };
+  return exact[path] ?? null;
+}
+
+export function canViewRoute(path: string, grants: ReadonlySet<string>, owner: boolean): boolean {
+  if (path === "/staff") return owner;
+  const capability = navigationCapability(path);
+  return Boolean(capability && (owner || grants.has(`${capability}.view`)));
+}
+
 export function visibleNavigationGroups(
   workspace: AdminWorkspace,
   isAdmin: boolean,
   search = "",
+  grants?: ReadonlySet<string>,
+  owner = false,
 ): NavigationGroup[] {
   const query = search.trim().toLocaleLowerCase();
   return workspaceNavigation[workspace]
@@ -128,6 +159,7 @@ export function visibleNavigationGroups(
       label: group.label,
       items: group.items.filter(item =>
         (!item.adminOnly || isAdmin) &&
+        (grants === undefined || canViewRoute(item.to, grants, owner)) &&
         (!query || item.label.toLocaleLowerCase().includes(query)),
       ),
     }))
