@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   UsersRound,
+  UserRoundCog,
 } from "lucide-react";
 
 export type AdminWorkspace = "website" | "app";
@@ -25,7 +26,7 @@ export type NavigationPath =
   | "/website/shows" | "/website/ticket-promotions" | "/website/media" | "/website/campaigns"
   | "/pages" | "/banners" | "/radio" | "/programs" | "/media"
   | "/dynamics" | "/notifications" | "/users" | "/weather"
-  | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring";
+  | "/releases" | "/audit" | "/branding" | "/configuration" | "/monitoring" | "/staff";
 
 export interface NavigationItem {
   readonly label: string;
@@ -112,15 +113,47 @@ export const workspaceNavigation: Record<AdminWorkspace, readonly NavigationGrou
       items: [
         { label: "Branding", to: "/branding", icon: Palette, adminOnly: true },
         { label: "App Configuration", to: "/configuration", icon: Settings, adminOnly: true },
+        { label: "Administradores y permisos", to: "/staff", icon: UserRoundCog, adminOnly: true },
       ],
     },
   ],
 };
 
+export type PermissionMap = Record<string, string[]>;
+
+const pathPermission: Partial<Record<NavigationPath, string>> = {
+  "/website/news": "website.news",
+  "/website/banners": "website.banners",
+  "/website/campaigns": "website.campaigns",
+  "/website/shows": "website.shows",
+  "/website/ticket-promotions": "website.tickets",
+  "/website/media": "website.media",
+  "/pages": "app.pages", "/banners": "app.banners",
+  "/radio": "app.radio", "/programs": "app.programs", "/media": "app.media",
+  "/dynamics": "app.dynamics", "/notifications": "app.notifications",
+  "/users": "app.users", "/weather": "app.weather",
+  "/branding": "app.branding", "/configuration": "app.configuration",
+  "/releases": "app.releases", "/audit": "app.audit",
+  "/monitoring": "app.monitoring",
+};
+
+export function canOpenPath(path: string, permissions: PermissionMap, isOwner: boolean): boolean {
+  if (path === "/staff") return isOwner;
+  if (path === "/website" || path === "/") {
+    return Object.entries(permissions).some(([module, actions]) =>
+      module.startsWith(path === "/" ? "app." : "website.") && actions.includes("view")
+    );
+  }
+  const exact = pathPermission[path as NavigationPath];
+  return Boolean(exact && permissions[exact]?.includes("view"));
+}
+
 export function visibleNavigationGroups(
   workspace: AdminWorkspace,
   isAdmin: boolean,
   search = "",
+  permissions?: PermissionMap,
+  isOwner = isAdmin,
 ): NavigationGroup[] {
   const query = search.trim().toLocaleLowerCase();
   return workspaceNavigation[workspace]
@@ -128,6 +161,8 @@ export function visibleNavigationGroups(
       label: group.label,
       items: group.items.filter(item =>
         (!item.adminOnly || isAdmin) &&
+        (item.to !== "/staff" || isOwner) &&
+        (!permissions || canOpenPath(item.to, permissions, isOwner)) &&
         (!query || item.label.toLocaleLowerCase().includes(query)),
       ),
     }))

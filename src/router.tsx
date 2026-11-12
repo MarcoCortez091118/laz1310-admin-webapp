@@ -19,6 +19,7 @@ import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { PagesPage } from "./features/pages/PagesPage";
 import { ProgramsWorkspace } from "./features/programs/ProgramsWorkspace";
 import { UsersPage } from "./features/users/UsersPage";
+import { StaffPage } from "./features/staff/StaffPage";
 import { WeatherPage } from "./features/weather/WeatherPage";
 import { WebsiteDashboardPage } from "./features/website/WebsiteDashboardPage";
 import { WebsiteCampaignsPage } from "./features/website/campaigns/WebsiteCampaignsPage";
@@ -137,6 +138,12 @@ const mediaRoute = createRoute({
   component: MediaLibraryPage,
 });
 
+const staffRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: "/staff",
+  component: StaffPage,
+});
+
 const usersRoute = createRoute({
   getParentRoute: () => adminRoute,
   path: "/users",
@@ -215,6 +222,7 @@ const routeTree = rootRoute.addChildren([
     websiteShowsRoute,
     websiteTicketPromotionsRoute,
     usersRoute,
+    staffRoute,
     releasesRoute,
     monitoringRoute,
     weatherRoute,

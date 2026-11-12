@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canOpenPath,
   visibleNavigationGroups,
   workspaceDashboard,
   workspaceFromPath,
@@ -50,7 +51,7 @@ describe("platform workspace navigation", () => {
 
   it("applies the existing adminOnly rule within each selected platform", () => {
     const editorPaths = allPaths("app", false);
-    for (const restricted of ["/users", "/releases", "/audit", "/branding", "/configuration"]) {
+    for (const restricted of ["/users", "/releases", "/audit", "/branding", "/configuration", "/staff"]) {
       expect(editorPaths).not.toContain(restricted);
       expect(allPaths("app", true)).toContain(restricted);
     }
@@ -70,5 +71,26 @@ describe("platform workspace navigation", () => {
     visibleNavigationGroups("app", false, "radio");
     const after = workspaceNavigation.app.map(group => group.items.length);
     expect(after).toEqual(before);
+  });
+});
+
+describe("staff per-module permissions", () => {
+  it("hides unauthorized items and direct links", () => {
+    const grants = { "website.news": ["view"], "app.programs": ["view"] };
+    expect(canOpenPath("/website/news", grants, false)).toBe(true);
+    expect(canOpenPath("/website/campaigns", grants, false)).toBe(false);
+    expect(canOpenPath("/programs", grants, false)).toBe(true);
+    expect(canOpenPath("/notifications", grants, false)).toBe(false);
+    expect(canOpenPath("/staff", grants, false)).toBe(false);
+    expect(visibleNavigationGroups("website", false, "", grants, false).flatMap(g => g.items.map(i => i.to))).toEqual([
+      "/website", "/website/news",
+    ]);
+  });
+  it("never delegates owner staff administration via managed admin role", () => {
+    const grants = { "app.programs": ["view", "edit"] };
+    const paths = visibleNavigationGroups("app", true, "", grants, false).flatMap(g => g.items.map(i => i.to));
+    expect(paths).toContain("/programs");
+    expect(paths).not.toContain("/staff");
+    expect(paths).not.toContain("/users");
   });
 });

@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type MouseEvent } from "react";
 import {
+  canOpenPath,
   visibleNavigationGroups,
   workspaceDashboard,
   workspaceFromPath,
@@ -55,11 +56,25 @@ export function AdminShell() {
   const { mode, toggle } = useAppearance();
   const desktop = useMediaQuery(theme.breakpoints.up("lg"));
   const admin = staff.roles.includes("admin");
+  const grants = (staff as typeof staff & { permissions?: Record<string, string[]>; managed?: boolean }).permissions ?? {};
+  const owner = admin && !(staff as typeof staff & { managed?: boolean }).managed;
+  const hasApp = canOpenPath("/", grants, owner);
+  const hasWebsite = canOpenPath("/website", grants, owner);
+  const allowed = canOpenPath(pathname, grants, owner);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigationSearch, setNavigationSearch] = useState("");
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
 
-  const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch);
+  const visibleGroups = visibleNavigationGroups(workspace, admin, navigationSearch, grants, owner);
+
+  // Redirect staff with no access to the default App workspace to a granted module.
+  useEffect(() => {
+    if (allowed) return;
+    const next = ["/website", "/website/news", "/website/campaigns", "/website/shows",
+      "/website/media", "/", "/pages", "/programs", "/dynamics", "/notifications",
+      "/media", "/banners", "/staff"].find(path => canOpenPath(path, grants, owner));
+    if (next && next !== pathname) void navigate({ to: next as "/" });
+  }, [allowed, grants, navigate, owner, pathname]);
 
   // Also reset sidebar search on browser Back/Forward and direct link navigation.
   useEffect(() => {
@@ -111,8 +126,8 @@ export function AdminShell() {
             }}
             sx={{ borderRadius: 2, fontWeight: 750, bgcolor: "action.hover" }}
           >
-            <MenuItem value="website">Website</MenuItem>
-            <MenuItem value="app">App Android / iOS</MenuItem>
+            {hasWebsite && <MenuItem value="website">Website</MenuItem>}
+            {hasApp && <MenuItem value="app">App Android / iOS</MenuItem>}
           </Select>
         </FormControl>
         <Typography fontSize={11} color="text.secondary" mt={1} px={0.5}>
@@ -224,7 +239,7 @@ export function AdminShell() {
             </IconButton>
           </Tooltip>
 
-          {workspace === "app" ? (
+          {workspace === "app" && grants["app.notifications"]?.includes("view") ? (
             <>
               <Chip size="small" label="Android / iOS" variant="outlined"
                 sx={{ display: { xs: "none", md: "inline-flex" } }} />
@@ -321,7 +336,12 @@ export function AdminShell() {
         }}
       >
         <Toolbar sx={{ minHeight: "86px !important" }} />
-        <Outlet />
+        {allowed ? <Outlet /> : (
+          <Box className="modern-page" role="alert">
+            <Typography variant="h5">Acceso restringido</Typography>
+            <Typography color="text.secondary">Tu cuenta no tiene permiso para acceder a este módulo. Solicita acceso al administrador principal.</Typography>
+          </Box>
+        )}
       </Box>
     </Box>
   );
