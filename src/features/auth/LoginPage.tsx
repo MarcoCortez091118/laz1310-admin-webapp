@@ -8,7 +8,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification,
+  sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup,
+} from "firebase/auth";
+import { apiRequest } from "../../api/client";
 import { LockKeyhole, RadioTower } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { auth } from "../../lib/firebase";
@@ -18,16 +22,75 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const [registration, setRegistration] = useState(false);
+
+  async function activateAndEnter() {
+    const user = auth.currentUser;
+    if (!user) throw new Error("No hay una sesión de Firebase activa.");
+    await user.reload();
+    if (!user.emailVerified) {
+      await sendEmailVerification(user);
+      setMessage("Te enviamos un correo de verificación de Firebase. Confirma tu dirección y vuelve a iniciar sesión.");
+      return;
+    }
+    try {
+      await apiRequest("/api/v1/admin/staff/activate", { method: "POST" });
+      await user.getIdToken(true);
+    } catch (activationError) {
+      // Existing staff provisioned by IAM/operator do not need an invitation.
+      const token = await user.getIdTokenResult(true);
+      const roles = token.claims.laz_roles;
+      if (!Array.isArray(roles) || !roles.some(r => r === "admin" || r === "editor")) {
+        throw activationError;
+      }
+    }
+    window.location.assign("/");
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setMessage(undefined);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      window.location.assign("/");
+      if (registration) {
+        const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await sendEmailVerification(result.user);
+        setMessage("Cuenta creada. Firebase te envió un correo de verificación. Después de verificarlo, inicia sesión para activar tu invitación.");
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+        await activateAndEnter();
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo autenticar la cuenta.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function googleSignIn() {
+    setSubmitting(true);
+    setMessage(undefined);
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      await activateAndEnter();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión con Google.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function resetPassword() {
+    if (!email.includes("@")) {
+      setMessage("Primero escribe tu dirección de correo.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setMessage("Si la cuenta existe, recibirás instrucciones de recuperación de contraseña.");
     } catch {
-      setMessage("Sign-in failed. Verify the account and configured Firebase provider.");
+      setMessage("No fue posible solicitar la recuperación de contraseña.");
     } finally {
       setSubmitting(false);
     }
@@ -105,13 +168,24 @@ export function LoginPage() {
                     value={password}
                   />
                   <Button disabled={submitting} fullWidth size="large" type="submit" variant="contained">
-                    {submitting ? "Signing in…" : "Sign in"}
+                    {submitting ? "Procesando…" : registration ? "Crear cuenta con invitación" : "Iniciar sesión"}
                   </Button>
                 </Stack>
               </Box>
 
+              <Stack spacing={1.2}>
+                <Button variant="outlined" fullWidth disabled={submitting} onClick={() => void googleSignIn()}>
+                  Continuar con Google
+                </Button>
+                <Button fullWidth disabled={submitting} onClick={() => {setRegistration(v => !v);setMessage(undefined);}}>
+                  {registration ? "Ya tengo una cuenta" : "Tengo una invitación y necesito crear mi cuenta"}
+                </Button>
+                {!registration && <Button size="small" disabled={submitting} onClick={() => void resetPassword()}>
+                  Recuperar contraseña
+                </Button>}
+              </Stack>
               <Typography color="text.secondary" fontSize={11.5} textAlign="center">
-                Authorized editorial and platform staff only.
+                Solo el personal invitado o autorizado puede acceder. Para correo/contraseña es obligatorio verificar el correo. El acceso con Google requiere un dominio OAuth autorizado.
               </Typography>
             </Stack>
           </CardContent>
