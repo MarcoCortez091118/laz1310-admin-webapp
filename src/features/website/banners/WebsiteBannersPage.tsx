@@ -18,6 +18,7 @@ import {
   readBannerReleases, readLegacyBanners, rollbackBannerRelease, saveBannerDraft,
   reconcileBannerDraft, websiteBannerKeys, type WebsiteBanner, type WebsiteBannerContent,
   type LegacyBannerDecision,
+  readBannerTrash, trashBannerFromDraft, restoreBannerFromTrash, websiteBannerTrashKey,
 } from "./api";
 
 type Layout = "desktop" | "mobile";
@@ -125,9 +126,11 @@ export function WebsiteBannersPage() {
   const staff = useStaff();
   const isAdmin = staff.roles.includes("admin");
   const [layout, setLayout] = useState<Layout>("desktop");
+  const [pane, setPane] = useState<"published" | "draft" | "trash" | "legacy">("published");
   const [working, setWorking] = useState<WebsiteBannerContent>(EMPTY);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [rollbackId, setRollbackId] = useState<string | null>(null);
+  const [trashCandidate, setTrashCandidate] = useState<{layout: Layout; bannerId: string} | null>(null);
   const [legacyActions, setLegacyActions] = useState<Record<string, "draft" | "trash">>({});
 
   const draft = useQuery({
@@ -143,6 +146,12 @@ export function WebsiteBannersPage() {
   const published = useQuery({
     queryKey: websiteBannerKeys.publication,
     queryFn: () => missing(readBannerPublication),
+    retry: false,
+  });
+  const archived = useQuery({
+    queryKey: websiteBannerTrashKey,
+    queryFn: async () => (await readBannerTrash()).data.items,
+    enabled: pane === "trash",
     retry: false,
   });
   const releases = useQuery({
@@ -166,9 +175,6 @@ export function WebsiteBannersPage() {
         legacy.data.fingerprint !== draft.data.legacyFingerprint
       : legacy.data.sourceExists
   ));
-  const legacyNeedsReview = Boolean(
-    legacyRequiresImport || legacyConflict || (legacy.data?.invalidEntries?.length ?? 0) > 0
-  );
   const requiresReconciliation = Boolean(legacyRequiresImport || legacyConflict);
   const invalidEntries = legacy.data?.invalidEntries ?? [];
   const allDecided = invalidEntries.every(
@@ -203,14 +209,23 @@ export function WebsiteBannersPage() {
   });
   const publishMutation = useMutation({
     mutationFn: () => publishBannerDraft(revision),
-    onSuccess: reload,
+    onSuccess: () => { reload(); setPane("published"); },
+  });
+  const trashMutation = useMutation({
+    mutationFn: (item: {layout: Layout; bannerId: string}) =>
+      trashBannerFromDraft(revision, item.layout, item.bannerId),
+    onSuccess: () => { setTrashCandidate(null); reload(); },
+  });
+  const restoreMutation = useMutation({
+    mutationFn: (trashId: string) => restoreBannerFromTrash(revision, trashId),
+    onSuccess: () => { reload(); setPane("draft"); },
   });
   const rollbackMutation = useMutation({
     mutationFn: (releaseId: string) =>
       rollbackBannerRelease(published.data?.revision ?? 0, releaseId),
     onSuccess: () => { setRollbackId(null); reload(); },
   });
-  const mutations = [importMutation, saveMutation, publishMutation, rollbackMutation, reconcileMutation];
+  const mutations = [importMutation, saveMutation, publishMutation, rollbackMutation, reconcileMutation, trashMutation, restoreMutation];
   const busy = mutations.some((item) => item.isPending);
   const actionError = mutations.find((item) => item.error)?.error;
   const conflict = actionError instanceof ApiError && actionError.status === 409;
@@ -249,26 +264,45 @@ export function WebsiteBannersPage() {
           responsive WEBSITE layouts — not the native LA Z Mobile app.
         </p>
       </header>
-      <Alert severity="info">
-        Changes first save as a Website draft. Only an administrator can publish or
-        roll back. The public Website stays on its existing banner source until
-        the separate approved API canary is deployed.
-      </Alert>
-      {draft.isPending || legacy.isPending ? (
+      <Tabs value={pane} onChange={(_, value: typeof pane) => setPane(value)}
+        variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile
+        aria-label="Website banner management">
+        <Tab value="published" label="Publicados"/>
+        <Tab value="draft" label="Borradores"/>
+        <Tab value="trash" label="Papelera"/>
+        <Tab value="legacy" label="Heredados"/>
+      </Tabs>
+      {pane === "published" && <Alert severity="info">
+        Publicado en FastAPI no significa visible en laz1310.com hasta que
+        el Website utilice el lector de publicaciones aprobadas. Active solo
+        habilita el banner dentro de esa revisión.
+      </Alert>}
+      {pane === "draft" && <Alert severity="info">
+        Edita aquí, guarda el borrador y publica una revisión.
+        El sitio cambiará solamente al consumir esa publicación.
+      </Alert>}
+      {pane === "trash" && <Alert severity="info">
+        Los banners de esta papelera se pueden restaurar. Los cambios del
+        borrador no afectan la publicación actual hasta publicar otra revisión.
+      </Alert>}
+      {pane === "legacy" && <Alert severity="info">
+        Inventario histórico de migración. No forma parte de los banners publicados.
+      </Alert>}
+      {draft.isPending || (pane === "legacy" && legacy.isPending) ? (
         <Stack direction="row" spacing={2} alignItems="center">
           <CircularProgress size={22} /> <Typography>Loading Website banner inventory…</Typography>
         </Stack>
-      ) : draft.error || legacy.error ? (
+      ) : draft.error || (pane === "legacy" && legacy.error) ? (
         <Alert severity="error">
           Unable to load Website Banners: {String(draft.error ?? legacy.error)}
           <Button onClick={reload}>Retry</Button>
         </Alert>
       ) : (
         <>
-          {legacy.data?.warnings.map((warning) => (
+          {pane === "legacy" && legacy.data?.warnings.map((warning) => (
             <Alert key={warning} severity="warning">{warning}</Alert>
           ))}
-          {legacyConflict && draft.data && (
+          {pane === "legacy" && legacyConflict && draft.data && (
             <Alert severity="error">
               <Typography fontWeight={750} sx={{ mb: .5 }}>
                 The legacy banners have changed since this draft was imported.
@@ -286,7 +320,7 @@ export function WebsiteBannersPage() {
               <Button size="small" onClick={reload} sx={{ mt: 1 }}>Reload inventory</Button>
             </Alert>
           )}
-          {legacyRequiresImport && (
+          {pane === "legacy" && legacyRequiresImport && (
             <Alert severity="warning" action={<Button disabled={busy || !isAdmin ||
               !legacy.data?.fingerprint || legacy.data?.importable !== true}
               onClick={() => importMutation.mutate()}>Review &amp; import</Button>}>
@@ -299,7 +333,7 @@ export function WebsiteBannersPage() {
               {!isAdmin ? " Only administrators can approve this import." : ""}
             </Alert>
           )}
-          {legacyNeedsReview && legacy.data?.content && (
+          {pane === "legacy" && legacy.data?.content && (
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
               <Typography fontWeight={800} sx={{ mb: 1 }}>
                 Existing Website banners — read-only inventory
@@ -389,19 +423,25 @@ export function WebsiteBannersPage() {
               )}
             </Paper>
           )}
-          {!legacyRequiresImport && !draft.data && (
+          {pane === "draft" && !legacyRequiresImport && !draft.data && (
             <Alert severity="info">
               No editable Website banner draft exists yet. New artwork can be
               entered below; verify old Storage fallback assets before first publication.
             </Alert>
           )}
+          {pane === "draft" && <>
+          {legacyConflict && <Alert severity="warning"
+            action={<Button onClick={() => setPane("legacy")}>Revisar heredados</Button>}>
+            Hay diferencias con el sistema anterior. Sincroniza desde Heredados
+            antes de publicar el borrador.
+          </Alert>}
           <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip size="small" color={changed ? "warning" : "default"}
                   label={changed ? "UNSAVED CHANGES" : `DRAFT #${revision}`} />
                 <Chip size="small" color={published.data ? "success" : "default"}
-                  label={published.data ? `LIVE #${published.data.revision}` : "NOT PUBLISHED"} />
+                  label={published.data ? `API RELEASE #${published.data.revision}` : "NOT PUBLISHED"} />
               </Stack>
               <Stack direction="row" spacing={1}>
                 <Button startIcon={<Save size={16} />} disabled={disabled || !changed || legacyRequiresImport}
@@ -472,9 +512,9 @@ export function WebsiteBannersPage() {
                       <Button size="small" variant="outlined" disabled={disabled}
                         onClick={() => setEditor({ layout, index, value: card })}>Edit</Button>
                       <Button size="small" color="error" disabled={disabled}
-                        onClick={() => setWorking((current) => ({
-                          ...current, [layout]: current[layout].filter((_, i) => i !== index),
-                        }))}>Remove</Button>
+                        title={changed ? "Guarda los cambios antes de mover a Papelera" : "Mover a Papelera"}
+                        disabled={disabled || changed}
+                        onClick={() => setTrashCandidate({layout, bannerId: card.id})}>Papelera</Button>
                     </Stack>
                   </Stack>
                 </Paper>
