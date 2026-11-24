@@ -16,7 +16,8 @@ import { useStaff } from "../../auth/StaffGate";
 import {
   importLegacyBanners, publishBannerDraft, readBannerDraft, readBannerPublication,
   readBannerReleases, readLegacyBanners, rollbackBannerRelease, saveBannerDraft,
-  websiteBannerKeys, type WebsiteBanner, type WebsiteBannerContent,
+  reconcileBannerDraft, websiteBannerKeys, type WebsiteBanner, type WebsiteBannerContent,
+  type LegacyBannerDecision,
 } from "./api";
 
 type Layout = "desktop" | "mobile";
@@ -127,6 +128,7 @@ export function WebsiteBannersPage() {
   const [working, setWorking] = useState<WebsiteBannerContent>(EMPTY);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [rollbackId, setRollbackId] = useState<string | null>(null);
+  const [legacyActions, setLegacyActions] = useState<Record<string, "draft" | "trash">>({});
 
   const draft = useQuery({
     queryKey: websiteBannerKeys.draft,
@@ -167,6 +169,11 @@ export function WebsiteBannersPage() {
   const legacyNeedsReview = Boolean(
     legacyRequiresImport || legacyConflict || (legacy.data?.invalidEntries?.length ?? 0) > 0
   );
+  const requiresReconciliation = Boolean(legacyRequiresImport || legacyConflict);
+  const invalidEntries = legacy.data?.invalidEntries ?? [];
+  const allDecided = invalidEntries.every(
+    issue => legacyActions[`${issue.layout}:${issue.index}`] !== undefined
+  );
 
   function reload() {
     void queryClient.invalidateQueries({ queryKey: ["admin", "website", "banners"] });
@@ -180,6 +187,20 @@ export function WebsiteBannersPage() {
     mutationFn: () => saveBannerDraft(revision, working),
     onSuccess: reload,
   });
+  const reconcileMutation = useMutation({
+    mutationFn: () => {
+      if (!legacy.data?.fingerprint || !allDecided) {
+        throw new Error("Choose Draft or Trash for each invalid legacy banner.");
+      }
+      const decisions: LegacyBannerDecision[] = invalidEntries.map(issue => ({
+        layout: issue.layout,
+        index: issue.index,
+        action: legacyActions[`${issue.layout}:${issue.index}`]!,
+      }));
+      return reconcileBannerDraft(revision, legacy.data.fingerprint, decisions);
+    },
+    onSuccess: () => { setLegacyActions({}); reload(); },
+  });
   const publishMutation = useMutation({
     mutationFn: () => publishBannerDraft(revision),
     onSuccess: reload,
@@ -189,7 +210,7 @@ export function WebsiteBannersPage() {
       rollbackBannerRelease(published.data?.revision ?? 0, releaseId),
     onSuccess: () => { setRollbackId(null); reload(); },
   });
-  const mutations = [importMutation, saveMutation, publishMutation, rollbackMutation];
+  const mutations = [importMutation, saveMutation, publishMutation, rollbackMutation, reconcileMutation];
   const busy = mutations.some((item) => item.isPending);
   const actionError = mutations.find((item) => item.error)?.error;
   const conflict = actionError instanceof ApiError && actionError.status === 409;
@@ -253,10 +274,9 @@ export function WebsiteBannersPage() {
                 The legacy banners have changed since this draft was imported.
               </Typography>
               <Typography variant="body2">
-                This is a data integrity conflict, not a page refresh problem.
-                Current draft #{draft.data.revision} cannot be published until the
-                original Firestore banners and the Website draft are reconciled.
-                Do not delete the draft or overwrite settings/banners.
+                We found changes in the older banner source. You can resolve them
+                directly here: choose Draft or Trash for the items below, then
+                select Sync to draft. Your existing draft and banners stay intact.
               </Typography>
               <Typography variant="caption" sx={{ display: "block", mt: 1, overflowWrap: "anywhere" }}>
                 Imported fingerprint: {(draft.data.legacyFingerprint ?? "none").slice(0, 12)}…
@@ -312,9 +332,10 @@ export function WebsiteBannersPage() {
                 </Box>
               ))}
               {(legacy.data?.invalidEntries ?? []).length > 0 && (
-                <Alert severity="error">
-                  Some legacy entries cannot be imported. Reconcile the original
-                  artwork and links first; partial import would silently lose banners.
+                <Alert severity={requiresReconciliation ? "warning" : "info"}>
+                  {requiresReconciliation
+                    ? "These banners have invalid original links. Choose Draft to keep the image without the unsafe link, or Trash to archive it outside the next release."
+                    : "These older banners contain invalid links; the current draft fingerprint is already synchronized."}
                 </Alert>
               )}
               {(legacy.data?.invalidEntries ?? []).map(problem => (
@@ -327,8 +348,45 @@ export function WebsiteBannersPage() {
                       alt={`Legacy ${problem.layout} banner needing review`}
                       shape={problem.layout === "web" ? "landscape" : "portrait"}/>
                   )}
+                  {requiresReconciliation && (
+                    <Stack direction="row" gap={1} sx={{ mt: 1 }}>
+                      <Button size="small"
+                        variant={legacyActions[`${problem.layout}:${problem.index}`] === "draft" ? "contained" : "outlined"}
+                        disabled={busy || !problem.previewUrl}
+                        onClick={() => setLegacyActions(old => ({
+                          ...old, [`${problem.layout}:${problem.index}`]: "draft",
+                        }))}>
+                        Add to Draft
+                      </Button>
+                      <Button size="small" color="warning"
+                        variant={legacyActions[`${problem.layout}:${problem.index}`] === "trash" ? "contained" : "outlined"}
+                        disabled={busy}
+                        onClick={() => setLegacyActions(old => ({
+                          ...old, [`${problem.layout}:${problem.index}`]: "trash",
+                        }))}>
+                        Send to Trash
+                      </Button>
+                    </Stack>
+                  )}
                 </Box>
               ))}
+              {requiresReconciliation && (
+                <Stack spacing={1.5} sx={{ mt: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Valid banners will be kept automatically. Your current Draft
+                    artwork and edits are preserved. The original Firestore source
+                    is never modified; Trash decisions are archived for recovery.
+                  </Typography>
+                  <Button variant="contained"
+                    disabled={!isAdmin || busy || changed || !legacy.data?.fingerprint || !allDecided}
+                    onClick={() => reconcileMutation.mutate()}>
+                    Sync to Draft
+                  </Button>
+                  {!allDecided && <Typography color="warning.main" variant="caption">
+                    Choose Draft or Trash for each banner highlighted in red.
+                  </Typography>}
+                </Stack>
+              )}
             </Paper>
           )}
           {!legacyRequiresImport && !draft.data && (
