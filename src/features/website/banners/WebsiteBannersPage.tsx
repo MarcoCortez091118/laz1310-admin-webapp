@@ -621,7 +621,7 @@ export function WebsiteBannersPage() {
               </Stack>
             ))}
             {releases.error && <Alert severity="error">{String(releases.error)}</Alert>}
-          </Paper>
+          </Paper>}
         </>
       )}
       <BannerEditorDialog editor={editor} onClose={() => setEditor(null)}
