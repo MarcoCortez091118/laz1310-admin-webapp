@@ -134,6 +134,45 @@ export function publishBannerDraft(revision: number): Promise<ApiResult<WebsiteB
   );
 }
 
+export interface WebsiteTrashBanner {
+  id: string;
+  layout: "desktop" | "mobile";
+  banner: WebsiteBanner;
+  deletedAt: string;
+  deletedBy: string;
+  draftRevision: number;
+  restoredAt: string | null;
+  restoredBy: string | null;
+}
+
+export const websiteBannerTrashKey = ["admin", "website", "banners", "trash"] as const;
+
+export function readBannerTrash(): Promise<ApiResult<{items: WebsiteTrashBanner[]}>> {
+  return apiRequest<{items: WebsiteTrashBanner[]}>(ROOT + "/trash");
+}
+
+export function trashBannerFromDraft(
+  revision: number, layout: "desktop" | "mobile", bannerId: string,
+): Promise<ApiResult<WebsiteBannerDraft>> {
+  return apiRequest<WebsiteBannerDraft>(
+    ROOT + "/draft/trash",
+    {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({layout, bannerId}),
+    },
+    { ifMatch: `"${revision}"` },
+  );
+}
+
+export function restoreBannerFromTrash(
+  revision: number, trashId: string,
+): Promise<ApiResult<WebsiteBannerDraft>> {
+  return apiRequest<WebsiteBannerDraft>(
+    ROOT + "/trash/" + encodeURIComponent(trashId) + "/restore",
+    { method: "POST" }, { ifMatch: `"${revision}"` },
+  );
+}
+
 export function rollbackBannerRelease(
   revision: number, releaseId: string,
 ): Promise<ApiResult<WebsiteBannerRelease>> {
