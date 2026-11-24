@@ -156,6 +156,17 @@ export function WebsiteBannersPage() {
   const changed = draftChanges(working, original);
   const revision = draft.data?.revision ?? 0;
   const legacyRequiresImport = !draft.data && Boolean(legacy.data?.sourceExists);
+  // A legacy-origin draft must match its original Firestore document exactly.
+  // Editing or saving the draft does NOT refresh its origin fingerprint.
+  const legacyConflict = Boolean(draft.data && legacy.data && (
+    draft.data.origin === "legacy"
+      ? !legacy.data.sourceExists ||
+        legacy.data.fingerprint !== draft.data.legacyFingerprint
+      : legacy.data.sourceExists
+  ));
+  const legacyNeedsReview = Boolean(
+    legacyRequiresImport || legacyConflict || (legacy.data?.invalidEntries?.length ?? 0) > 0
+  );
 
   function reload() {
     void queryClient.invalidateQueries({ queryKey: ["admin", "website", "banners"] });
@@ -236,6 +247,25 @@ export function WebsiteBannersPage() {
           {legacy.data?.warnings.map((warning) => (
             <Alert key={warning} severity="warning">{warning}</Alert>
           ))}
+          {legacyConflict && draft.data && (
+            <Alert severity="error">
+              <Typography fontWeight={750} sx={{ mb: .5 }}>
+                The legacy banners have changed since this draft was imported.
+              </Typography>
+              <Typography variant="body2">
+                This is a data integrity conflict, not a page refresh problem.
+                Current draft #{draft.data.revision} cannot be published until the
+                original Firestore banners and the Website draft are reconciled.
+                Do not delete the draft or overwrite settings/banners.
+              </Typography>
+              <Typography variant="caption" sx={{ display: "block", mt: 1, overflowWrap: "anywhere" }}>
+                Imported fingerprint: {(draft.data.legacyFingerprint ?? "none").slice(0, 12)}…
+                {" · "}Current source: {(legacy.data?.fingerprint ?? "missing").slice(0, 12)}…
+                {" · "}Current source importable: {legacy.data?.importable ? "yes" : "no"}
+              </Typography>
+              <Button size="small" onClick={reload} sx={{ mt: 1 }}>Reload inventory</Button>
+            </Alert>
+          )}
           {legacyRequiresImport && (
             <Alert severity="warning" action={<Button disabled={busy || !isAdmin ||
               !legacy.data?.fingerprint || legacy.data?.importable !== true}
@@ -249,14 +279,15 @@ export function WebsiteBannersPage() {
               {!isAdmin ? " Only administrators can approve this import." : ""}
             </Alert>
           )}
-          {legacyRequiresImport && legacy.data?.content && (
+          {legacyNeedsReview && legacy.data?.content && (
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
               <Typography fontWeight={800} sx={{ mb: 1 }}>
                 Existing Website banners — read-only inventory
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                These entries come from legacy settings/banners; they are not a
-                published FastAPI release. No legacy asset is modified here.
+                These entries come from the current Firestore settings/banners document,
+                not the saved draft. Compare this read-only inventory against the draft
+                cards below before reconciling the source. No legacy asset is modified here.
               </Typography>
               {(["desktop", "mobile"] as const).map(responsive => (
                 <Box key={responsive} sx={{ mb: 2 }}>
@@ -319,7 +350,8 @@ export function WebsiteBannersPage() {
                   onClick={() => saveMutation.mutate()}>Save draft</Button>
                 <Button variant="contained" startIcon={<Rocket size={16} />}
                   disabled={disabled || !isAdmin || changed || !draft.data ||
-                    published.data?.draftRevision === revision || Boolean(draft.error)}
+                    published.data?.draftRevision === revision || Boolean(draft.error) ||
+                    legacyConflict}
                   onClick={() => publishMutation.mutate()}>Publish Website banners</Button>
               </Stack>
             </Stack>
