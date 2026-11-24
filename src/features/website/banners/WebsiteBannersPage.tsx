@@ -280,13 +280,13 @@ export function WebsiteBannersPage() {
                   </Box>
                 </Box>
               ))}
-              {(legacy.data.invalidEntries ?? []).length > 0 && (
+              {(legacy.data?.invalidEntries ?? []).length > 0 && (
                 <Alert severity="error">
                   Some legacy entries cannot be imported. Reconcile the original
                   artwork and links first; partial import would silently lose banners.
                 </Alert>
               )}
-              {(legacy.data.invalidEntries ?? []).map(problem => (
+              {(legacy.data?.invalidEntries ?? []).map(problem => (
                 <Box key={problem.layout + problem.index} sx={{ p: 1.5, mt: 1, border: 1, borderColor: "error.main", borderRadius: 2 }}>
                   <Typography fontWeight={700}>
                     {problem.layout}[{problem.index}]: {problem.reason}
