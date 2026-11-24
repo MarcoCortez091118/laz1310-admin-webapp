@@ -552,7 +552,7 @@ export function WebsiteBannersPage() {
                     mt: 1, display: "grid", gap: 1.5,
                     gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" },
                   }}>
-                    {published.data.content[responsive].map((card, index) => (
+                    {published.data?.content[responsive].map((card, index) => (
                       <Paper key={card.id + index} variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
                         <ArtworkPreview src={card.url} alt={`Publicado ${responsive} ${index + 1}`}
                           shape={responsive === "mobile" ? "portrait" : "landscape"}/>
