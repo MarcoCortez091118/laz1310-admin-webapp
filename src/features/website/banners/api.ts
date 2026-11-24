@@ -85,6 +85,27 @@ export function importLegacyBanners(fingerprint: string): Promise<ApiResult<Webs
   );
 }
 
+export type LegacyBannerDecision = {
+  layout: "web" | "mobile";
+  index: number;
+  action: "draft" | "trash";
+};
+
+export function reconcileBannerDraft(
+  revision: number,
+  fingerprint: string,
+  decisions: LegacyBannerDecision[],
+): Promise<ApiResult<WebsiteBannerDraft>> {
+  return apiRequest<WebsiteBannerDraft>(
+    ROOT + "/draft/reconcile",
+    {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fingerprint, decisions }),
+    },
+    { ifMatch: `"${revision}"` },
+  );
+}
+
 export function saveBannerDraft(
   revision: number, content: WebsiteBannerContent,
 ): Promise<ApiResult<WebsiteBannerDraft>> {
