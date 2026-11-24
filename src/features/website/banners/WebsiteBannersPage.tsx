@@ -511,7 +511,7 @@ export function WebsiteBannersPage() {
                     <Stack direction="row" spacing={.5}>
                       <Button size="small" variant="outlined" disabled={disabled}
                         onClick={() => setEditor({ layout, index, value: card })}>Edit</Button>
-                      <Button size="small" color="error" disabled={disabled}
+                      <Button size="small" color="warning"
                         title={changed ? "Guarda los cambios antes de mover a Papelera" : "Mover a Papelera"}
                         disabled={disabled || changed}
                         onClick={() => setTrashCandidate({layout, bannerId: card.id})}>Papelera</Button>
@@ -533,8 +533,78 @@ export function WebsiteBannersPage() {
               </Button>
             </Stack>
           </Paper>
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-            <Typography variant="h6" fontWeight={800} gutterBottom>Website release history</Typography>
+          </>}
+          {pane === "published" && (
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+              <Typography variant="h6" fontWeight={800}>Última publicación aprobada en FastAPI</Typography>
+              {published.isPending && <CircularProgress size={24}/>}
+              {published.error && <Alert severity="error">{String(published.error)}</Alert>}
+              {!published.isPending && !published.data && <Alert severity="info">
+                No hay publicaciones. Puedes crear la primera desde Borradores.
+              </Alert>}
+              {published.data && (["desktop", "mobile"] as const).map(responsive => (
+                <Box key={responsive} sx={{ mt: 3 }}>
+                  <Typography fontWeight={700}>
+                    {responsive === "desktop" ? "Escritorio" : "Web móvil"}
+                    {": "}{published.data?.content[responsive].length ?? 0} banners
+                  </Typography>
+                  <Box sx={{
+                    mt: 1, display: "grid", gap: 1.5,
+                    gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" },
+                  }}>
+                    {published.data.content[responsive].map((card, index) => (
+                      <Paper key={card.id + index} variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
+                        <ArtworkPreview src={card.url} alt={`Publicado ${responsive} ${index + 1}`}
+                          shape={responsive === "mobile" ? "portrait" : "landscape"}/>
+                        <Stack direction="row" sx={{ mt: 1 }} justifyContent="space-between">
+                          <Typography fontWeight={700}>Banner {index + 1}</Typography>
+                          <Chip size="small" label={card.active ? "Habilitado" : "Oculto"}
+                            color={card.active ? "success" : "default"}/>
+                        </Stack>
+                        <Typography variant="caption" sx={{ overflowWrap: "anywhere" }}>
+                          {card.linkUrl || "Sin enlace"}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              ))}
+              <Button sx={{ mt: 2 }} variant="outlined"
+                onClick={() => setPane("draft")}>Editar en Borradores</Button>
+            </Paper>
+          )}
+          {pane === "trash" && (
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+              <Typography variant="h6" fontWeight={800}>Papelera de banners Website</Typography>
+              {archived.isPending && <CircularProgress size={24}/>}
+              {archived.error && <Alert severity="error">{String(archived.error)}</Alert>}
+              {archived.data?.length === 0 && (
+                <Typography color="text.secondary">No hay banners en la papelera.</Typography>
+              )}
+              <Box sx={{
+                mt: 2, display: "grid", gap: 2,
+                gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" },
+              }}>
+                {archived.data?.map(item => (
+                  <Paper key={item.id} variant="outlined" sx={{ p: 1.5 }}>
+                    <ArtworkPreview src={item.banner.url} alt="Banner archivado"
+                      shape={item.layout === "mobile" ? "portrait" : "landscape"}/>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {item.layout === "mobile" ? "Web móvil" : "Escritorio"}
+                      {" · "}{new Date(item.deletedAt).toLocaleString()}
+                    </Typography>
+                    <Button size="small" variant="outlined" sx={{ mt: 1 }}
+                      disabled={busy || changed || !draft.data}
+                      onClick={() => restoreMutation.mutate(item.id)}>
+                      Restaurar al borrador
+                    </Button>
+                  </Paper>
+                ))}
+              </Box>
+            </Paper>
+          )}
+          {pane === "published" && <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+            <Typography variant="h6" fontWeight={800} gutterBottom>Historial de publicaciones</Typography>
             {published.isPending ? <CircularProgress size={20} /> : published.error ? (
               <Alert severity="error">{String(published.error)}</Alert>
             ) : !published.data ? (
@@ -561,6 +631,20 @@ export function WebsiteBannersPage() {
             setEditor(null);
           }
         }} />
+      <Dialog open={Boolean(trashCandidate)} onClose={() => setTrashCandidate(null)}>
+        <DialogTitle>¿Mover banner a Papelera?</DialogTitle>
+        <DialogContent>
+          El banner quedará archivado y se podrá restaurar al borrador.
+          La publicación actual no cambiará hasta que publiques otra revisión.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTrashCandidate(null)}>Cancelar</Button>
+          <Button color="warning" variant="contained" disabled={busy || changed}
+            onClick={() => { if (trashCandidate) trashMutation.mutate(trashCandidate); }}>
+            Mover a papelera
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={Boolean(rollbackId)} onClose={() => setRollbackId(null)}>
         <DialogTitle>Restore earlier Website banners?</DialogTitle>
         <DialogContent>
