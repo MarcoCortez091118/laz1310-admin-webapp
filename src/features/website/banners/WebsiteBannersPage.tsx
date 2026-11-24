@@ -238,13 +238,67 @@ export function WebsiteBannersPage() {
           ))}
           {legacyRequiresImport && (
             <Alert severity="warning" action={<Button disabled={busy || !isAdmin ||
-              !legacy.data?.fingerprint}
+              !legacy.data?.fingerprint || legacy.data?.importable !== true}
               onClick={() => importMutation.mutate()}>Review &amp; import</Button>}>
-              Existing banners were detected in settings/banners. Import them
-              before making editorial changes; their original document will not be modified.
+              Existing banners were detected in settings/banners. Review the
+              read-only inventory below before import; the original document will not be modified.
               {legacy.data?.fingerprint ? ` Fingerprint: ${legacy.data.fingerprint.slice(0, 12)}…` : ""}
+              {legacy.data?.importable === false
+                ? " Import is blocked: invalid entries or Storage-only banners require reconciliation."
+                : ""}
               {!isAdmin ? " Only administrators can approve this import." : ""}
             </Alert>
+          )}
+          {legacyRequiresImport && legacy.data?.content && (
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Typography fontWeight={800} sx={{ mb: 1 }}>
+                Existing Website banners — read-only inventory
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                These entries come from legacy settings/banners; they are not a
+                published FastAPI release. No legacy asset is modified here.
+              </Typography>
+              {(["desktop", "mobile"] as const).map(responsive => (
+                <Box key={responsive} sx={{ mb: 2 }}>
+                  <Typography fontWeight={700} sx={{ mb: 1 }}>
+                    {responsive === "desktop" ? "Desktop Website" : "Mobile Website"}
+                    {": "}{legacy.data?.content?.[responsive].length ?? 0} valid previews
+                  </Typography>
+                  <Box sx={{
+                    display: "grid", gap: 1.5,
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(3,minmax(0,1fr))" },
+                  }}>
+                    {(legacy.data?.content?.[responsive] ?? []).map((item, index) => (
+                      <Paper key={item.id + index} variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+                        <ArtworkPreview src={item.url} alt={`Legacy ${responsive} banner ${index + 1}`}
+                          shape={responsive === "desktop" ? "landscape" : "portrait"}/>
+                        <Typography variant="caption" sx={{ overflowWrap: "anywhere" }}>
+                          {item.linkUrl || "No destination link"}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              ))}
+              {(legacy.data?.invalidEntries ?? []).length > 0 && (
+                <Alert severity="error">
+                  Some legacy entries cannot be imported. Reconcile the original
+                  artwork and links first; partial import would silently lose banners.
+                </Alert>
+              )}
+              {(legacy.data?.invalidEntries ?? []).map(problem => (
+                <Box key={problem.layout + problem.index} sx={{ p: 1.5, mt: 1, border: 1, borderColor: "error.main", borderRadius: 2 }}>
+                  <Typography fontWeight={700}>
+                    {problem.layout}[{problem.index}]: {problem.reason}
+                  </Typography>
+                  {problem.previewUrl && (
+                    <ArtworkPreview src={problem.previewUrl}
+                      alt={`Legacy ${problem.layout} banner needing review`}
+                      shape={problem.layout === "web" ? "landscape" : "portrait"}/>
+                  )}
+                </Box>
+              ))}
+            </Paper>
           )}
           {!legacyRequiresImport && !draft.data && (
             <Alert severity="info">
