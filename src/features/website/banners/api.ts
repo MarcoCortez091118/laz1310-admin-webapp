@@ -39,12 +39,22 @@ export interface WebsiteBannerRelease extends WebsiteBannerPublication {
   previousReleaseId: string | null;
 }
 
+export interface WebsiteLegacyBannerIssue {
+  layout: "web" | "mobile";
+  index: number;
+  reason: string;
+  previewUrl: string | null;
+}
+
 export interface WebsiteLegacyBanners {
   source: "settings/banners";
   sourceExists: boolean;
   fingerprint: string | null;
   content: WebsiteBannerContent | null;
   warnings: string[];
+  /** The API blocks importing a partial/corrupt legacy inventory. */
+  importable: boolean;
+  invalidEntries: WebsiteLegacyBannerIssue[];
 }
 
 export const websiteBannerKeys = {
